@@ -1,7 +1,5 @@
 #!/usr/bin/env bash
 set -euo pipefail
-current_step="initialization"
-trap 'status=$?; echo "::error file=scripts/kicad-spike.sh::KiCad spike failed during ${current_step} with exit status ${status}"; exit "$status"' ERR
 
 IMAGE="${KICAD_IMAGE:-kicad/kicad:10.0}"
 OUT="${KICAD_OUT:-artifacts/kicad}"
@@ -34,11 +32,8 @@ docker_run() {
     "$IMAGE" "$@"
 }
 
-current_step="capability version"
 docker_run kicad-cli --version | tee "$ROOT/$OUT/capability.txt"
-current_step="capability help"
 docker_run kicad-cli --help > "$ROOT/$OUT/kicad-cli-help.txt"
-current_step="DRC"
 set +e
 docker_run kicad-cli pcb drc \
   --output /work/reports/drc.rpt /work/project/design.kicad_pcb \
@@ -54,16 +49,12 @@ if grep -Eq 'Found [1-9][0-9]* (DRC violations|unconnected items)' "$ROOT/$OUT/r
   echo "::error file=scripts/kicad-spike.sh::DRC report contains: $(grep -E 'Found [1-9][0-9]* (DRC violations|unconnected items)' "$ROOT/$OUT/reports/drc.rpt" | tr '\n' ';')"
   exit 4
 fi
-current_step="Gerber export"
 docker_run kicad-cli pcb export gerbers \
   -o /work/gerbers/ /work/project/design.kicad_pcb
-current_step="drill export"
 docker_run kicad-cli pcb export drill \
   -o /work/drill/ /work/project/design.kicad_pcb
-current_step="STEP export"
 docker_run kicad-cli pcb export step \
   -o /work/board.step /work/project/design.kicad_pcb
-current_step="ERC"
 set +e
 docker_run kicad-cli sch erc \
   --output /work/reports/erc.rpt /work/project/design.kicad_sch \
@@ -78,7 +69,6 @@ if grep -Eq 'ERC messages: [1-9][0-9]*' "$ROOT/$OUT/reports/erc.rpt"; then
   echo "ERC report contains violations"
   exit 4
 fi
-current_step="artifact manifests"
 find "$ROOT/$OUT" -type f \
   ! -name 'SHA256SUMS' ! -name 'STABLE-SHA256SUMS' -print0 |
   sort -z | xargs -0 sha256sum > "$ROOT/$OUT/SHA256SUMS"
