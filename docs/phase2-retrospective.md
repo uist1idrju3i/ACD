@@ -57,7 +57,8 @@ READMEのPhase 2完了条件（**Phase 1のgolden taskで、注入した設計�
 - **機能ブロックはrationaleにしかない：** partには機能ブロックの宣言がないため、WP7の
   配置はWP3のrationale（`appliesTo`）から導いた。設計根拠の構造化が、可読性という別の
   成果を副産物として生んだ。
-- **stacked PRの積み上げ：** 6本のstackで下段の修正を上段へ順に統合した。gate matrixの
+- **stacked PRの積み上げ：** WP1（#23）を単独でmainへ入れたあと、WP2〜WP7の6本を
+  stack #26として積み、下段のレビュー修正を上段へ順に統合した。gate matrixの
   `runsAfter`により、gate番号を振り直さずに実行位置だけを宣言できた。
 
 ## 残課題とPhase 3候補
