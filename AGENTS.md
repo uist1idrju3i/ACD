@@ -149,6 +149,10 @@ Neither ADR closes the final decisions in ADR-0006 or ADR-0007.
 
 - Prefer minimal, focused edits and preserve unrelated user changes. Never use
   `git add .`; stage explicit paths and never stage secrets or credentials.
+- Before editing, agents MUST inspect the branch, worktree, relevant diff, and
+  existing user changes. Before committing, agents MUST review the staged paths,
+  `git diff --cached --check`, and the contract impact. Unrelated changes MUST be
+  left unstaged.
 - Never run destructive commands such as `reset --hard`, `clean -fd`, checkout of
   user files, or stash deletion. Never use `--no-verify`, amend commits, force-push,
   or push directly to `main`/`master`.
@@ -161,6 +165,9 @@ Neither ADR closes the final decisions in ADR-0006 or ADR-0007.
   create or update PRs unless explicitly authorized.
 - Do not weaken tests, gates, license checks, or approval rules to make generated
   output pass.
+- If a requirement conflicts with an ADR, license, patent concern, phase boundary,
+  or safety invariant, agents MUST stop at that boundary, preserve evidence, and
+  escalate with a decision-ready explanation rather than silently choosing.
 
 ## Validation contract
 
