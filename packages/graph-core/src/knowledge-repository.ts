@@ -1,5 +1,6 @@
 import { isDeepStrictEqual } from "node:util";
 import type { KnowledgeItem } from "./knowledge-lifecycle.js";
+import { GraphCoreError } from "./errors.js";
 
 /** Persistence contract: saves are idempotent for equal IDs and reject conflicting IDs. */
 export interface KnowledgeRepository {
@@ -15,7 +16,10 @@ export class InMemoryKnowledgeRepository implements KnowledgeRepository {
     const existing = this.items.get(item.id);
     if (existing) {
       if (!isDeepStrictEqual(existing, item)) {
-        throw new Error(`knowledge ID already exists with different content: ${item.id}`);
+        throw new GraphCoreError(
+          "reference-integrity",
+          `knowledge ID already exists with different content: ${item.id}`,
+        );
       }
       return;
     }
