@@ -25,16 +25,18 @@ export type EventEnvelope = {
   payload: unknown;
 };
 
-export const createEvent = (
-  input: Omit<EventEnvelope, "payloadHash">,
-): EventEnvelope => ({
+export const createEvent = (input: Omit<EventEnvelope, "payloadHash">): EventEnvelope => ({
   ...input,
   payloadHash: sha256(input.payload),
 });
 
 export const verifyEvent = (event: EventEnvelope): void => {
   if (event.payloadHash !== sha256(event.payload)) {
-    throw new GraphCoreError("event-replay-failure", `event payload hash mismatch: ${event.eventId}`, "critical");
+    throw new GraphCoreError(
+      "event-replay-failure",
+      `event payload hash mismatch: ${event.eventId}`,
+      "critical",
+    );
   }
 };
 
@@ -64,14 +66,23 @@ export class FileEventLog {
     let revision = 0;
     const ids = new Set<string>();
     for (const event of events) {
-      if (ids.has(event.eventId)) throw new GraphCoreError("event-replay-failure", `duplicate event: ${event.eventId}`);
+      if (ids.has(event.eventId))
+        throw new GraphCoreError("event-replay-failure", `duplicate event: ${event.eventId}`);
       ids.add(event.eventId);
       verifyEvent(event);
       if (event.baseRevision !== revision) {
-        throw new GraphCoreError("event-replay-failure", `event revision gap: ${event.eventId}`, "critical");
+        throw new GraphCoreError(
+          "event-replay-failure",
+          `event revision gap: ${event.eventId}`,
+          "critical",
+        );
       }
       if (event.resultRevision < revision || event.resultRevision > revision + 1) {
-        throw new GraphCoreError("event-replay-failure", `invalid result revision: ${event.eventId}`, "critical");
+        throw new GraphCoreError(
+          "event-replay-failure",
+          `invalid result revision: ${event.eventId}`,
+          "critical",
+        );
       }
       revision = event.resultRevision;
     }

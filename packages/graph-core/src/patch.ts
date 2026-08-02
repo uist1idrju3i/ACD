@@ -20,11 +20,9 @@ const decode = (segment: string): string => segment.replaceAll("~1", "/").replac
 
 const pointerSegments = (path: string): string[] => {
   if (path === "") return [];
-  if (!path.startsWith("/")) throw new GraphCoreError("patch-conflict", `invalid JSON Pointer: ${path}`);
-  return path
-    .slice(1)
-    .split("/")
-    .map(decode);
+  if (!path.startsWith("/"))
+    throw new GraphCoreError("patch-conflict", `invalid JSON Pointer: ${path}`);
+  return path.slice(1).split("/").map(decode);
 };
 
 const entityIndex = (entities: DesignGraph["entities"], segment: string): number => {
@@ -41,13 +39,22 @@ const entityIndex = (entities: DesignGraph["entities"], segment: string): number
   return index;
 };
 
-const resolveParent = (graph: DesignGraph, segments: string[]): { parent: unknown; key: string } => {
-  if (segments.length === 0) throw new GraphCoreError("patch-conflict", "root replacement is not supported");
+const resolveParent = (
+  graph: DesignGraph,
+  segments: string[],
+): { parent: unknown; key: string } => {
+  if (segments.length === 0)
+    throw new GraphCoreError("patch-conflict", "root replacement is not supported");
   let current: unknown = graph;
   for (let index = 0; index < segments.length - 1; index += 1) {
     const segment = segments[index];
     if (segment === undefined) throw new GraphCoreError("patch-conflict", "missing path segment");
-    if (current && typeof current === "object" && !Array.isArray(current) && segment === "entities") {
+    if (
+      current &&
+      typeof current === "object" &&
+      !Array.isArray(current) &&
+      segment === "entities"
+    ) {
       current = (current as JsonRecord)[segment];
       continue;
     }
@@ -64,7 +71,10 @@ const resolveParent = (graph: DesignGraph, segments: string[]): { parent: unknow
       continue;
     }
     if (!current || typeof current !== "object" || !(segment in current)) {
-      throw new GraphCoreError("patch-conflict", `path not found: /${segments.slice(0, index + 1).join("/")}`);
+      throw new GraphCoreError(
+        "patch-conflict",
+        `path not found: /${segments.slice(0, index + 1).join("/")}`,
+      );
     }
     current = (current as JsonRecord)[segment];
   }
@@ -98,7 +108,12 @@ const applyOperation = (graph: DesignGraph, operation: PatchOperation): void => 
     return;
   }
   if (Array.isArray(parent)) {
-    const index = parent === graph.entities ? (key === "-" ? parent.length : entityIndex(graph.entities, key)) : Number(key);
+    const index =
+      parent === graph.entities
+        ? key === "-"
+          ? parent.length
+          : entityIndex(graph.entities, key)
+        : Number(key);
     if (operation.op === "add" && key === "-") {
       parent.push(clone(operation.value));
       return;
@@ -115,7 +130,8 @@ const applyOperation = (graph: DesignGraph, operation: PatchOperation): void => 
   }
   const record = parent as JsonRecord;
   if (operation.op === "remove") {
-    if (!(key in record)) throw new GraphCoreError("patch-conflict", `path not found: ${operation.path}`);
+    if (!(key in record))
+      throw new GraphCoreError("patch-conflict", `path not found: ${operation.path}`);
     delete record[key];
   } else {
     if (operation.op === "add" && key in record) {
@@ -135,17 +151,25 @@ export class PatchEngine {
     const existing = this.accepted.get(patch.patchId);
     if (existing) {
       if (existing.patchHash !== sha256(patch)) {
-        throw new GraphCoreError("patch-conflict", `patchId reused with different payload: ${patch.patchId}`);
+        throw new GraphCoreError(
+          "patch-conflict",
+          `patchId reused with different payload: ${patch.patchId}`,
+        );
       }
       return { ...existing, replayed: true };
     }
     if (patch.baseRevision !== currentRevision || patch.resultRevision !== currentRevision + 1) {
-      throw new GraphCoreError("patch-conflict", "patch revision does not match current revision", "error", {
-        patchId: patch.patchId,
-        currentRevision,
-        baseRevision: patch.baseRevision,
-        resultRevision: patch.resultRevision,
-      });
+      throw new GraphCoreError(
+        "patch-conflict",
+        "patch revision does not match current revision",
+        "error",
+        {
+          patchId: patch.patchId,
+          currentRevision,
+          baseRevision: patch.baseRevision,
+          resultRevision: patch.resultRevision,
+        },
+      );
     }
     const next = clone(graph);
     try {
@@ -153,7 +177,10 @@ export class PatchEngine {
       validateSemanticGraph(next, patch.resultRevision);
     } catch (error) {
       if (error instanceof GraphCoreError) throw error;
-      throw new GraphCoreError("patch-conflict", error instanceof Error ? error.message : "patch failed");
+      throw new GraphCoreError(
+        "patch-conflict",
+        error instanceof Error ? error.message : "patch failed",
+      );
     }
     for (const entity of next.entities) entity.revision = patch.resultRevision;
     next.project.revision = patch.resultRevision;
