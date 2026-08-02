@@ -32,10 +32,12 @@ docker run --rm -v "$ROOT/$OUT:/work" "$IMAGE" kicad-cli --help > "$ROOT/$OUT/ki
 current_step="DRC"
 set +e
 docker run --rm -v "$ROOT/$OUT:/work" "$IMAGE" kicad-cli pcb drc \
-  --output /work/reports/drc.rpt /work/project/design.kicad_pcb
+  --output /work/reports/drc.rpt /work/project/design.kicad_pcb \
+  2> "$ROOT/$OUT/reports/drc.stderr"
 drc_status=$?
 set -e
 if [ ! -f "$ROOT/$OUT/reports/drc.rpt" ]; then
+  echo "::error file=scripts/kicad-spike.sh::KiCad DRC stderr: $(tr '\n' ';' < "$ROOT/$OUT/reports/drc.stderr")"
   echo "KiCad DRC did not produce a report"
   exit "$drc_status"
 fi
