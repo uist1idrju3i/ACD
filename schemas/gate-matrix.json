@@ -233,7 +233,12 @@
       "inputs": "記録済みfab report fixture、対象設計revision、fab profile",
       "passCondition": "source provenance、対象参照、重複統合、構造化結果とderivation hashが一致し、unknownは合格扱いにしない",
       "onFailure": "`fab-feedback-unknown`で停止し、fab-feedback.jsonをEvidenceとして保持したうえで下流検証範囲を広げる",
-      "errorCodes": ["verification-failed", "fab-feedback-unknown", "schema-invalid", "reference-integrity"]
+      "errorCodes": [
+        "verification-failed",
+        "fab-feedback-unknown",
+        "schema-invalid",
+        "reference-integrity"
+      ]
     }
   ]
 }
