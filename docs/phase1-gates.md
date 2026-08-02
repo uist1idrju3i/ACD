@@ -61,7 +61,7 @@ Phase 1 fixtureは次を含む。
 | 12   | Pre-order readiness     | 全artifact、BOM、cost、availability       | 人手発注に必要な情報が揃い、未解決order-relevant unknownなし          | 発注準備を停止                                     |
 | 13   | Physical completion     | 実機測定Evidence                          | golden taskのTestItemが条件・基準付きでpass                           | 後続継続を停止／再設計                             |
 
-各gateの合否、対象gate、入力revision、tool version、判定時刻は`VerificationResult`へ
+各gateの合否、対象gate、入力revision、入力hash、tool version、判定時刻は`VerificationResult`へ
 記録する。測定・tool output・library／model provenance、output hash、uncertainty、停止理由は
 `Evidence`として記録し、`VerificationResult`からID参照する。
 
