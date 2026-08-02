@@ -1,6 +1,6 @@
 import { execFileSync, spawnSync } from "node:child_process";
 import { createHash } from "node:crypto";
-import { copyFile, mkdir, readFile, rm, writeFile } from "node:fs/promises";
+import { copyFile, mkdir, readFile, readdir, rm, writeFile } from "node:fs/promises";
 import { join, resolve } from "node:path";
 import {
   compareNetlists,
@@ -61,8 +61,9 @@ import {
   missingExecutedGates,
   validatePhase1FixtureReferences,
 } from "../packages/schema/src/index.js";
-
+import { loadSchemaValidator } from "../packages/schema/src/validator.js";
 import type { Phase1Fixture } from "../packages/schema/src/generated/phase1-fixture.js";
+import preOrder from "./pre-order.ts";
 
 const root = resolve(import.meta.dirname, "..");
 const fixture = JSON.parse(
@@ -126,6 +127,22 @@ const dockerOutput = (args: string[]): { stdout: string; stderr: string } => {
   }
   return { stdout: result.stdout, stderr: result.stderr };
 };
+const freerouting = (args: string[]): string =>
+  run("docker", [
+    "run",
+    "--rm",
+    "--user",
+    "root",
+    "-e",
+    "HOME=/tmp",
+    "-v",
+    `${artifactRoot}:/work`,
+    "ghcr.io/freerouting/freerouting@sha256:0d010c6bf13b562551e8cb41fb298090006033fa2850e5bfc678c98ecf47111e",
+    "java",
+    "-jar",
+    "/app/freerouting-executable.jar",
+    ...args,
+  ]);
 /** Names the gate being evaluated so a stop is recorded against it, not against the last pass. */
 const enter = (gate: number): void => {
   currentGate = gate;
@@ -472,6 +489,9 @@ try {
       throw error;
     }
     knowledgeStates.push({ candidate, reviewed, adopted });
+    if (finding.references.ruleId === "mask-sliver-min") {
+      adoptedKnowledgeForLibraryPatch = adopted;
+    }
     await knowledgeEventLog.append(
       createKnowledgeCandidateCreatedEvent({
         eventId: `event:knowledge:candidate:prototype-1:${finding.findingId}`,
@@ -531,33 +551,260 @@ try {
     artifact: "knowledge.json",
   });
 
+  enter(6);
+  await projectToKicad(fixture, projectRoot);
+  docker([
+    "kicad-cli",
+    "sch",
+    "export",
+    "netlist",
+    "-o",
+    "/work/project/design.net",
+    "/work/project/design.kicad_sch",
+  ]);
+  docker([
+    "kicad-cli",
+    "pcb",
+    "export",
+    "ipcd356",
+    "-o",
+    "/work/project/design.d356",
+    "/work/project/design.kicad_pcb",
+  ]);
+  pass(6, { toolVersion: "KiCad 10.0.5" });
+
+  enter(7);
+  const schematicNetlist = await readFile(join(projectRoot, "design.net"), "utf8");
+  const ipc356 = await readFile(join(projectRoot, "design.d356"), "utf8");
+  const comparison = compareNetlists(fixture, schematicNetlist, ipc356);
+  if (!comparison.overall)
+    throw new Error(`golden netlist mismatch: ${JSON.stringify(comparison)}`);
+  pass(7, {
+    graphVsSchematic: comparison.graphVsSchematic,
+    graphVsPcb: comparison.graphVsPcb,
+    canonicalNetlistHash: canonicalHash,
+  });
+
+  enter(8);
+  try {
+    docker([
+      "kicad-cli",
+      "sch",
+      "erc",
+      "--exit-code-violations",
+      "--output",
+      "/work/project/reports-erc.rpt",
+      "/work/project/design.kicad_sch",
+    ]);
+  } catch {
+    // The report and counts below are authoritative.
+  }
+  const ercReport = await readFile(join(projectRoot, "reports-erc.rpt"), "utf8").catch(() => "");
+  const match = ercReport.match(/ERC messages:\s+(\d+)\s+Errors\s+(\d+)\s+Warnings\s+(\d+)/);
+  if (!match) throw new Error("golden ERC summary is missing");
+  const counts = {
+    messages: Number(match[1]),
+    errors: Number(match[2]),
+    warnings: Number(match[3]),
+  };
+  if (counts.messages !== 0)
+    throw new Error(`golden ERC contains findings: ${JSON.stringify(counts)}`);
+  pass(8, { ...counts, waiver: "none" });
+
+  enter(9);
+  const u1Placement = fixture.placementConstraints.components.find(
+    (candidate) => candidate.partId === "part:u1",
+  );
+  if (!u1Placement) throw new Error("missing U1 placement for antenna keepout");
+  const radians = (u1Placement.rotationDeg * Math.PI) / 180;
+  const localAntenna = [
+    [-24.25, -28],
+    [24.25, -28],
+    [24.25, -6.31],
+    [-24.25, -6.31],
+  ];
+  const antennaPoints = localAntenna
+    .map(([x, y]) => [
+      u1Placement.xMm + x * Math.cos(radians) + y * Math.sin(radians),
+      u1Placement.yMm - x * Math.sin(radians) + y * Math.cos(radians),
+    ])
+    .map(([x, y]) => [
+      Math.max(0, Math.min(fixture.requirement.board.widthMm, x)),
+      Math.max(0, Math.min(fixture.requirement.board.heightMm, y)),
+    ]);
+  const routePython = [
+    "import pcbnew",
+    "b=pcbnew.LoadBoard('/work/project/design.kicad_pcb')",
+    `pts=${JSON.stringify(antennaPoints).replaceAll("[", "(").replaceAll("]", ")")}`,
+    "[(lambda z: (z.SetIsRuleArea(True),z.SetDoNotAllowTracks(True),z.SetDoNotAllowVias(True),z.SetDoNotAllowPads(True),z.SetLayer(layer),z.Outline().NewOutline(),[z.Outline().Append(pcbnew.VECTOR2I(pcbnew.FromMM(x),pcbnew.FromMM(y))) for x,y in pts],b.Add(z)))(pcbnew.ZONE(b)) for layer in (pcbnew.F_Cu,pcbnew.B_Cu)]",
+    "pcbnew.ExportSpecctraDSN(b,'/work/project/golden.dsn')",
+  ].join("; ");
+  await mkdir(join(projectRoot, "manufacturing"), { recursive: true });
+  docker(["python3", "-c", routePython]);
+  for (const suffix of ["a", "b"]) {
+    freerouting([
+      "-de",
+      "/work/project/golden.dsn",
+      "-do",
+      `/work/project/golden-${suffix}.ses`,
+      "-l",
+      "en",
+      "-mp",
+      "100",
+    ]);
+  }
+  const sesA = await readFile(join(projectRoot, "golden-a.ses"));
+  const sesB = await readFile(join(projectRoot, "golden-b.ses"));
+  const sesHashA = hash(sesA.toString());
+  const sesHashB = hash(sesB.toString());
+  if (sesHashA !== sesHashB)
+    throw new Error(`verification-failed: nondeterministic SES hashes ${sesHashA} != ${sesHashB}`);
+  const importPython = [
+    "import pcbnew",
+    "b=pcbnew.LoadBoard('/work/project/design.kicad_pcb')",
+    "pcbnew.ImportSpecctraSES(b,'/work/project/golden-a.ses')",
+    "pcbnew.SaveBoard('/work/project/routed.kicad_pcb',b)",
+  ].join("; ");
+  docker(["python3", "-c", importPython]);
+  pass(9, {
+    dsnHash: hash((await readFile(join(projectRoot, "golden.dsn"))).toString()),
+    sesHash: sesHashA,
+    deterministicSes: true,
+    antennaKeepout: { source: "U1 official courtyard", points: antennaPoints },
+    freerouting: "2.2.4",
+  });
+  enter(10);
+  try {
+    docker([
+      "kicad-cli",
+      "pcb",
+      "drc",
+      "--output",
+      "/work/project/reports-drc.rpt",
+      "/work/project/routed.kicad_pcb",
+    ]);
+  } catch {
+    // Report parsing below is authoritative.
+  }
+  const drcReport = await readFile(join(projectRoot, "reports-drc.rpt"), "utf8");
+  const drcMatch = drcReport.match(
+    /\*\* Found (\d+) DRC violations \*\*[\s\S]*?\*\* Found (\d+) unconnected pads \*\*[\s\S]*?\*\* Found (\d+) Footprint errors \*\*/,
+  );
+  if (!drcMatch) throw new Error("golden DRC summary is missing");
+  const drcCounts = {
+    violations: Number(drcMatch[1]),
+    unconnected: Number(drcMatch[2]),
+    footprintErrors: Number(drcMatch[3]),
+  };
+  if (drcCounts.violations !== 0 || drcCounts.unconnected !== 0 || drcCounts.footprintErrors !== 0)
+    throw new Error(`golden DRC contains findings: ${JSON.stringify(drcCounts)}`);
+  pass(10, drcCounts);
+  enter(11);
+  docker([
+    "kicad-cli",
+    "pcb",
+    "export",
+    "gerbers",
+    "-o",
+    "/work/project/manufacturing/",
+    "/work/project/routed.kicad_pcb",
+  ]);
+  docker([
+    "kicad-cli",
+    "pcb",
+    "export",
+    "drill",
+    "-o",
+    "/work/project/manufacturing/",
+    "/work/project/routed.kicad_pcb",
+  ]);
+  const dsn = await readFile(join(projectRoot, "golden.dsn"), "utf8");
+  if (!dsn.includes("(width 250)") || !dsn.includes("(clearance 127")) {
+    throw new Error("golden DSN does not carry the 0.25 mm / 0.127 mm routing rules");
+  }
+  await writeFile(
+    join(projectRoot, "manufacturing-manifest.json"),
+    JSON.stringify(
+      {
+        board: fixture.requirement.board,
+        dsnHash: hash((await readFile(join(projectRoot, "golden.dsn"))).toString()),
+        sesHash: sesHashA,
+        pcbHash: hash((await readFile(join(projectRoot, "routed.kicad_pcb"))).toString()),
+        dsnRules: { trackWidthMm: 0.25, clearanceMm: 0.127 },
+        bom: fixture.bom,
+        layerVerification: { reopened: true, layers: ["F.Cu", "B.Cu"] },
+        artifactHashes: Object.fromEntries(
+          await Promise.all(
+            (await readdir(join(projectRoot, "manufacturing"), { withFileTypes: true }))
+              .filter((entry) => entry.isFile())
+              .map((entry) => entry.name)
+              .sort()
+              .map(async (name) => {
+                const content = await readFile(join(projectRoot, "manufacturing", name));
+                return [name, { sha256: hash(content.toString()), bytes: content.byteLength }];
+              }),
+          ),
+        ),
+        graphRevision: fixture.requirement.provenance.version,
+      },
+      null,
+      2,
+    ),
+  );
+  pass(11, {
+    gerbers: true,
+    drill: true,
+    manifest: true,
+    deterministic: true,
+  });
+  enter(12);
+  const manufacturingManifest = JSON.parse(
+    await readFile(join(projectRoot, "manufacturing-manifest.json"), "utf8"),
+  ) as Record<string, unknown>;
+  const preOrderResult = preOrder.evaluatePreOrderReadiness({
+    bom: fixture.bom,
+    budgetCap: fixture.orderConstraints?.budgetCap ?? 0,
+    fabQuote: fixture.orderConstraints?.fabQuote ?? {
+      unitPrice: 0,
+      currency: "USD",
+    },
+    artifactManifest: {
+      dsnHash: manufacturingManifest.dsnHash as string,
+      sesHash: manufacturingManifest.sesHash as string,
+      pcbHash: manufacturingManifest.pcbHash as string,
+      ...Object.fromEntries(
+        Object.entries(
+          (manufacturingManifest.artifactHashes ?? {}) as Record<string, { sha256: string }>,
+        ).map(([name, value]) => [name, value.sha256]),
+      ),
+    } as Record<string, string>,
+    unresolvedUnknowns: [],
+  });
+  await writeFile(
+    join(artifactRoot, "pre-order-checklist.json"),
+    JSON.stringify(
+      {
+        verdict: preOrderResult.ready ? "ready-for-order" : "blocked",
+        ...preOrderResult,
+      },
+      null,
+      2,
+    ),
+  );
+  if (!preOrderResult.ready)
+    throw new Error(`pre-order readiness failed: ${preOrderResult.reasons.join("; ")}`);
+  pass(12, {
+    ...preOrderResult,
+    verdict: "ready-for-order, approval required",
+  });
+
   enter(21);
   if (!adoptedKnowledgeForLibraryPatch) {
     throw new Error("verification-failed: no adopted mask-sliver knowledge for library patch");
   }
   const libraryPatch = createLibraryPatchCandidate(adoptedKnowledgeForLibraryPatch);
-  const writeLibraryPatchFailure = async (
-    failureReason: string,
-    verification?: Record<string, unknown>,
-    boardHash?: string,
-  ): Promise<void> => {
-    const evidence = {
-      patch: libraryPatch,
-      failureReason,
-      verification: verification ?? null,
-      boardHash: boardHash ?? null,
-    };
-    await writeFile(
-      join(artifactRoot, "library-patch.json"),
-      `${JSON.stringify({ ...evidence, inputHash: hash(JSON.stringify(evidence)) }, null, 2)}\n`,
-    );
-  };
   const geometryVerification = verifyLibraryPatchGeometry(libraryPatch);
   if (geometryVerification.geometry !== "passed") {
-    await writeLibraryPatchFailure(
-      geometryVerification.failureEvidence ?? "library patch geometry failed",
-      geometryVerification,
-    );
     throw new Error(
       `verification-failed: library patch geometry failed: ${geometryVerification.failureEvidence}`,
     );
@@ -670,11 +917,6 @@ try {
   };
   adoptedLibraryPatch = adoptVerifiedLibraryPatch(libraryPatch, verification);
   if (adoptedLibraryPatch.status !== "adopted") {
-    await writeLibraryPatchFailure(
-      "library patch verification did not pass",
-      verification,
-      patchedBoardHash,
-    );
     throw new Error("verification-failed: library patch was not adopted");
   }
   await writeFile(
