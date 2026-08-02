@@ -1,13 +1,16 @@
 {
   "taskId": "golden:patch-conflict",
   "kind": "patch",
+  "inputFixture": "design-graphs/normal-2layer.json",
   "expected": {
+    "gate": "patch",
     "outcome": "fail",
     "jidoka": "stop",
     "errorCode": "patch-conflict",
     "atomic": true
   },
   "scenario": {
+    "description": "Two patches target the same base revision",
     "baseRevision": 0,
     "currentRevision": 1,
     "resultRevision": 1

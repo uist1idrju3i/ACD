@@ -15,7 +15,8 @@
     "schema:generate": "pnpm --filter @acd/schema schema:generate",
     "schema:check": "pnpm --filter @acd/schema schema:check",
     "typegen-sync": "pnpm --filter @acd/schema schema:check",
-    "golden": "vitest run fixtures packages",
+    "golden": "tsx scripts/golden-run.mts",
+    "golden:unit": "vitest run fixtures packages",
     "kicad:spike": "bash scripts/kicad-spike.sh",
     "kicad:library:verify": "tsx scripts/verify-kicad-library.mts",
     "phase1:smoke": "pnpm kicad:library:verify && pnpm --filter @acd/adapter-kicad build && tsx scripts/phase1-smoke.mts"
