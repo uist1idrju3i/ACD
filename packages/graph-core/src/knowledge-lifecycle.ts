@@ -2,6 +2,7 @@ import type { Entity } from "@acd/schema";
 import { GraphCoreError } from "./errors.js";
 import { createEvent, type EventEnvelope } from "./event-log.js";
 import type { FabFeedbackFinding, FabFeedbackReport } from "./fab-feedback.js";
+import { rulesForFabProfile, type ApplicabilityCondition } from "./fab-profile-rules.js";
 
 export type KnowledgeStatus = "candidate" | "reviewed" | "adopted" | "rejected" | "deprecated";
 
@@ -12,8 +13,9 @@ export type KnowledgeItem = Entity & {
   provenance: NonNullable<Entity["provenance"]>;
   content: string;
   status: KnowledgeStatus;
-  appliesWhen: string[];
-  excludesWhen: string[];
+  knowledgeId: string;
+  appliesWhen: ApplicabilityCondition[];
+  excludesWhen: ApplicabilityCondition[];
   previousRevisionId?: string;
   rejectionReason?: string;
   staleReason?: string;
@@ -29,6 +31,41 @@ export type KnowledgeApproval = {
   approvedBy: string;
   approvedAt: string;
   expiresAt: string;
+};
+
+export type KnowledgeApplicability = "pass" | "unknown" | "fail";
+export type ApplicabilityContext = Partial<
+  Record<ApplicabilityCondition["field"], string | string[]>
+> &
+  Record<string, string | string[] | undefined>;
+
+const evaluateCondition = (
+  conditionToEvaluate: ApplicabilityCondition,
+  context: ApplicabilityContext,
+): KnowledgeApplicability => {
+  const observed = context[conditionToEvaluate.field];
+  if (observed === undefined) return "unknown";
+  const values = Array.isArray(observed) ? observed : [observed];
+  const matches = values.includes(conditionToEvaluate.value);
+  return (conditionToEvaluate.operator === "equals" ? matches : !matches) ? "pass" : "fail";
+};
+
+export const evaluateKnowledgeApplicability = (
+  item: Pick<KnowledgeItem, "appliesWhen" | "excludesWhen">,
+  context: ApplicabilityContext,
+): KnowledgeApplicability => {
+  let unknown = false;
+  for (const conditionToEvaluate of item.appliesWhen) {
+    const result = evaluateCondition(conditionToEvaluate, context);
+    if (result === "fail") return "fail";
+    if (result === "unknown") unknown = true;
+  }
+  for (const conditionToEvaluate of item.excludesWhen) {
+    const result = evaluateCondition(conditionToEvaluate, context);
+    if (result === "pass") return "fail";
+    if (result === "unknown") unknown = true;
+  }
+  return unknown ? "unknown" : "pass";
 };
 
 const lifecycleOrder: Record<KnowledgeStatus, number> = {
@@ -60,10 +97,53 @@ const nextRevision = (item: KnowledgeItem, changes: Partial<KnowledgeItem>): Kno
   return {
     ...item,
     ...changes,
-    id: `${item.id}:r${revision}`,
+    id: revision === 0 ? item.knowledgeId : `${item.knowledgeId}:r${revision}`,
     revision,
     previousRevisionId: item.id,
   };
+};
+
+const condition = (
+  field: ApplicabilityCondition["field"],
+  operator: ApplicabilityCondition["operator"],
+  value: string,
+): ApplicabilityCondition => ({ field, operator, value });
+
+const conditionsForFinding = (
+  finding: FabFeedbackFinding,
+  report: FabFeedbackReport,
+): { appliesWhen: ApplicabilityCondition[]; excludesWhen: ApplicabilityCondition[] } => {
+  const profile = rulesForFabProfile(report.fabProfileId);
+  const rule = profile?.rules.find((candidate) => candidate.ruleId === finding.references.ruleId);
+  if (!rule || rule.appliesWhen.length === 0 || rule.excludesWhen.length === 0) {
+    throw new GraphCoreError(
+      "schema-invalid",
+      `fab profile rule lacks declared applicability conditions: ${finding.references.ruleId ?? finding.findingId}`,
+    );
+  }
+  const appliesWhen = [
+    condition("fabProfileId", "equals", report.fabProfileId),
+    ...(finding.references.partId
+      ? [condition("partId", "equals", finding.references.partId)]
+      : []),
+    ...(finding.references.footprintId
+      ? [condition("footprintId", "equals", finding.references.footprintId)]
+      : []),
+    ...(finding.references.ruleId
+      ? [condition("ruleId", "equals", finding.references.ruleId)]
+      : []),
+    condition("classification", "equals", finding.classification),
+    ...finding.reproductionConditions.map((value) =>
+      condition("reproductionCondition", "equals", value),
+    ),
+    ...rule.appliesWhen,
+  ];
+  const unique = (conditions: ApplicabilityCondition[]): ApplicabilityCondition[] =>
+    conditions.filter(
+      (candidate, index, all) =>
+        all.findIndex((entry) => JSON.stringify(entry) === JSON.stringify(candidate)) === index,
+    );
+  return { appliesWhen: unique(appliesWhen), excludesWhen: unique(rule.excludesWhen) };
 };
 
 export const createKnowledgeCandidate = (input: {
@@ -73,7 +153,7 @@ export const createKnowledgeCandidate = (input: {
   designRevision: string;
   derivationInputHash: string;
   derivationOutputHash: string;
-  excludesWhen: string[];
+  excludesWhen?: never;
   createdAt: string;
 }): KnowledgeItem => {
   if (input.finding.verdict !== "pass") {
@@ -83,16 +163,16 @@ export const createKnowledgeCandidate = (input: {
       "error",
     );
   }
-  if (input.excludesWhen.length === 0) {
-    throw new GraphCoreError(
-      "schema-invalid",
-      "knowledge candidate requires non-empty exclusion conditions",
-    );
+  const applicability = conditionsForFinding(input.finding, input.report);
+  if (applicability.appliesWhen.length === 0 || applicability.excludesWhen.length === 0) {
+    throw new GraphCoreError("schema-invalid", "knowledge candidate requires declared conditions");
   }
+  const knowledgeId = `knowledge:${input.report.reportId}:${input.finding.findingId}`;
   return {
-    id: `knowledge:${input.report.reportId}:${input.finding.findingId}`,
+    id: knowledgeId,
     type: "KnowledgeItem",
     revision: 0,
+    knowledgeId,
     scope: "project-local",
     sourceEventIds: [input.sourceEventId],
     provenance: [
@@ -110,12 +190,8 @@ export const createKnowledgeCandidate = (input: {
     ],
     content: `${input.finding.classification}: ${input.finding.originalText}`,
     status: "candidate",
-    appliesWhen: [
-      `fabProfileId=${input.report.fabProfileId}`,
-      `designRevision=${input.designRevision}`,
-      ...input.finding.reproductionConditions,
-    ],
-    excludesWhen: input.excludesWhen,
+    appliesWhen: applicability.appliesWhen,
+    excludesWhen: applicability.excludesWhen,
     confidence: input.finding.confidence,
     reproduced: false,
   };
@@ -137,7 +213,7 @@ export const transitionKnowledgeItem = (
     const approval = input.approval;
     if (
       !approval ||
-      approval.subject !== item.id ||
+      approval.subject !== item.knowledgeId ||
       approval.scope !== "library-wide" ||
       Date.parse(approval.expiresAt) <= Date.parse(input.now)
     ) {
@@ -187,33 +263,65 @@ export const reviseKnowledgeItem = (
   return nextRevision(item, changes);
 };
 
-const referencedIds = (value: unknown): string[] => {
-  if (typeof value === "string") return [value];
-  if (Array.isArray(value)) return value.flatMap(referencedIds);
-  if (value && typeof value === "object") {
-    return Object.values(value).flatMap(referencedIds);
+const declaredReferenceFields: Partial<Record<Entity["type"], string[]>> = {
+  KnowledgeItem: ["sourceEventIds", "changedDecisionIds", "previousRevisionId", "links"],
+  Rationale: ["evidenceLinks", "generatedTestItemIds", "links"],
+  VerificationResult: ["findingIds", "evidenceIds", "links"],
+  Approval: ["subject"],
+  Waiver: ["approvalId"],
+  Project: ["requirements", "revisionIds", "links"],
+};
+
+const explicitReferences = (entity: Entity): { ids: string[]; basis: string } => {
+  const fields = declaredReferenceFields[entity.type];
+  if (!fields) {
+    return {
+      ids: [],
+      basis: `${entity.type}:no-declared-reference-fields:widened`,
+    };
   }
-  return [];
+  const ids = fields.flatMap((field) => {
+    const value = entity[field];
+    if (typeof value === "string") return [value];
+    if (Array.isArray(value)) {
+      return value.flatMap((entry) =>
+        typeof entry === "string"
+          ? [entry]
+          : entry && typeof entry === "object" && "evidenceId" in entry
+            ? [String(entry.evidenceId)]
+            : [],
+      );
+    }
+    return [];
+  });
+  return { ids, basis: `${entity.type}:${fields.join(",")}` };
 };
 
 export const propagateKnowledgeDeprecation = (
   graph: { entities: Entity[] },
   knowledgeItemId: string,
   reason: string,
-): { graph: typeof graph; staleEntityIds: string[] } => {
-  const dependents = new Map<string, string[]>();
+): {
+  graph: typeof graph;
+  staleEntityIds: string[];
+  traversalBasis: string[];
+} => {
+  const dependents = new Map<string, { ids: string[]; basis: string }>();
+  const traversalBasis: string[] = [];
   for (const entity of graph.entities) {
-    dependents.set(
-      entity.id,
-      referencedIds(entity).filter((id) => id !== entity.id),
-    );
+    const references = explicitReferences(entity);
+    dependents.set(entity.id, references);
+    traversalBasis.push(`${entity.id}:${references.basis}`);
   }
   const affected = new Set<string>([knowledgeItemId]);
+  for (const [entityId, references] of dependents) {
+    if (references.basis.endsWith(":widened")) affected.add(entityId);
+  }
   let changed = true;
   while (changed) {
     changed = false;
     for (const [entityId, references] of dependents) {
-      if (!affected.has(entityId) && references.some((id) => affected.has(id))) {
+      if (!affected.has(entityId) && references.ids.some((id) => affected.has(id))) {
         affected.add(entityId);
         changed = true;
       }
@@ -231,7 +339,7 @@ export const propagateKnowledgeDeprecation = (
     }
     return entity;
   });
-  return { graph: { ...graph, entities: updated }, staleEntityIds };
+  return { graph: { ...graph, entities: updated }, staleEntityIds, traversalBasis };
 };
 
 export type KnowledgeCandidateCreatedPayload = {
