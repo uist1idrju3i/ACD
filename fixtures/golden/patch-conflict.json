@@ -1,0 +1,15 @@
+{
+  "taskId": "golden:patch-conflict",
+  "kind": "patch",
+  "expected": {
+    "outcome": "fail",
+    "jidoka": "stop",
+    "errorCode": "patch-conflict",
+    "atomic": true
+  },
+  "scenario": {
+    "baseRevision": 0,
+    "currentRevision": 1,
+    "resultRevision": 1
+  }
+}

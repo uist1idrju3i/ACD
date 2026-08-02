@@ -1,0 +1,15 @@
+{
+  "taskId": "golden:erc-fail",
+  "kind": "verification",
+  "inputFixture": "design-graphs/normal-2layer.json",
+  "expected": {
+    "gate": "erc",
+    "outcome": "fail",
+    "jidoka": "stop",
+    "errorCode": "verification-failed"
+  },
+  "scenario": {
+    "description": "Intentional schematic rule violation",
+    "mutation": "add-unconnected-input"
+  }
+}

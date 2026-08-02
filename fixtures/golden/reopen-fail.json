@@ -1,0 +1,13 @@
+{
+  "taskId": "golden:reopen-fail",
+  "kind": "tool",
+  "expected": {
+    "outcome": "fail",
+    "jidoka": "stop",
+    "errorCode": "reopen-failure"
+  },
+  "scenario": {
+    "artifact": "missing.kicad_pcb",
+    "retryable": false
+  }
+}
