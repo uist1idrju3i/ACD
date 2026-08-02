@@ -40,7 +40,7 @@ if [ "$drc_status" -ne 0 ] && ! grep -Eq 'Found [1-9][0-9]* (DRC violations|unco
   exit "$drc_status"
 fi
 if grep -Eq 'Found [1-9][0-9]* (DRC violations|unconnected items)' "$ROOT/$OUT/reports/drc.rpt"; then
-  echo "DRC report contains violations"
+  echo "::error file=scripts/kicad-spike.sh::DRC report contains: $(grep -E 'Found [1-9][0-9]* (DRC violations|unconnected items)' "$ROOT/$OUT/reports/drc.rpt" | tr '\n' ';')"
   exit 4
 fi
 current_step="Gerber export"
