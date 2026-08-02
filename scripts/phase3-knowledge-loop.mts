@@ -5,13 +5,9 @@ import type { Phase1Fixture } from "../packages/schema/src/generated/phase1-fixt
 import {
   createFabFeedbackReceivedEvent,
   createKnowledgeAppliedEvent,
-  createKnowledgeCandidate,
-  createKnowledgeCandidateCreatedEvent,
-  createKnowledgeTransitionedEvent,
   createTargetDesignKnowledgeContext,
   evaluateKnowledgeApplications,
   recordKnowledgeApplications,
-  transitionKnowledgeItem,
   InMemoryEventLog,
   type FabFeedbackReport,
   rulesForFabProfile,
@@ -53,6 +49,26 @@ try {
   );
 }
 const patch = patchArtifact.patch;
+let knowledgeArtifact: {
+  knowledgeStates: Array<{ adopted: Parameters<typeof evaluateKnowledgeApplications>[0][number] }>;
+};
+try {
+  knowledgeArtifact = JSON.parse(
+    await readFile(join(artifactRoot, "knowledge.json"), "utf8"),
+  ) as typeof knowledgeArtifact;
+} catch (error) {
+  throw new Error(
+    `verification-failed: missing Phase 1 knowledge.json; run pnpm phase1:golden first (${error instanceof Error ? error.message : String(error)})`,
+  );
+}
+const adopted = knowledgeArtifact.knowledgeStates
+  .map((state) => state.adopted)
+  .find((item) => item.knowledgeId === patch.sourceKnowledgeId);
+if (!adopted) {
+  throw new Error(
+    `verification-failed: Phase 1 adopted KnowledgeItem not found for library patch source ${patch.sourceKnowledgeId}`,
+  );
+}
 const targetDesignRevision = fixture.requirement.provenance.version;
 const hash = (value: string): string =>
   `sha256:${createHash("sha256").update(value).digest("hex")}`;
@@ -251,23 +267,6 @@ const sourceEvent = createFabFeedbackReceivedEvent({
   report: controlReport,
   intake: controlIntake,
 });
-const candidate = createKnowledgeCandidate({
-  finding: controlIntake.findings[0]!,
-  report: controlReport,
-  sourceEventId: sourceEvent.eventId,
-  designRevision: "prototype-2",
-  derivationInputHash: controlIntake.evidence.value.derivationInputHash,
-  derivationOutputHash: controlIntake.evidence.value.derivationOutputHash,
-  createdAt: "2026-01-03T00:00:00.000Z",
-});
-const reviewed = transitionKnowledgeItem(candidate, {
-  status: "reviewed",
-  now: "2026-01-03T00:00:00.000Z",
-});
-const adopted = transitionKnowledgeItem(reviewed, {
-  status: "adopted",
-  now: "2026-01-03T00:00:00.000Z",
-});
 if (patch.sourceKnowledgeId !== adopted.knowledgeId) {
   throw new Error(
     "verification-failed: library patch source knowledge does not match adopted item",
@@ -312,35 +311,6 @@ if (applied.applicableKnowledgeIds.length !== 1 || !applied.decisions[0]?.applie
 const projectionArtifactId = "artifact:phase1-golden:prototype-2-knowledge-enabled";
 const events = [
   sourceEvent,
-  createKnowledgeCandidateCreatedEvent({
-    eventId: "event:knowledge:candidate:prototype-2:P2-DFM-001",
-    occurredAt: "2026-01-03T00:00:00.000Z",
-    actor: "fixture:phase3-knowledge-loop",
-    projectId: fixture.fixtureId,
-    baseRevision: 0,
-    resultRevision: 0,
-    knowledgeItem: candidate,
-  }),
-  createKnowledgeTransitionedEvent({
-    eventId: "event:knowledge:reviewed:prototype-2:P2-DFM-001",
-    occurredAt: "2026-01-03T00:00:00.000Z",
-    actor: "fixture:phase3-knowledge-loop",
-    projectId: fixture.fixtureId,
-    baseRevision: 0,
-    resultRevision: 0,
-    knowledgeItem: reviewed,
-    previousStatus: "candidate",
-  }),
-  createKnowledgeTransitionedEvent({
-    eventId: "event:knowledge:adopted:prototype-2:P2-DFM-001",
-    occurredAt: "2026-01-03T00:00:00.000Z",
-    actor: "fixture:phase3-knowledge-loop",
-    projectId: fixture.fixtureId,
-    baseRevision: 0,
-    resultRevision: 0,
-    knowledgeItem: adopted,
-    previousStatus: "reviewed",
-  }),
   createKnowledgeAppliedEvent({
     eventId: "event:knowledge:applied:prototype-2:P2-DFM-001",
     occurredAt: "2026-01-03T00:00:00.000Z",
