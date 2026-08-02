@@ -505,9 +505,11 @@ const renderGoldenSchematic = (fixture: Phase1Fixture): string => {
     });
   });
   const flagNets = ["+5V", "GND"];
+  const powerRegulator = fixture.parts.find((part) => part.reference === "U3")?.id;
+  const controller = fixture.parts.find((part) => part.reference === "U1")?.id;
   const flagPins: Array<[string, string]> = [
-    ["part:u3", "3"],
-    ["part:u1", "GND"],
+    [powerRegulator ?? "", "3"],
+    [controller ?? "", "GND"],
   ];
   const flagCoordinates = flagPins.map((entry, index) => {
     if (!entry) return [schematicGrid(70 + index * 35), schematicGrid(35)] as [number, number];

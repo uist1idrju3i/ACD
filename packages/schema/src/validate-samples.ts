@@ -16,6 +16,7 @@ import {
   phase1FixtureSchemaPath,
   phase1GatesDocPath,
   phase1GoldenFixturePath,
+  phase1Prototype2FixturePath,
   phase1SmokeFixturePath,
   physicalEvidenceSamplePath,
   physicalEvidenceSchemaPath,
@@ -143,6 +144,7 @@ const phase1FixtureValidator = await loadValidator(phase1FixtureSchemaPath);
 for (const [fixturePath, label] of [
   [phase1SmokeFixturePath, "fixtures/phase1/smoke.json"],
   [phase1GoldenFixturePath, "fixtures/phase1/golden-esp32.json"],
+  [phase1Prototype2FixturePath, "fixtures/phase1/prototype-2.json"],
 ] as const) {
   const fixture = JSON.parse(await readFile(fixturePath, "utf8")) as unknown;
   if (!phase1FixtureValidator(fixture)) {
