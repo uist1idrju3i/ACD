@@ -16,29 +16,29 @@
 
 ## エンティティ
 
-| 型 | 役割 | 主なリンク |
-|---|---|---|
-| `Project` | 設計ランと目的の入れ物 | requirements, layouts, packages, revisions |
-| `Requirement` | ユーザーの目的、性能、コスト、納期 | constraints, evidence, test items |
-| `Constraint` | 電気、機械、製造、調達、予算、ライセンス条件 | source, severity, verification |
-| `FunctionalBlock` | 電源、MCU、センサーなどの機能分解 | components, nets, rationale |
-| `Component` | 設計上の論理部品 | part, pins, footprint, rationale |
-| `Part` | MPN、代替、データシート、在庫を持つ実部品 | datasheet evidence, sourcing evidence |
-| `Footprint` | パッド、穴、courtyard、3Dモデル、製造制約 | part, fab rules, revisions |
-| `Net` | ピン間の電気接続とネットクラス | pins, constraints, verification |
-| `Pin` | 部品の物理・論理ピン | component, net, datasheet page |
-| `Layout` | 配置、配線、ゾーン、層、ルール | board stackup, DRC results |
-| `BoardStackup` | 層構成、材料、厚さ、銅厚、インピーダンス | fab profile, SI evidence |
-| `ManufacturingPackage` | Gerber、drill、IPC-2581、BOM、pick-and-place | layout revision, output checks |
-| `FirmwarePackage` | ピン割り当て、ペリフェラル設定、HALスタブ、ビルド情報 | components, test items |
-| `TestItem` | 仮想・実機の試験項目と合否 | rationale, measurement evidence |
-| `Rationale` | 判断理由、代替案、仮定、リスク | evidence, test items |
-| `Evidence` | データシート、fabルール、シミュレーション、測定 | evidence kind, observations, provenance |
-| `KnowledgeItem` | 再利用可能な標準、修正、経験則 | source events, scope, confidentiality, content |
-| `TaskLedgerEntry` | 実行状態、依存、予算、停止、完了条件 | graph revision, checkpoint, retry budget |
-| `VerificationResult` | 検証ゲートの入力、結果、所見 | gate, status, tool version, evidence |
-| `Approval` | 人間または認可主体による範囲付き承認 | approval ID, scope, expiry |
-| `Waiver` | 検証警告・免除の理由と期限 | gate, risk, approval ID, expiry |
+| 型                     | 役割                                                  | 主なリンク                                     |
+| ---------------------- | ----------------------------------------------------- | ---------------------------------------------- |
+| `Project`              | 設計ランと目的の入れ物                                | requirements, layouts, packages, revisions     |
+| `Requirement`          | ユーザーの目的、性能、コスト、納期                    | constraints, evidence, test items              |
+| `Constraint`           | 電気、機械、製造、調達、予算、ライセンス条件          | source, severity, verification                 |
+| `FunctionalBlock`      | 電源、MCU、センサーなどの機能分解                     | components, nets, rationale                    |
+| `Component`            | 設計上の論理部品                                      | part, pins, footprint, rationale               |
+| `Part`                 | MPN、代替、データシート、在庫を持つ実部品             | datasheet evidence, sourcing evidence          |
+| `Footprint`            | パッド、穴、courtyard、3Dモデル、製造制約             | part, fab rules, revisions                     |
+| `Net`                  | ピン間の電気接続とネットクラス                        | pins, constraints, verification                |
+| `Pin`                  | 部品の物理・論理ピン                                  | component, net, datasheet page                 |
+| `Layout`               | 配置、配線、ゾーン、層、ルール                        | board stackup, DRC results                     |
+| `BoardStackup`         | 層構成、材料、厚さ、銅厚、インピーダンス              | fab profile, SI evidence                       |
+| `ManufacturingPackage` | Gerber、drill、IPC-2581、BOM、pick-and-place          | layout revision, output checks                 |
+| `FirmwarePackage`      | ピン割り当て、ペリフェラル設定、HALスタブ、ビルド情報 | components, test items                         |
+| `TestItem`             | 仮想・実機の試験項目と合否                            | rationale, measurement evidence                |
+| `Rationale`            | 判断理由、代替案、仮定、リスク                        | evidence, test items                           |
+| `Evidence`             | データシート、fabルール、シミュレーション、測定       | evidence kind, observations, provenance        |
+| `KnowledgeItem`        | 再利用可能な標準、修正、経験則                        | source events, scope, confidentiality, content |
+| `TaskLedgerEntry`      | 実行状態、依存、予算、停止、完了条件                  | graph revision, checkpoint, retry budget       |
+| `VerificationResult`   | 検証ゲートの入力、結果、所見                          | gate, status, tool version, evidence           |
+| `Approval`             | 人間または認可主体による範囲付き承認                  | approval ID, scope, expiry                     |
+| `Waiver`               | 検証警告・免除の理由と期限                            | gate, risk, approval ID, expiry                |
 
 ## 設計根拠
 

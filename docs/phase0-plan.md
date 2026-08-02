@@ -84,12 +84,12 @@ Phase 0は、次の全てを同じCI環境で再現できた時点で完了と�
 
 ## 技術spike
 
-| Spike | 成功基準 | 失敗時の扱い |
-|---|---|---|
-| `kicad-cli`再現性 | 固定KiCad 10.x環境で再オープン、ERC/DRC、Gerber/drill、hashが再現 | CI基準または投影範囲を見直す |
-| ngspice WASM | 同一input/model/tool hashでDC/AC/transient、timeout/cancel、結果出力が再現 | Phase 0ゲートには含めず、workerまたは外部Evidenceへ延期 |
-| freerouting DSN/SES | 固定fixtureでCLI実行、SES取込、DRC再実行、失敗分類が再現 | adapterを後続Phaseへ延期 |
-| ブラウザstorage | quota、snapshot復旧、export/import、中断復旧を確認 | Phase 0はJSON Repositoryのまま継続 |
+| Spike               | 成功基準                                                                   | 失敗時の扱い                                            |
+| ------------------- | -------------------------------------------------------------------------- | ------------------------------------------------------- |
+| `kicad-cli`再現性   | 固定KiCad 10.x環境で再オープン、ERC/DRC、Gerber/drill、hashが再現          | CI基準または投影範囲を見直す                            |
+| ngspice WASM        | 同一input/model/tool hashでDC/AC/transient、timeout/cancel、結果出力が再現 | Phase 0ゲートには含めず、workerまたは外部Evidenceへ延期 |
+| freerouting DSN/SES | 固定fixtureでCLI実行、SES取込、DRC再実行、失敗分類が再現                   | adapterを後続Phaseへ延期                                |
+| ブラウザstorage     | quota、snapshot復旧、export/import、中断復旧を確認                         | Phase 0はJSON Repositoryのまま継続                      |
 
 ## 完了レビュー
 
