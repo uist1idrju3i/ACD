@@ -998,7 +998,7 @@ try {
           decision.lifecycleStatus === "adopted" &&
           (decision.status === "pass" || decision.status === "unknown") &&
           !decision.applicationExemption,
-        )
+      )
       .map((decision) => ({
         knowledgeId: decision.knowledgeId,
         ...(decision.knowledgeId === adoptedKnowledgeForLibraryPatch.knowledgeId
