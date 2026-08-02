@@ -1,6 +1,15 @@
 # Phase 1ゲートと製造準備契約
 
-**ステータス：Draft**
+**ステータス：Draft（smoke fixtureのGate 1〜11を実装済み。goldenは将来）**
+
+## 実装済みsmoke vertical slice
+
+`pnpm phase1:smoke`は`fixtures/phase1/smoke.json`を入力としてGate 1〜11を
+順序実行します。KiCad公式symbolを埋め込んだ回路図、fixtureからのcanonical
+netlist、IPC-D-356との照合、ERC、2層の決定論的heuristic routing、Gerber／drill、
+BOM、manifest、pre-order checklistを`artifacts/phase1-smoke/`へ出力します。
+ESP32級golden fixture、実部品library geometryの完全な置換、自動発注、実機Evidence
+は本PRの対象外です。
 
 ## 目的と範囲
 
