@@ -482,6 +482,9 @@ try {
       throw error;
     }
     knowledgeStates.push({ candidate, reviewed, adopted });
+    if (finding.references.ruleId === "mask-sliver-min") {
+      adoptedKnowledgeForLibraryPatch = adopted;
+    }
     await knowledgeEventLog.append(
       createKnowledgeCandidateCreatedEvent({
         eventId: `event:knowledge:candidate:prototype-1:${finding.findingId}`,
@@ -538,89 +541,6 @@ try {
       knowledgeHash: hash(knowledgeText),
       eventCount: knowledgeEvents.length,
     },
-    artifact: "knowledge.json",
-  });
-
-  enter(20);
-  const passingFindings = fabFeedback.findings
-    .filter((finding) => finding.verdict === "pass")
-    .sort((left, right) => left.findingId.localeCompare(right.findingId));
-  if (passingFindings.length === 0) {
-    throw new Error("verification-failed: fab feedback produced no passing findings");
-  }
-  const knowledgeStates = [];
-  for (const finding of passingFindings) {
-    const candidate = createKnowledgeCandidate({
-      finding,
-      report: fabFeedbackReport,
-      sourceEventId: "event:fab-feedback:prototype-1-jlcpcb-001",
-      designRevision: fabFeedbackReport.target.designRevision,
-      derivationInputHash: fabFeedback.evidence.value.derivationInputHash,
-      derivationOutputHash: fabFeedback.evidence.value.derivationOutputHash,
-      createdAt: "2026-01-01T00:00:00.000Z",
-    });
-    const reviewed = transitionKnowledgeItem(candidate, {
-      status: "reviewed",
-      now: "2026-01-01T00:00:00.000Z",
-    });
-    const adopted = transitionKnowledgeItem(reviewed, {
-      status: "adopted",
-      now: "2026-01-01T00:00:00.000Z",
-    });
-    knowledgeStates.push({ candidate, reviewed, adopted });
-    if (finding.references.ruleId === "mask-sliver-min") {
-      adoptedKnowledgeForLibraryPatch = adopted;
-    }
-    await fabFeedbackEventLog.append(
-      createKnowledgeCandidateCreatedEvent({
-        eventId: `event:knowledge:candidate:prototype-1:${finding.findingId}`,
-        occurredAt: "2026-01-01T00:00:00.000Z",
-        actor: "fixture:fab-report-prototype-1-jlcpcb",
-        projectId: fixture.fixtureId,
-        baseRevision: 0,
-        resultRevision: 0,
-        knowledgeItem: candidate,
-      }),
-    );
-    await fabFeedbackEventLog.append(
-      createKnowledgeTransitionedEvent({
-        eventId: `event:knowledge:reviewed:prototype-1:${finding.findingId}`,
-        occurredAt: "2026-01-01T00:00:00.000Z",
-        actor: "fixture:fab-report-prototype-1-jlcpcb",
-        projectId: fixture.fixtureId,
-        baseRevision: 0,
-        resultRevision: 0,
-        knowledgeItem: reviewed,
-        previousStatus: "candidate",
-      }),
-    );
-    await fabFeedbackEventLog.append(
-      createKnowledgeTransitionedEvent({
-        eventId: `event:knowledge:adopted:prototype-1:${finding.findingId}`,
-        occurredAt: "2026-01-01T00:00:00.000Z",
-        actor: "fixture:fab-report-prototype-1-jlcpcb",
-        projectId: fixture.fixtureId,
-        baseRevision: 0,
-        resultRevision: 0,
-        knowledgeItem: adopted,
-        previousStatus: "reviewed",
-      }),
-    );
-  }
-  await writeFile(
-    join(artifactRoot, "knowledge.json"),
-    `${JSON.stringify(
-      {
-        knowledgeStates,
-        events: await fabFeedbackEventLog.readAll(),
-      },
-      null,
-      2,
-    )}\n`,
-  );
-  pass(20, {
-    candidateCount: knowledgeStates.length,
-    adoptedIds: knowledgeStates.map((state) => state.adopted.id),
     artifact: "knowledge.json",
   });
 
