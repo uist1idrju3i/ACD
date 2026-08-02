@@ -165,7 +165,30 @@ export const materializeLibraryPatchInBoardSource = (
       output += source.slice(cursor, start);
       if (block.startsWith(`(footprint "${footprintId}"`)) {
         const marker = `(property "ACD_LibraryOverlay" "pad-mask-clearance=${operation.requiredValueMm}" (at 0 0 0) (layer "F.Fab") hide (effects (font (size 1 1) (thickness 0.15))))`;
-        output += `${block.slice(0, -1)}\n\t${marker}\n)`;
+        let patchedBlock = block;
+        let padCursor = 0;
+        while (true) {
+          const padStart = patchedBlock.indexOf('(pad "', padCursor);
+          if (padStart < 0) break;
+          const padBlock = blockAt(patchedBlock, padStart);
+          const padNumber = padBlock.match(/^\(pad "([^"]+)"/)?.[1];
+          if (!operation.padNumber || operation.padNumber === padNumber) {
+            const replacement = /\(solder_mask_margin\s+[-\d.]+\s*\)/.test(padBlock)
+              ? padBlock.replace(
+                  /\(solder_mask_margin\s+[-\d.]+\s*\)/,
+                  `(solder_mask_margin ${operation.requiredValueMm})`,
+                )
+              : `${padBlock.slice(0, -1)}\n\t\t(solder_mask_margin ${operation.requiredValueMm})\n\t)`;
+            patchedBlock =
+              patchedBlock.slice(0, padStart) +
+              replacement +
+              patchedBlock.slice(padStart + padBlock.length);
+            padCursor = padStart + replacement.length;
+          } else {
+            padCursor = padStart + padBlock.length;
+          }
+        }
+        output += `${patchedBlock.slice(0, -1)}\n\t${marker}\n)`;
       } else {
         output += block;
       }

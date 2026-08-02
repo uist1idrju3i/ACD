@@ -8,6 +8,7 @@ import {
   createLibraryPatchCandidate,
   materializeLibraryPatchInBoardSource,
   placeFixture,
+  parseFootprintSource,
   projectToKicad,
   verifyLibraryPatchGeometry,
 } from "../packages/adapters/kicad/src/index.js";
@@ -984,8 +985,20 @@ try {
   if (patchedBoardContent === unpatchedBoardContent) {
     throw new Error("verification-failed: library patch did not change the projected board");
   }
-  if (!patchedBoardContent.includes('ACD_LibraryOverlay" "pad-mask-clearance=0.1')) {
+  if (
+    !patchedBoardContent.includes(
+      `ACD_LibraryOverlay" "pad-mask-clearance=${libraryPatch.operations[0]?.requiredValueMm}`,
+    )
+  ) {
     throw new Error("verification-failed: projected board lacks the library correction");
+  }
+  const patchedPads = parseFootprintSource(adoptedLibraryPatch.footprintId, patchedBoardContent)
+    .filter((pad) => pad.solderMaskMargin !== undefined);
+  if (
+    patchedPads.length === 0 ||
+    patchedPads.some((pad) => pad.solderMaskMargin !== adoptedLibraryPatch.operations[0]?.requiredValueMm)
+  ) {
+    throw new Error("verification-failed: patched board pads lack declared solder mask margin");
   }
   const patchedBoardHash = hash(patchedBoardContent);
   await writeFile(boardPath, patchedBoardContent, "utf8");
