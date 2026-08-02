@@ -47,6 +47,7 @@ export interface ACDLibraryOverlayPatch {
     reopen: "passed" | "failed" | "blocked";
     drc: "passed" | "failed" | "blocked";
     inputHash: string;
+    boardInputHash?: string;
     failureEvidence?: string;
   };
 }

@@ -6,6 +6,7 @@ import {
   compareNetlists,
   adoptVerifiedLibraryPatch,
   createLibraryPatchCandidate,
+  materializeLibraryPatchInBoardSource,
   placeFixture,
   projectToKicad,
   verifyLibraryPatchGeometry,
@@ -970,8 +971,26 @@ try {
   await copyFile(join(projectRoot, "routed.kicad_pcb"), join(patchProjectRoot, "routed.kicad_pcb"));
   await copyFile(join(projectRoot, "routed.kicad_pro"), join(patchProjectRoot, "routed.kicad_pro"));
   await copyFile(join(projectRoot, "routed.kicad_prl"), join(patchProjectRoot, "routed.kicad_prl"));
-  let reopen: "passed" | "failed" | "blocked" = "passed";
-  let drc: "passed" | "failed" | "blocked" = "passed";
+  await copyFile(join(projectRoot, "routed.kicad_pro"), join(patchProjectRoot, "design.kicad_pro"));
+  await copyFile(join(projectRoot, "routed.kicad_prl"), join(patchProjectRoot, "design.kicad_prl"));
+  const boardPath = join(patchProjectRoot, "design.kicad_pcb");
+  const unpatchedBoardContent = await readFile(boardPath, "utf8");
+  const unpatchedBoardHash = hash(unpatchedBoardContent);
+  const patchedBoardContent = materializeLibraryPatchInBoardSource(
+    unpatchedBoardContent,
+    libraryPatch.footprintId,
+    libraryPatch.operations,
+  );
+  if (patchedBoardContent === unpatchedBoardContent) {
+    throw new Error("verification-failed: library patch did not change the projected board");
+  }
+  if (!patchedBoardContent.includes('ACD_LibraryOverlay" "pad-mask-clearance=0.1')) {
+    throw new Error("verification-failed: projected board lacks the library correction");
+  }
+  const patchedBoardHash = hash(patchedBoardContent);
+  await writeFile(boardPath, patchedBoardContent, "utf8");
+  let reopen: "passed" | "failed" | "blocked" = "blocked";
+  let drc: "passed" | "failed" | "blocked" = "blocked";
   let failureEvidence: string | undefined;
   try {
     docker([
@@ -990,8 +1009,9 @@ try {
       "ipcd356",
       "-o",
       "/work/library-patch-project/design.d356",
-      "/work/library-patch-project/routed.kicad_pcb",
+      "/work/library-patch-project/design.kicad_pcb",
     ]);
+    reopen = "passed";
   } catch (error) {
     reopen = "failed";
     failureEvidence = error instanceof Error ? error.message : String(error);
@@ -1003,7 +1023,7 @@ try {
       "drc",
       "--output",
       "/work/library-patch-project/reports-drc.rpt",
-      "/work/library-patch-project/routed.kicad_pcb",
+      "/work/library-patch-project/design.kicad_pcb",
     ]);
   } catch {
     // Parse the report below; KiCad returns non-zero when it finds violations.
@@ -1024,9 +1044,12 @@ try {
   ) {
     drc = "failed";
     failureEvidence ??= `patched projection DRC contains findings: ${patchDrcMatch[0]}`;
+  } else {
+    drc = "passed";
   }
   const verification = {
     ...geometryVerification,
+    boardInputHash: patchedBoardHash,
     reopen,
     drc,
     ...(failureEvidence ? { failureEvidence } : {}),
@@ -1047,6 +1070,9 @@ try {
           reopen: verification.reopen,
           drc: verification.drc,
           resolvedRevision: adoptedLibraryPatch.libraryRevision,
+          unpatchedBoardHash,
+          patchedBoardHash,
+          patchedBoardInputHash: patchedBoardHash,
         },
       },
       null,

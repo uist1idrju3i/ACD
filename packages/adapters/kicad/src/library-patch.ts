@@ -15,6 +15,7 @@ export type LibraryPatchOperation = {
   kind: "set-pad-mask-clearance";
   target: string;
   requiredValueMm: number;
+  padNumber?: string;
 };
 
 export type LibraryOverlayPatch = {
@@ -41,6 +42,7 @@ export type LibraryOverlayPatch = {
     reopen: "passed" | "failed" | "blocked";
     drc: "passed" | "failed" | "blocked";
     inputHash: string;
+    boardInputHash?: string;
     failureEvidence?: string;
   };
 };
@@ -122,11 +124,15 @@ export const materializeLibraryPatchContent = (
         break;
       }
       const block = blockAt(source, start);
+      const padNumber = block.trimStart().match(/^\(pad "([^"]+)"/)?.[1];
       output += source.slice(cursor, start);
       if (/\(solder_mask_margin\s/.test(block)) {
         throw new GraphCoreError("schema-invalid", "official footprint already has mask margin");
       }
-      output += `${block.slice(0, -1)}\n\t\t(solder_mask_margin ${operation.requiredValueMm})\n\t)`;
+      output +=
+        !operation.padNumber || operation.padNumber === padNumber
+          ? `${block.slice(0, -1)}\n\t\t(solder_mask_margin ${operation.requiredValueMm})\n\t)`
+          : block;
       cursor = start + block.length;
     }
     source = output;
@@ -149,6 +155,7 @@ export const materializeLibraryPatchInBoardSource = (
     }
     let cursor = 0;
     let output = "";
+    let applied = false;
     while (true) {
       const start = source.indexOf('(footprint "', cursor);
       if (start < 0) {
@@ -157,23 +164,10 @@ export const materializeLibraryPatchInBoardSource = (
       }
       const block = blockAt(source, start);
       output += source.slice(cursor, start);
-      if (block.startsWith(`(footprint "${footprintId}"`)) {
-        let padCursor = 0;
-        let patched = "";
-        while (true) {
-          const padStart = block.indexOf('(pad "', padCursor);
-          if (padStart < 0) {
-            patched += block.slice(padCursor);
-            break;
-          }
-          const padBlock = blockAt(block, padStart);
-          patched += block.slice(padCursor, padStart);
-          patched += /\(solder_mask_margin\s/.test(padBlock)
-            ? padBlock
-            : `${padBlock.slice(0, -1)}\n    (solder_mask_margin ${operation.requiredValueMm})\n  )`;
-          padCursor = padStart + padBlock.length;
-        }
-        output += patched;
+      if (!applied && block.startsWith(`(footprint "${footprintId}"`)) {
+        applied = true;
+        const marker = `(property "ACD_LibraryOverlay" "pad-mask-clearance=${operation.requiredValueMm}" (at 0 0 0) (layer "F.Fab") hide (effects (font (size 1 1) (thickness 0.15))))`;
+        output += `${block.slice(0, -1)}\n\t${marker}\n)`;
       } else {
         output += block;
       }
@@ -224,6 +218,7 @@ export const createLibraryPatchCandidate = (knowledgeItem: KnowledgeItem): Libra
     kind: "set-pad-mask-clearance",
     target: rule.correction!.target,
     requiredValueMm: rule.correction!.requiredValueMm,
+    ...(rule.correction!.padNumber ? { padNumber: rule.correction!.padNumber } : {}),
   };
   const content = materializeLibraryPatchContent(footprintId, [operation]);
   const manifestHash = snapshotManifestHash();
@@ -301,8 +296,14 @@ export const verifyLibraryPatchGeometry = (
       ) {
         throw new Error("mask clearance exceeds pad geometry");
       }
+      const targetPads = operation.padNumber
+        ? pads.filter((pad) => pad.number === operation.padNumber)
+        : pads;
       if (
-        pads.some((pad) => pad.type === "smd" && pad.solderMaskMargin !== operation.requiredValueMm)
+        targetPads.length === 0 ||
+        targetPads.some(
+          (pad) => pad.type === "smd" && pad.solderMaskMargin !== operation.requiredValueMm,
+        )
       ) {
         throw new Error("materialized correction is missing from a pad");
       }
