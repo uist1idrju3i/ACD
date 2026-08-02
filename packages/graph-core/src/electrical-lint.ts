@@ -282,13 +282,20 @@ const decouplingPerSupplyPin = (context: Context): LintFinding[] => {
 type LedBranch = {
   resistanceOhm?: number;
   undeclaredResistors: string[];
+  /** Nets where the walk cannot tell a series element from a shunt. */
+  ambiguousNets: string[];
   driveVoltageV?: number;
   reachedGround: boolean;
 };
 
 /** Walks the two-terminal chain around an LED to collect series resistance and the drive node. */
 const traceLedBranch = (context: Context, led: Part): LedBranch => {
-  const branch: LedBranch = { resistanceOhm: 0, undeclaredResistors: [], reachedGround: false };
+  const branch: LedBranch = {
+    resistanceOhm: 0,
+    undeclaredResistors: [],
+    ambiguousNets: [],
+    reachedGround: false,
+  };
   const visited = new Set<string>([led.id]);
   for (const start of netsOfPart(context, led.id)) {
     let net: Net | undefined = start;
@@ -312,18 +319,29 @@ const traceLedBranch = (context: Context, led: Part): LedBranch => {
         if (supply?.nominalVoltageV !== undefined) branch.driveVoltageV = supply.nominalVoltageV;
         break;
       }
-      const next: Net | undefined = net.pins
-        .map((pin) => context.parts.get(pin.partId))
-        .filter((part): part is Part => part !== undefined && part.kind === "resistor")
-        .filter((part) => !visited.has(part.id))
-        .flatMap((resistor) => {
-          visited.add(resistor.id);
-          const value = resistor.parameters?.resistanceOhm;
-          if (value === undefined) branch.undeclaredResistors.push(resistor.reference);
-          else if (branch.resistanceOhm !== undefined) branch.resistanceOhm += value;
-          return otherNets(context, resistor.id, net as Net);
-        })[0];
-      net = next;
+      const current: Net = net;
+      const candidates = [
+        ...new Map(
+          current.pins
+            .map((pin) => context.parts.get(pin.partId))
+            .filter((part): part is Part => part !== undefined && part.kind === "resistor")
+            .filter((part) => !visited.has(part.id))
+            .map((part) => [part.id, part] as const),
+        ).values(),
+      ];
+      // Only a node with a single unvisited resistor is a series node. A fan-out could be a
+      // shunt, so the branch stays unknown instead of summing unrelated resistance.
+      if (candidates.length > 1) {
+        branch.ambiguousNets.push(current.id);
+        break;
+      }
+      const resistor = candidates[0];
+      if (!resistor) break;
+      visited.add(resistor.id);
+      const value = resistor.parameters?.resistanceOhm;
+      if (value === undefined) branch.undeclaredResistors.push(resistor.reference);
+      else if (branch.resistanceOhm !== undefined) branch.resistanceOhm += value;
+      net = otherNets(context, resistor.id, current)[0];
     }
   }
   return branch;
@@ -344,6 +362,7 @@ const ledSeriesCurrent = (context: Context): LintFinding[] =>
         maxMa === undefined ||
         branch.driveVoltageV === undefined ||
         branch.undeclaredResistors.length > 0 ||
+        branch.ambiguousNets.length > 0 ||
         branch.resistanceOhm === undefined
       ) {
         return {
@@ -352,9 +371,11 @@ const ledSeriesCurrent = (context: Context): LintFinding[] =>
           entity: led.id,
           expected: "declared LED forward voltage, current window, drive voltage and resistance",
           observed:
-            branch.undeclaredResistors.length > 0
-              ? `resistance of ${branch.undeclaredResistors.join(", ")} is undeclared`
-              : "LED parameters or drive voltage are undeclared",
+            branch.ambiguousNets.length > 0
+              ? `the series path branches at ${branch.ambiguousNets.join(", ")}`
+              : branch.undeclaredResistors.length > 0
+                ? `resistance of ${branch.undeclaredResistors.join(", ")} is undeclared`
+                : "LED parameters or drive voltage are undeclared",
           basis,
         };
       }
@@ -482,7 +503,18 @@ const capacitorVoltageDerating = (context: Context): LintFinding[] => {
     const voltages = netsOfPart(context, capacitor.id)
       .map((net) => net.nominalVoltageV)
       .filter((voltage): voltage is number => voltage !== undefined);
-    if (voltages.length === 0) continue;
+    if (voltages.length === 0) {
+      // No net around the capacitor declares a voltage, so the rating cannot be judged.
+      findings.push({
+        ruleId: "capacitor-voltage-derating",
+        status: "unknown",
+        entity: capacitor.id,
+        expected: `rated voltage >= ${context.profile.capacitorVoltageDerating} x the net nominal voltage`,
+        observed: "no net attached to the capacitor declares nominalVoltageV",
+        basis: "capacitor datasheet parameters and net nominal voltage",
+      });
+      continue;
+    }
     const netVoltageV = Math.max(...voltages);
     const required = netVoltageV * context.profile.capacitorVoltageDerating;
     const rated = capacitor.parameters?.ratedVoltageV;
