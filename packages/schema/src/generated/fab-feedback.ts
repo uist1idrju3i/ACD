@@ -21,6 +21,9 @@ export interface ACDFabFeedbackReport {
   rawReport: {
     contentType: string;
     content: string;
+    /**
+     * SHA-256 of the report body in content.
+     */
     contentHash: string;
   };
   /**
