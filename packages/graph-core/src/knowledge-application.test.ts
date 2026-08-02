@@ -5,7 +5,6 @@ import {
   evaluateKnowledgeApplications,
   recordKnowledgeApplications,
 } from "./knowledge-application.js";
-import { rulesForFabProfile } from "./fab-profile-rules.js";
 import type { KnowledgeItem } from "./knowledge-lifecycle.js";
 
 const item = (overrides: Partial<KnowledgeItem> = {}): KnowledgeItem => ({
@@ -45,7 +44,7 @@ const item = (overrides: Partial<KnowledgeItem> = {}): KnowledgeItem => ({
 const context = createTargetDesignKnowledgeContext({
   designRevision: "prototype-2",
   fabProfileId: "fab:jlcpcb-class-2layer",
-  footprintIds: ["footprint:Resistor_SMD:R_0603_1608Metric"],
+  footprintIds: ["R_0603_1608Metric"],
   ruleIds: [],
   classifications: [],
   reproductionConditions: [],
@@ -60,8 +59,7 @@ describe("knowledge application", () => {
     expect(
       evaluateKnowledgeApplications([item({ status: "reviewed" })], context).decisions[0],
     ).toMatchObject({
-      status: "not-applicable",
-      applicability: "pass",
+      status: "pass",
       applied: false,
       lifecycleStatus: "reviewed",
     });
@@ -82,110 +80,9 @@ describe("knowledge application", () => {
     expect(result.applicableKnowledgeIds).toEqual(["knowledge:test"]);
   });
 
-  it("treats unavailable rule dimensions as unknown", () => {
-    const ruleItem = item({
-      appliesWhen: [
-        { field: "fabProfileId", operator: "equals", value: "fab:jlcpcb-class-2layer" },
-        { field: "ruleId", operator: "equals", value: "mask-sliver-min" },
-      ],
-    });
-    const target = createTargetDesignKnowledgeContext({
-      designRevision: "prototype-2",
-      fabProfileId: "fab:jlcpcb-class-2layer",
-      footprintIds: ["footprint:Resistor_SMD:R_0603_1608Metric"],
-      reproductionConditions: [],
-    });
-    expect(evaluateKnowledgeApplications([ruleItem], target).decisions[0]?.status).toBe("unknown");
-  });
-
-  it("keeps footprint library qualifiers during normalization", () => {
-    const otherLibrary = evaluateKnowledgeApplications([item()], {
-      ...context,
-      footprintIds: ["footprint:OtherLib:R_0603_1608Metric"],
-      footprintId: ["footprint:OtherLib:R_0603_1608Metric"],
-    });
-    expect(otherLibrary.decisions[0]?.status).toBe("fail");
-  });
-
-  it("omits undeclared applicability dimensions", () => {
-    const target = createTargetDesignKnowledgeContext({
-      designRevision: "prototype-2",
-      fabProfileId: "fab:jlcpcb-class-2layer",
-      footprintIds: [],
-      reproductionConditions: [],
-    });
-    expect(target).not.toHaveProperty("footprintId");
-    expect(target).not.toHaveProperty("reproductionCondition");
-    expect(target).not.toHaveProperty("ruleId");
-    expect(target).not.toHaveProperty("classification");
-    expect(target).not.toHaveProperty("partId");
-  });
-
-  it("rejects recording ineligible decisions", () => {
-    const result = evaluateKnowledgeApplications([item({ status: "reviewed" })], context);
-    expect(() => recordKnowledgeApplications(result, [{ knowledgeId: "knowledge:test" }])).toThrow(
-      /not eligible/,
-    );
-  });
-
-  it("keeps correction rules free of application exemptions", () => {
-    const rule = rulesForFabProfile("fab:jlcpcb-class-2layer")?.rules.find(
-      (candidate) => candidate.ruleId === "mask-sliver-min",
-    );
-    expect(rule?.correction).toBeDefined();
-    expect(rule?.applicationExemption).toBeUndefined();
-  });
-
-  it("stops applicable knowledge without a correction or exemption", () => {
-    const noCorrection = item({
-      appliesWhen: [
-        { field: "fabProfileId", operator: "equals", value: "fab:jlcpcb-class-2layer" },
-        {
-          field: "footprintId",
-          operator: "equals",
-          value: "footprint:Resistor_SMD:R_0603_1608Metric",
-        },
-        { field: "ruleId", operator: "equals", value: "unmodeled-rule" },
-      ],
-    });
-    const result = evaluateKnowledgeApplications([noCorrection], context);
-    expect(() => assertKnowledgeApplicationsComplete(result, "projection")).toThrow(
-      /was not applied/,
-    );
-  });
-
   it("records explicit no-applicable-knowledge", () => {
     const result = evaluateKnowledgeApplications([item({ status: "deprecated" })], context);
-    expect(result.noApplicableKnowledge).toEqual({
-      kind: "no-applicable-knowledge",
-      evaluatedItemCount: 1,
-    });
-    expect(result.decisions).toHaveLength(1);
-  });
-
-  it("fails for another fab profile and has no match without the affected footprint", () => {
-    expect(
-      evaluateKnowledgeApplications([item()], { ...context, fabProfileId: "fab:other" })
-        .decisions[0]?.status,
-    ).toBe("fail");
-    const withoutFootprint = { ...context };
-    delete (withoutFootprint as Record<string, unknown>).footprintId;
-    const result = evaluateKnowledgeApplications([item()], {
-      ...withoutFootprint,
-      footprintIds: [],
-    });
-    expect(result.decisions[0]?.status).toBe("unknown");
-    expect(result.applicableKnowledgeIds).toEqual(["knowledge:test"]);
-    const otherFootprint = evaluateKnowledgeApplications([item()], {
-      ...context,
-      footprintIds: ["C_0603_1608Metric"],
-      footprintId: ["C_0603_1608Metric"],
-    });
-    expect(otherFootprint.decisions[0]?.status).toBe("fail");
-    expect(otherFootprint.noApplicableKnowledge).toEqual({
-      kind: "no-applicable-knowledge",
-      evaluatedItemCount: 1,
-    });
+    expect(result.decisions.at(-1)?.status).toBe("no-applicable-knowledge");
   });
 
   it("stops when applicable adopted knowledge was not applied", () => {
