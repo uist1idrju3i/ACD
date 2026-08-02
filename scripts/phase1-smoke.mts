@@ -4,7 +4,12 @@ import { cp, mkdir, readFile, readdir, rm, writeFile } from "node:fs/promises";
 import { join, relative, resolve } from "node:path";
 import { GraphCoreError } from "../packages/graph-core/src/index.js";
 import { compareNetlists, projectToKicad } from "../packages/adapters/kicad/src/index.js";
-import { validatePhase1FixtureReferences } from "../packages/schema/src/index.js";
+import {
+  gateByOrder,
+  loadGateMatrix,
+  missingExecutedGates,
+  validatePhase1FixtureReferences,
+} from "../packages/schema/src/index.js";
 import type { Phase1Fixture } from "../packages/schema/src/generated/phase1-fixture.js";
 
 const root = resolve(import.meta.dirname, "..");
@@ -26,6 +31,7 @@ type GateResult = {
 };
 
 const fixture = JSON.parse(await readFile(fixturePath, "utf8")) as Phase1Fixture;
+const gateMatrix = await loadGateMatrix();
 const results: GateResult[] = [];
 
 const hash = (content: string | Buffer): string =>
@@ -62,9 +68,9 @@ const fail = (gate: number, name: string, error: unknown): never => {
 
 const runGate = async (
   gate: number,
-  name: string,
   action: () => Promise<Record<string, unknown>> | Record<string, unknown>,
 ): Promise<void> => {
+  const { name } = gateByOrder(gateMatrix, gate);
   try {
     pass(gate, name, await action());
   } catch (error) {
@@ -97,18 +103,18 @@ await mkdir(projectRoot, { recursive: true });
 await mkdir(boardOnlyRoot, { recursive: true });
 
 try {
-  await runGate(1, "Fixture/schema", () => {
+  await runGate(1, () => {
     const errors = validatePhase1FixtureReferences(fixture);
     if (errors.length > 0) throw new Error(errors.join("; "));
     return { fixture: fixture.fixtureId, schemaVersion: fixture.schemaVersion };
   });
 
-  await runGate(2, "Graph semantic", () => ({
+  await runGate(2, () => ({
     status: "passed",
     note: "Phase 1 smoke uses the typed fixture as the graph semantic boundary",
   }));
 
-  await runGate(3, "Component selection", () => {
+  await runGate(3, () => {
     for (const line of fixture.bom) {
       if (!line.mpn || !line.manufacturer || !line.supplier || !line.sku) {
         throw new Error(`order-relevant BOM unknown for ${line.partId}`);
@@ -121,7 +127,7 @@ try {
     };
   });
 
-  await runGate(4, "Placement", () => {
+  await runGate(4, () => {
     const { widthMm, heightMm } = fixture.requirement.board;
     for (const placement of fixture.placementConstraints.components) {
       if (
@@ -140,7 +146,7 @@ try {
   });
 
   let canonicalHash = "";
-  await runGate(5, "Netlist consistency", () => {
+  await runGate(5, () => {
     const canonical = compareNetlists(fixture, "", "");
     canonicalHash = hash(JSON.stringify(canonical.expected));
     return {
@@ -149,7 +155,7 @@ try {
     };
   });
 
-  await runGate(6, "KiCad projection/reopen", () => {
+  await runGate(6, () => {
     return projectToKicad(fixture, projectRoot).then(async () => {
       await cp(join(projectRoot, "design.kicad_pcb"), join(boardOnlyRoot, "design.kicad_pcb"));
       docker([
@@ -174,7 +180,7 @@ try {
     });
   });
 
-  await runGate(7, "Netlist readback", async () => {
+  await runGate(7, async () => {
     const schematicNetlist = await readFile(join(projectRoot, "design.net"), "utf8");
     const ipc356 = await readFile(join(projectRoot, "design.d356"), "utf8");
     const comparison = compareNetlists(fixture, schematicNetlist, ipc356);
@@ -193,7 +199,7 @@ try {
     };
   });
 
-  await runGate(8, "ERC/topology", async () => {
+  await runGate(8, async () => {
     try {
       docker([
         "kicad-cli",
@@ -228,7 +234,7 @@ try {
     return { ...counts, report: "reports-erc.rpt", waiver: "none" };
   });
 
-  await runGate(9, "Routing", () => {
+  await runGate(9, () => {
     docker([
       "kicad-cli",
       "pcb",
@@ -245,7 +251,7 @@ try {
     });
   });
 
-  await runGate(10, "DRC/DFM", () => {
+  await runGate(10, () => {
     return readFile(join(boardOnlyRoot, "drc.rpt"), "utf8").then((text) => {
       const violations = text.match(/Found ([0-9]+) DRC violations/);
       const unconnected = text.match(/Found ([0-9]+) unconnected (?:items|pads)/);
@@ -265,7 +271,7 @@ try {
     });
   });
 
-  await runGate(11, "Manufacturing outputs", async () => {
+  await runGate(11, async () => {
     await mkdir(join(artifactRoot, "gerbers"), { recursive: true });
     await mkdir(join(artifactRoot, "drill"), { recursive: true });
     docker([
@@ -376,6 +382,21 @@ try {
       stableHashes: deterministicHashes,
     };
   });
+
+  const missing = missingExecutedGates(
+    gateMatrix,
+    "smoke",
+    results.filter((result) => result.status === "passed").map((result) => result.gate),
+  );
+  if (missing.length > 0) {
+    fail(
+      missing[0].order,
+      missing[0].name,
+      new Error(
+        `verification-failed: smoke run skipped contracted gates ${missing.map((gate) => gate.order).join(", ")}`,
+      ),
+    );
+  }
 } catch (error) {
   await writeFile(join(artifactRoot, "gate-results.json"), `${JSON.stringify(results, null, 2)}\n`);
   process.stderr.write(`${error instanceof Error ? error.message : String(error)}\n`);

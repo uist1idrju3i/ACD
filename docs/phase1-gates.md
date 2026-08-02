@@ -47,21 +47,32 @@ Phase 1 fixtureは次を含む。
 
 ## Gate matrix
 
-| 順序 | Gate                    | 入力                                      | 合格条件                                                              | 不合格時                                           |
-| ---- | ----------------------- | ----------------------------------------- | --------------------------------------------------------------------- | -------------------------------------------------- |
-| 1    | Fixture/schema          | Requirement fixture、typed Phase 1 schema | Schema valid、全参照解決、MPN/AVLとmappingが存在                      | `schema-invalid`／`reference-integrity`で停止      |
-| 2    | Graph semantic          | graph snapshot                            | ID重複なし、revision整合、Component/Pin/Net参照整合                   | `reference-integrity`／`revision-invalid`で停止    |
-| 3    | Component selection     | fixture Part/AVL                          | 選択Partがfixture許可範囲、数量・package・lifecycle・provenanceが確定 | 未確定Partを下流へ流さず停止                       |
-| 4    | Placement               | outline、keepout、placement constraints   | deterministic座標、outline・穴・高さ・keepout違反なし                 | `verification-failed`で停止                        |
-| 5    | Netlist consistency     | graph Component/Pin/Net                   | graph canonical netlistと投影前のcanonical netlistが一致              | 接続差分、pin/pad ambiguityで停止                  |
-| 6    | KiCad projection/reopen | schematic、PCB、library manifest          | 固定containerで再オープン、symbol/pad/netが読戻し可能                 | `reopen-failure`で停止                             |
-| 7    | Netlist readback        | KiCad schematic netlist、PCB pad table    | reference、pin、pad、net接続集合がgraphと完全一致                     | `verification-failed`で停止                        |
-| 8    | ERC/topology            | KiCad schematic、graph rules              | ERC errors=0、許容warningは明示waiverのみ                             | 下流へ流さず停止                                   |
-| 9    | Routing                 | PCB、routing profile                      | **unrouted=0**、ratsnestなし、同一入力でdeterministic                 | `convergence-failure`／`verification-failed`で停止 |
-| 10   | DRC/DFM                 | routed PCB、fab profile                   | DRC violations=0、unconnected=0、fab critical/high=0                  | 下流へ流さず停止                                   |
-| 11   | Manufacturing outputs   | Gerber、drill、BOM、必要なpick-and-place  | 再読込可能、層／部品／net数とrevision/hashが一致                      | `verification-failed`で停止                        |
-| 12   | Pre-order readiness     | 全artifact、BOM、cost、availability       | 人手発注に必要な情報が揃い、未解決order-relevant unknownなし          | 発注準備を停止                                     |
-| 13   | Physical completion     | 実機測定Evidence                          | golden taskのTestItemが条件・基準付きでpass                           | 後続継続を停止／再設計                             |
+gate契約の正は[`../schemas/gate-matrix.json`](../schemas/gate-matrix.json)であり、構造は
+[`../schemas/gate-matrix.schema.json`](../schemas/gate-matrix.schema.json)で検証します。
+以下の表は`pnpm gates:generate`が同dataから生成し、`pnpm schema:validate`が同期を検査します。
+表を直接編集しないでください。各gateの`errorCodes`は
+[`error-taxonomy.md`](error-taxonomy.md)のcodeを参照し、runnerは同dataから
+gate番号・名称・適用範囲を読み込みます。
+
+<!-- generated:gate-matrix:start -->
+
+| 順序 | Gate                    | Phase | 状態          | 適用          | 入力                                      | 合格条件                                                              | 不合格時                                           |
+| ---- | ----------------------- | ----- | ------------- | ------------- | ----------------------------------------- | --------------------------------------------------------------------- | -------------------------------------------------- |
+| 1    | Fixture/schema          | 1     | implemented   | smoke／golden | Requirement fixture、typed Phase 1 schema | Schema valid、全参照解決、MPN/AVLとmappingが存在                      | `schema-invalid`／`reference-integrity`で停止      |
+| 2    | Graph semantic          | 1     | implemented   | smoke／golden | graph snapshot                            | ID重複なし、revision整合、Component/Pin/Net参照整合                   | `reference-integrity`／`revision-invalid`で停止    |
+| 3    | Component selection     | 1     | implemented   | smoke／golden | fixture Part/AVL                          | 選択Partがfixture許可範囲、数量・package・lifecycle・provenanceが確定 | 未確定Partを下流へ流さず停止                       |
+| 4    | Placement               | 1     | implemented   | smoke／golden | outline、keepout、placement constraints   | deterministic座標、outline・穴・高さ・keepout違反なし                 | `verification-failed`で停止                        |
+| 5    | Netlist consistency     | 1     | implemented   | smoke／golden | graph Component/Pin/Net                   | graph canonical netlistと投影前のcanonical netlistが一致              | 接続差分、pin/pad ambiguityで停止                  |
+| 6    | KiCad projection/reopen | 1     | implemented   | smoke／golden | schematic、PCB、library manifest          | 固定containerで再オープン、symbol/pad/netが読戻し可能                 | `reopen-failure`で停止                             |
+| 7    | Netlist readback        | 1     | implemented   | smoke／golden | KiCad schematic netlist、PCB pad table    | reference、pin、pad、net接続集合がgraphと完全一致                     | `verification-failed`で停止                        |
+| 8    | ERC/topology            | 1     | implemented   | smoke／golden | KiCad schematic、graph rules              | ERC errors=0、許容warningは明示waiverのみ                             | 下流へ流さず停止                                   |
+| 9    | Routing                 | 1     | implemented   | smoke／golden | PCB、routing profile                      | **unrouted=0**、ratsnestなし、同一入力でdeterministic                 | `convergence-failure`／`verification-failed`で停止 |
+| 10   | DRC/DFM                 | 1     | implemented   | smoke／golden | routed PCB、fab profile                   | DRC violations=0、unconnected=0、fab critical/high=0                  | 下流へ流さず停止                                   |
+| 11   | Manufacturing outputs   | 1     | implemented   | smoke／golden | Gerber、drill、BOM、必要なpick-and-place  | 再読込可能、層／部品／net数とrevision/hashが一致                      | `verification-failed`で停止                        |
+| 12   | Pre-order readiness     | 1     | implemented   | golden        | 全artifact、BOM、cost、availability       | 人手発注に必要な情報が揃い、未解決order-relevant unknownなし          | 発注準備を停止                                     |
+| 13   | Physical completion     | 1     | contract-only | golden        | 実機測定Evidence                          | golden taskのTestItemが条件・基準付きでpass                           | 後続継続を停止／再設計                             |
+
+<!-- generated:gate-matrix:end -->
 
 各gateの合否、対象gate、入力revision、入力hash、tool version、判定時刻は`VerificationResult`へ
 記録する。測定・tool output・library／model provenance、output hash、uncertainty、停止理由は

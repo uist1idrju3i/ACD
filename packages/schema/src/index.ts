@@ -8,3 +8,16 @@ export type { ACDPhase1PhysicalEvidence as PhysicalEvidence } from "./generated/
 export { validatePhase1FixtureReferences } from "./phase1-semantic.js";
 export { evaluatePhysicalEvidence } from "./physical-evidence.js";
 export type { PhysicalEvidenceVerdict } from "./physical-evidence.js";
+export {
+  gateByOrder,
+  gateMatrixSectionEnd,
+  gateMatrixSectionMatches,
+  gateMatrixSectionStart,
+  gatesForScope,
+  loadGateMatrix,
+  missingExecutedGates,
+  renderGateMatrixTable,
+  replaceGateMatrixSection,
+} from "./gate-matrix.js";
+export type { GateDefinition, GateMatrix, GateScope } from "./gate-matrix.js";
+export { gateMatrixDataPath, phase1GatesDocPath } from "./paths.js";

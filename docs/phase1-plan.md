@@ -227,6 +227,8 @@ golden routingと`unrouted=0`はWP4で実装する。
 
 ## Phase 2へのフォワードプラン
 
+実装計画は[`phase2-plan.md`](phase2-plan.md)で管理します。
+
 - AI要件からtyped fixtureを生成する入力エントリを設計する。
 - 電源系、終端、LED電流、定格を対象とするtopology-level electrical lintをGate化する。
 - fixture限定から一般化されたrouting boundaryへの移行条件を再検討する。
@@ -242,4 +244,5 @@ golden routingと`unrouted=0`はWP4で実装する。
 - [`kicad-ci-profile.md`](kicad-ci-profile.md)
 - [`golden-tasks.md`](golden-tasks.md)
 - [`phase1-retrospective.md`](phase1-retrospective.md)
+- [`phase2-plan.md`](phase2-plan.md)
 - [`../schemas/phase1-fixture.schema.json`](../schemas/phase1-fixture.schema.json)

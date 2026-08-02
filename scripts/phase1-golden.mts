@@ -7,7 +7,12 @@ import {
   placeFixture,
   projectToKicad,
 } from "../packages/adapters/kicad/src/index.js";
-import { validatePhase1FixtureReferences } from "../packages/schema/src/index.js";
+import {
+  gateByOrder,
+  loadGateMatrix,
+  missingExecutedGates,
+  validatePhase1FixtureReferences,
+} from "../packages/schema/src/index.js";
 import type { Phase1Fixture } from "../packages/schema/src/generated/phase1-fixture.js";
 import preOrder from "./pre-order.ts";
 
@@ -29,6 +34,7 @@ type Result = {
   reason?: string;
 };
 
+const gateMatrix = await loadGateMatrix();
 const results: Result[] = [];
 let currentGate = 0;
 let currentName = "golden";
@@ -67,7 +73,8 @@ const freerouting = (args: string[]): string =>
     "/app/freerouting-executable.jar",
     ...args,
   ]);
-const pass = (gate: number, name: string, evidence: Record<string, unknown>): void => {
+const pass = (gate: number, evidence: Record<string, unknown>): void => {
+  const { name } = gateByOrder(gateMatrix, gate);
   currentGate = gate;
   currentName = name;
   results.push({ gate, name, status: "passed", evidence });
@@ -78,13 +85,13 @@ await mkdir(projectRoot, { recursive: true });
 try {
   const referenceErrors = validatePhase1FixtureReferences(fixture);
   if (referenceErrors.length > 0) throw new Error(referenceErrors.join("; "));
-  pass(1, "Fixture/schema", { fixture: fixture.fixtureId, schemaVersion: fixture.schemaVersion });
+  pass(1, { fixture: fixture.fixtureId, schemaVersion: fixture.schemaVersion });
 
-  pass(2, "Graph semantic", {
+  pass(2, {
     status: "passed",
     note: "Phase 1 golden uses the typed fixture as the graph semantic boundary",
   });
-  pass(3, "Component selection", {
+  pass(3, {
     parts: fixture.parts.length,
     bomLines: fixture.bom.length,
     source: "fixture-provided AVL",
@@ -106,7 +113,7 @@ try {
     }
   }
   const placement = placeFixture(fixture);
-  pass(4, "Placement", {
+  pass(4, {
     components: placement.length,
     deterministicSeed: fixture.placementConstraints.seed,
     board: fixture.requirement.board,
@@ -114,7 +121,7 @@ try {
 
   const canonical = compareNetlists(fixture, "", "");
   const canonicalHash = hash(JSON.stringify(canonical.expected));
-  pass(5, "Canonical netlist", {
+  pass(5, {
     pins: canonical.expected.length,
     canonicalNetlistHash: canonicalHash,
   });
@@ -138,14 +145,14 @@ try {
     "/work/project/design.d356",
     "/work/project/design.kicad_pcb",
   ]);
-  pass(6, "KiCad projection/reopen", { toolVersion: "KiCad 10.0.5" });
+  pass(6, { toolVersion: "KiCad 10.0.5" });
 
   const schematicNetlist = await readFile(join(projectRoot, "design.net"), "utf8");
   const ipc356 = await readFile(join(projectRoot, "design.d356"), "utf8");
   const comparison = compareNetlists(fixture, schematicNetlist, ipc356);
   if (!comparison.overall)
     throw new Error(`golden netlist mismatch: ${JSON.stringify(comparison)}`);
-  pass(7, "Netlist readback", {
+  pass(7, {
     graphVsSchematic: comparison.graphVsSchematic,
     graphVsPcb: comparison.graphVsPcb,
     canonicalNetlistHash: canonicalHash,
@@ -174,7 +181,7 @@ try {
   };
   if (counts.messages !== 0)
     throw new Error(`golden ERC contains findings: ${JSON.stringify(counts)}`);
-  pass(8, "ERC/topology", { ...counts, waiver: "none" });
+  pass(8, { ...counts, waiver: "none" });
 
   const u1Placement = fixture.placementConstraints.components.find(
     (candidate) => candidate.partId === "part:u1",
@@ -230,7 +237,7 @@ try {
     "pcbnew.SaveBoard('/work/project/routed.kicad_pcb',b)",
   ].join("; ");
   docker(["python3", "-c", importPython]);
-  pass(9, "Routing", {
+  pass(9, {
     dsnHash: hash((await readFile(join(projectRoot, "golden.dsn"))).toString()),
     sesHash: sesHashA,
     deterministicSes: true,
@@ -261,7 +268,7 @@ try {
   };
   if (drcCounts.violations !== 0 || drcCounts.unconnected !== 0 || drcCounts.footprintErrors !== 0)
     throw new Error(`golden DRC contains findings: ${JSON.stringify(drcCounts)}`);
-  pass(10, "DRC/DFM", drcCounts);
+  pass(10, drcCounts);
   docker([
     "kicad-cli",
     "pcb",
@@ -313,7 +320,7 @@ try {
       2,
     ),
   );
-  pass(11, "Manufacturing outputs", {
+  pass(11, {
     gerbers: true,
     drill: true,
     manifest: true,
@@ -354,10 +361,21 @@ try {
   );
   if (!preOrderResult.ready)
     throw new Error(`pre-order readiness failed: ${preOrderResult.reasons.join("; ")}`);
-  pass(12, "Pre-order readiness", {
+  pass(12, {
     ...preOrderResult,
     verdict: "ready-for-order, approval required",
   });
+
+  const missing = missingExecutedGates(
+    gateMatrix,
+    "golden",
+    results.filter((result) => result.status === "passed").map((result) => result.gate),
+  );
+  if (missing.length > 0) {
+    throw new Error(
+      `verification-failed: golden run skipped contracted gates ${missing.map((gate) => gate.order).join(", ")}`,
+    );
+  }
 } catch (error) {
   results.push({
     gate: currentGate || 1,

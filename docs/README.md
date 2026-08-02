@@ -30,11 +30,13 @@
     [`kicad-ci-profile.md`](kicad-ci-profile.md)、[`golden-tasks.md`](golden-tasks.md)、
     [`../schemas/phase1-fixture.schema.json`](../schemas/phase1-fixture.schema.json) —
     Phase 1受入gate、完了計画、KiCad、fixture契約
-12. [`error-taxonomy.md`](error-taxonomy.md) — エラー分類
-13. [`repo-structure.md`](repo-structure.md)、[`tool-contract.md`](tool-contract.md)、
+12. [`phase2-plan.md`](phase2-plan.md)、[`../schemas/gate-matrix.json`](../schemas/gate-matrix.json) —
+    Phase 2実装計画と、machine-readableなgate契約
+13. [`error-taxonomy.md`](error-taxonomy.md) — エラー分類
+14. [`repo-structure.md`](repo-structure.md)、[`tool-contract.md`](tool-contract.md)、
     [`dependency-inventory.md`](dependency-inventory.md)、[`kicad-interop.md`](kicad-interop.md)、
     [`testing.md`](testing.md) — 構成、ツール境界、依存関係、外部連携、評価
-14. [`adr/README.md`](adr/README.md) — ADR運用と既存の設計判断
+15. [`adr/README.md`](adr/README.md) — ADR運用と既存の設計判断
 
 ## ステータス凡例
 
