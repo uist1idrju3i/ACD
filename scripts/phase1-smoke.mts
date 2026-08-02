@@ -389,8 +389,12 @@ try {
     results.filter((result) => result.status === "passed").map((result) => result.gate),
   );
   if (missing.length > 0) {
-    throw new Error(
-      `verification-failed: smoke run skipped contracted gates ${missing.map((gate) => gate.order).join(", ")}`,
+    fail(
+      missing[0].order,
+      missing[0].name,
+      new Error(
+        `verification-failed: smoke run skipped contracted gates ${missing.map((gate) => gate.order).join(", ")}`,
+      ),
     );
   }
 } catch (error) {
