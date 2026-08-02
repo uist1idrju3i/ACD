@@ -114,7 +114,8 @@ const assertPromotionMetadata = (item: KnowledgeItem): void => {
     item.sourceEventIds.length === 0 ||
     item.provenance.length === 0 ||
     item.appliesWhen.length === 0 ||
-    item.excludesWhen.length === 0
+    item.excludesWhen.length === 0 ||
+    !item.appliesWhen.some((entry) => entry.field === "reproductionCondition")
   ) {
     throw new GraphCoreError(
       "schema-invalid",
@@ -328,6 +329,8 @@ export const reviseKnowledgeItem = (
     scope: "project-local",
   });
   delete revised.approvalId;
+  delete revised.rejectionReason;
+  delete revised.staleReason;
   return revised;
 };
 
