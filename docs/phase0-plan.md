@@ -93,6 +93,17 @@ Phase 0は、次の全てを同じCI環境で再現できた時点で完了と�
 | freerouting DSN/SES | 固定fixtureでCLI実行、SES取込、DRC再実行、失敗分類が再現                   | adapterを後続Phaseへ延期                                |
 | ブラウザstorage     | quota、snapshot復旧、export/import、中断復旧を確認                         | Phase 0はJSON Repositoryのまま継続                      |
 
+### Spike実測メモ
+
+- **Freerouting DSN/SES（2026-08-02）：** 公式
+  `ghcr.io/freerouting/freerouting:2.2.4`（digest
+  `sha256:0d010c6bf13b562551e8cb41fb298090006033fa2850e5bfc678c98ecf47111e`）を
+  外部processとして実行した。公式の`multichannel_mixer-unrouted.dsn`を入力し、
+  `-mp 1`でSESを生成できた（入力約62 KB、SES約33 KB）。ただし、ログ上141
+  unrouted nets中128が未配線であり、round-trip成功は「入出力とSES生成」の範囲に
+  限定する。DSN/SESのKiCad再取込とDRC合格は未実施のため、Phase 1 adapter採用は
+  保留する。FreeroutingはGPLのためjar/containerをvendor・再配布しない。
+
 ## 完了レビュー
 
 完了時には、実行コマンド、Node/pnpm/KiCadの版、fixture hash、生成物hash、
