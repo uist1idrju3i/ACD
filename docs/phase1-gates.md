@@ -1,6 +1,6 @@
 # Phase 1ゲートと製造準備契約
 
-**ステータス：Draft（smoke fixtureのGate 1〜11を実装済み。goldenは将来）**
+**ステータス：Draft（smokeおよびgoldenのGate 1〜11を実装済み。Gate 12/13は将来）**
 
 ## 実装済みsmoke vertical slice
 
@@ -13,8 +13,10 @@ ESP32級golden fixture、実部品library geometryの完全な置換、自動発
 
 Routingの例外範囲はsmoke fixtureだけです。smokeでは決定論的なtrack/via
 projectionを使用できますが、non-smoke fixtureへ適用する場合はjidoka停止します。
-ESP32級goldenではFreeroutingのDSN/SES境界、または将来承認されるADRの外部routing
-toolを使用します。Phase 1で一般用途routerを実装することは許可しません。
+ESP32級goldenではKiCad-generated DSN、FreeroutingのSES、KiCadのSES import境界、
+または将来承認されるADRの外部routing toolを使用します。Phase 1で一般用途routerを
+実装することは許可しません。goldenのDSNを手書きで生成して受入判定に使用しては
+なりません。
 
 ## 目的と範囲
 

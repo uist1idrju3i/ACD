@@ -123,6 +123,17 @@ Gate 9〜11（routing、DRC、manufacturing）はWP4へ延期。**
 - DSNのimage/component grouping、pad geometry、layer rule、SES importが主リスクである。
 - smokeの決定論的track/via projectionは一般用途routerではなく、goldenへ拡張しない。
 
+**実装状況（WP4）**：
+
+- KiCad-generated PCBから`pcbnew.ExportSpecctraDSN`でDSNを生成
+- Freerouting 2.2.4 external processでrouting
+- `pcbnew.ImportSpecctraSES`でSESをimport
+- clearance 0.127 mm、track 0.25 mm、via 0.8/0.4 mmを採用
+- golden Gate 9〜11を実行し、unrouted=0、DRC 0、unconnected 0、
+  footprint errors 0を実測
+- 同一入力を2回実行しSES hash一致を確認
+- smokeのrouting pathは変更しない
+
 ### WP5：Gate 12/13
 
 **作業**

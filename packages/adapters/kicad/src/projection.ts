@@ -57,7 +57,8 @@ const renderSmokeFootprint = (
       const layers = geometry.layers.map((layer) => `"${layer}"`).join(" ");
       const drill = geometry.drill ? ` (drill ${geometry.drill})` : "";
       const netLine = net ? ` (net ${net.code} "${net.name}")` : "";
-      return `    (pad "${pinPad.pad}" ${geometry.type} ${geometry.shape} (at ${geometry.x} ${geometry.y}) (size ${geometry.width} ${geometry.height})${drill} (layers ${layers})${netLine})`;
+      const padRotation = geometry.rotation ? ` ${geometry.rotation}` : "";
+      return `    (pad "${pinPad.pad}" ${geometry.type} ${geometry.shape} (at ${geometry.x} ${geometry.y}${padRotation}) (size ${geometry.width} ${geometry.height})${drill} (layers ${layers})${netLine})`;
     })
     .join("\n");
   return `  (footprint "${mapping.footprintName}"
@@ -257,6 +258,11 @@ export const renderGoldenBoard = (fixture: Phase1Fixture): string => {
     (44 "Edge.Cuts" user)
   )
   (setup (pad_to_mask_clearance 0))
+  (net_class "Default" ""
+    (clearance 0.127)
+    (trace_width 0.25)
+    (via_dia 0.8)
+    (via_drill 0.4))
 ${netLines.join("\n")}
   (gr_rect
     (start 0 0)

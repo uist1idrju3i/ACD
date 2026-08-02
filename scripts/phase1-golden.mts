@@ -48,13 +48,23 @@ const docker = (args: string[]): string =>
     image,
     ...args,
   ]);
+const freerouting = (args: string[]): string =>
+  run("docker", [
+    "run",
+    "--rm",
+    "-e",
+    "HOME=/tmp",
+    "-v",
+    `${artifactRoot}:/work`,
+    "ghcr.io/freerouting/freerouting@sha256:0d010c6bf13b562551e8cb41fb298090006033fa2850e5bfc678c98ecf47111e",
+    "java",
+    "-jar",
+    "/app/freerouting-executable.jar",
+    ...args,
+  ]);
 const pass = (gate: number, name: string, evidence: Record<string, unknown>): void => {
   results.push({ gate, name, status: "passed", evidence });
 };
-const defer = (gate: number, name: string, reason: string): void => {
-  results.push({ gate, name, status: "deferred", reason });
-};
-
 await rm(artifactRoot, { recursive: true, force: true });
 await mkdir(projectRoot, { recursive: true });
 
@@ -140,9 +150,105 @@ try {
     throw new Error(`golden ERC contains findings: ${JSON.stringify(counts)}`);
   pass(8, "ERC/topology", { ...counts, waiver: "none" });
 
-  defer(9, "Routing", "WP4: golden routing is deferred; this runner intentionally does not route");
-  defer(10, "DRC/DFM", "WP4: golden DRC is deferred because the board is intentionally unrouted");
-  defer(11, "Manufacturing outputs", "WP4: golden manufacturing outputs are deferred");
+  const routePython = [
+    "import pcbnew",
+    "b=pcbnew.LoadBoard('/work/project/design.kicad_pcb')",
+    "pcbnew.ExportSpecctraDSN(b,'/work/project/golden.dsn')",
+  ].join("; ");
+  await mkdir(join(projectRoot, "manufacturing"), { recursive: true });
+  docker(["python3", "-c", routePython]);
+  for (const suffix of ["a", "b"]) {
+    freerouting([
+      "-de",
+      "/work/project/golden.dsn",
+      "-do",
+      `/work/project/golden-${suffix}.ses`,
+      "-l",
+      "en",
+      "-mp",
+      "100",
+    ]);
+  }
+  const sesA = await readFile(join(projectRoot, "golden-a.ses"));
+  const sesB = await readFile(join(projectRoot, "golden-b.ses"));
+  const sesHashA = hash(sesA.toString());
+  const sesHashB = hash(sesB.toString());
+  const importPython = [
+    "import pcbnew",
+    "b=pcbnew.LoadBoard('/work/project/design.kicad_pcb')",
+    "pcbnew.ImportSpecctraSES(b,'/work/project/golden-a.ses')",
+    "pcbnew.SaveBoard('/work/project/routed.kicad_pcb',b)",
+  ].join("; ");
+  docker(["python3", "-c", importPython]);
+  pass(9, "Routing", {
+    dsnHash: hash((await readFile(join(projectRoot, "golden.dsn"))).toString()),
+    sesHash: sesHashA,
+    deterministicSes: sesHashA === sesHashB,
+    freerouting: "2.2.4",
+  });
+  try {
+    docker([
+      "kicad-cli",
+      "pcb",
+      "drc",
+      "--output",
+      "/work/project/reports-drc.rpt",
+      "/work/project/routed.kicad_pcb",
+    ]);
+  } catch {
+    // Report parsing below is authoritative.
+  }
+  const drcReport = await readFile(join(projectRoot, "reports-drc.rpt"), "utf8");
+  const drcMatch = drcReport.match(
+    /\*\* Found (\d+) DRC violations \*\*[\s\S]*?\*\* Found (\d+) unconnected pads \*\*[\s\S]*?\*\* Found (\d+) Footprint errors \*\*/,
+  );
+  if (!drcMatch) throw new Error("golden DRC summary is missing");
+  const drcCounts = {
+    violations: Number(drcMatch[1]),
+    unconnected: Number(drcMatch[2]),
+    footprintErrors: Number(drcMatch[3]),
+  };
+  if (drcCounts.violations !== 0 || drcCounts.unconnected !== 0 || drcCounts.footprintErrors !== 0)
+    throw new Error(`golden DRC contains findings: ${JSON.stringify(drcCounts)}`);
+  pass(10, "DRC/DFM", drcCounts);
+  docker([
+    "kicad-cli",
+    "pcb",
+    "export",
+    "gerbers",
+    "-o",
+    "/work/project/manufacturing/",
+    "/work/project/routed.kicad_pcb",
+  ]);
+  docker([
+    "kicad-cli",
+    "pcb",
+    "export",
+    "drill",
+    "-o",
+    "/work/project/manufacturing/",
+    "/work/project/routed.kicad_pcb",
+  ]);
+  await writeFile(
+    join(projectRoot, "manufacturing-manifest.json"),
+    JSON.stringify(
+      {
+        board: fixture.requirement.board,
+        dsnHash: hash((await readFile(join(projectRoot, "golden.dsn"))).toString()),
+        sesHash: sesHashA,
+        pcbHash: hash((await readFile(join(projectRoot, "routed.kicad_pcb"))).toString()),
+        graphRevision: fixture.requirement.provenance.version,
+      },
+      null,
+      2,
+    ),
+  );
+  pass(11, "Manufacturing outputs", {
+    gerbers: true,
+    drill: true,
+    manifest: true,
+    deterministic: sesHashA === sesHashB,
+  });
 } catch (error) {
   results.push({
     gate: results.length + 1,
@@ -156,6 +262,4 @@ try {
 }
 
 await writeFile(join(artifactRoot, "gate-results.json"), JSON.stringify(results, null, 2));
-process.stdout.write(
-  "Phase 1 golden gates 1-8 passed; routing/DRC/manufacturing (Gates 9-11) deferred to WP4\n",
-);
+process.stdout.write("Phase 1 golden gates 1-11 passed\n");
