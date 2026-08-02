@@ -41,7 +41,16 @@ record the resulting scope.
   unverified artifacts MUST NOT flow downstream.
 - Human review is optional by default, but configured approvals and explicit
   waivers remain enforceable.
+- A waiver MUST be a one-off, time-bounded deviation scoped to a gate and
+  revision, not a rule change. An expired waiver or approval MUST NOT be reused
+  or auto-extended; repeated waivers for the same rule MUST be escalated into a
+  rule change in `docs/`, Schema, or an ADR rather than accumulated.
 - Artifact generation is pull-based and MUST be revision- and input-hash-aware.
+- Verification Evidence MUST be invalidated retroactively when its input
+  revision/hash, tool/model/library/container version, provenance,
+  measurement-system qualification, referenced KnowledgeItem status, or
+  fab/manufacturing profile changes; downstream results that depended on it
+  become stale.
 - Total order cost includes board fabrication, components, assembly, shipping, taxes,
   and enclosure/mechanical parts. An order MAY execute without an approval ID only
   when the pre-order final gate passes and total cost is within the configured cap.
@@ -61,6 +70,10 @@ record the resulting scope.
 - When blocked, report the exact question, alternatives considered, evidence,
   recommendation, and the single decision needed. Do not replace a missing decision
   with an undocumented default.
+- An agent MUST NOT declare its own output passing. Generation, deterministic
+  verification, and integration MUST NOT be collapsed into one self-judgement.
+  A handoff MUST carry the input revision, assumptions, open items, and any
+  verification not run with its reason.
 
 ## Phase boundaries
 
@@ -121,6 +134,10 @@ Neither ADR closes the final decisions in ADR-0006 or ADR-0007.
   not duplicate a side effect.
 - An agent MUST preserve failure evidence and report the exact command, code,
   stderr/stdout, recovery condition, and whether the failure is pre-existing.
+- Closing a stop MUST record the disposition (re-run, design fix, requirement
+  change, waiver request, discard and redo), the entry condition for resuming,
+  and whether horizontal deployment to other projects, fixtures, or gates is
+  needed. An unattended stop with no owner or response is itself an anomaly.
 
 ## Security, secrets, and untrusted input
 
@@ -165,6 +182,8 @@ Neither ADR closes the final decisions in ADR-0006 or ADR-0007.
   relevant tests in the same change.
 - New error codes MUST be added to `docs/error-taxonomy.md`; new tools MUST follow
   `docs/tool-contract.md`; new packages MUST follow `docs/repo-structure.md`.
+- A requirement or constraint with no assigned verification method MUST be treated
+  as unverified.
 - Draft, Proposed, Accepted, and Superseded states MUST be used accurately. Do not
   describe a provisional decision as the final product policy.
 - Documentation MUST state what is out of scope when a target-state description
@@ -270,6 +289,8 @@ and verify:
    are represented where the changed contract needs them.
 4. The exact validation commands, environment limitations, warnings, and remaining
    open decisions are reported.
+5. Every rule, assumption, waiver, and open item introduced has an owner or
+   closure condition, and an expiry where applicable.
 
 ## Related contracts
 

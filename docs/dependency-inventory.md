@@ -2,6 +2,8 @@
 
 **ステータス：Draft**
 
+## 目的と権威範囲
+
 Phase 0で追加した直接依存のライセンスと用途を記録します。pnpm lockfileの
 transitive dependencyもレビュー対象とし、CIでSBOM／ライセンス検査を追加する
 までは、依存追加時にlockfileとこの一覧を同時に確認します。CIの
@@ -42,3 +44,8 @@ ACDはKiCad本体やDocker imageをvendorせず、公式libraryの必要最小�
 snapshotだけを、帰属とhash manifest付きで再配布します。projection前に
 manifest hashを検証し、欠落、manifest entry不在、改変、未知pad形式は
 `verification-failed`として停止します。
+
+## 関連文書
+
+- [`../AGENTS.md`](../AGENTS.md)：依存、ライセンス、固定と更新の作業契約
+- [`kicad-ci-profile.md`](kicad-ci-profile.md)：KiCad containerの実行境界とprovenance
