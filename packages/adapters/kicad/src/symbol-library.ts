@@ -4,4 +4,4 @@
  * Container baseline: kicad/kicad:10.0 (KiCad 10.0.5)
  * License: CC-BY-SA-4.0-with-exception
  */
-export { smokeLibrarySymbols } from "./library-snapshot.js";
+export { goldenLibrarySymbols, smokeLibrarySymbols } from "./library-snapshot.js";

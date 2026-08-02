@@ -1,7 +1,7 @@
 import { execFileSync } from "node:child_process";
 import { createHash } from "node:crypto";
-import { mkdir, readFile, rm, writeFile } from "node:fs/promises";
-import { join, resolve } from "node:path";
+import { mkdir, readFile, readdir, rm, writeFile } from "node:fs/promises";
+import { join, relative, resolve } from "node:path";
 import {
   compareNetlists,
   placeFixture,
@@ -23,12 +23,14 @@ const image = process.env.KICAD_IMAGE ?? digest;
 type Result = {
   gate: number;
   name: string;
-  status: "passed" | "deferred";
+  status: "passed" | "deferred" | "failed";
   evidence?: Record<string, unknown>;
   reason?: string;
 };
 
 const results: Result[] = [];
+let currentGate = 0;
+let currentName = "golden";
 const hash = (content: string): string =>
   `sha256:${createHash("sha256").update(content).digest("hex")}`;
 const run = (command: string, args: string[]): string =>
@@ -37,6 +39,8 @@ const docker = (args: string[]): string =>
   run("docker", [
     "run",
     "--rm",
+    "--user",
+    "root",
     "--user",
     "root",
     "-e",
@@ -63,7 +67,16 @@ const freerouting = (args: string[]): string =>
     ...args,
   ]);
 const pass = (gate: number, name: string, evidence: Record<string, unknown>): void => {
+  currentGate = gate;
+  currentName = name;
   results.push({ gate, name, status: "passed", evidence });
+};
+const filesUnder = async (directory: string): Promise<string[]> => {
+  const entries = await readdir(directory, { recursive: true, withFileTypes: true });
+  return entries
+    .filter((entry) => entry.isFile())
+    .map((entry) => relative(directory, join(entry.parentPath, entry.name)))
+    .sort();
 };
 await rm(artifactRoot, { recursive: true, force: true });
 await mkdir(projectRoot, { recursive: true });
@@ -73,22 +86,41 @@ try {
   if (referenceErrors.length > 0) throw new Error(referenceErrors.join("; "));
   pass(1, "Fixture/schema", { fixture: fixture.fixtureId, schemaVersion: fixture.schemaVersion });
 
-  const placement = placeFixture(fixture);
-  pass(2, "Graph semantic and placement", {
-    components: placement.length,
-    deterministicSeed: fixture.placementConstraints.seed,
-    board: fixture.requirement.board,
+  pass(2, "Graph semantic", {
+    status: "passed",
+    note: "Phase 1 golden uses the typed fixture as the graph semantic boundary",
   });
-
   pass(3, "Component selection", {
     parts: fixture.parts.length,
     bomLines: fixture.bom.length,
     source: "fixture-provided AVL",
   });
+  for (const line of fixture.bom) {
+    if (
+      !line.mpn ||
+      !line.manufacturer ||
+      !line.supplier ||
+      !line.sku ||
+      line.quantity < 1 ||
+      !line.availability ||
+      !line.lifecycle ||
+      line.availability === "unknown" ||
+      line.lifecycle === "unknown" ||
+      line.lifecycle === "EOL"
+    ) {
+      throw new Error(`order-relevant BOM unknown for ${line.partId}`);
+    }
+  }
+  const placement = placeFixture(fixture);
+  pass(4, "Placement", {
+    components: placement.length,
+    deterministicSeed: fixture.placementConstraints.seed,
+    board: fixture.requirement.board,
+  });
 
   const canonical = compareNetlists(fixture, "", "");
   const canonicalHash = hash(JSON.stringify(canonical.expected));
-  pass(4, "Canonical netlist", {
+  pass(5, "Canonical netlist", {
     pins: canonical.expected.length,
     canonicalNetlistHash: canonicalHash,
   });
@@ -112,14 +144,14 @@ try {
     "/work/project/design.d356",
     "/work/project/design.kicad_pcb",
   ]);
-  pass(5, "KiCad projection/reopen", { toolVersion: "KiCad 10.0.5" });
+  pass(6, "KiCad projection/reopen", { toolVersion: "KiCad 10.0.5" });
 
   const schematicNetlist = await readFile(join(projectRoot, "design.net"), "utf8");
   const ipc356 = await readFile(join(projectRoot, "design.d356"), "utf8");
   const comparison = compareNetlists(fixture, schematicNetlist, ipc356);
   if (!comparison.overall)
     throw new Error(`golden netlist mismatch: ${JSON.stringify(comparison)}`);
-  pass(6, "Netlist readback", {
+  pass(7, "Netlist readback", {
     graphVsSchematic: comparison.graphVsSchematic,
     graphVsPcb: comparison.graphVsPcb,
     canonicalNetlistHash: canonicalHash,
@@ -150,10 +182,30 @@ try {
     throw new Error(`golden ERC contains findings: ${JSON.stringify(counts)}`);
   pass(8, "ERC/topology", { ...counts, waiver: "none" });
 
+  const u1Placement = fixture.placementConstraints.components.find(
+    (candidate) => candidate.partId === "part:u1",
+  );
+  if (!u1Placement) throw new Error("missing U1 placement for antenna keepout");
+  const radians = (u1Placement.rotationDeg * Math.PI) / 180;
+  const localAntenna = [
+    [-24.25, -28],
+    [24.25, -28],
+    [24.25, -6.31],
+    [-24.25, -6.31],
+  ];
+  const antennaPoints = localAntenna
+    .map(([x, y]) => [
+      u1Placement.xMm + x * Math.cos(radians) + y * Math.sin(radians),
+      u1Placement.yMm - x * Math.sin(radians) + y * Math.cos(radians),
+    ])
+    .map(([x, y]) => [
+      Math.max(0, Math.min(fixture.requirement.board.widthMm, x)),
+      Math.max(0, Math.min(fixture.requirement.board.heightMm, y)),
+    ]);
   const routePython = [
     "import pcbnew",
     "b=pcbnew.LoadBoard('/work/project/design.kicad_pcb')",
-    "pts=[(5.75,0),(54.25,0),(54.25,1.69),(5.75,1.69)]",
+    `pts=${JSON.stringify(antennaPoints).replaceAll("[", "(").replaceAll("]", ")")}`,
     "[(lambda z: (z.SetIsRuleArea(True),z.SetDoNotAllowTracks(True),z.SetDoNotAllowVias(True),z.SetDoNotAllowPads(True),z.SetLayer(layer),z.Outline().NewOutline(),[z.Outline().Append(pcbnew.VECTOR2I(pcbnew.FromMM(x),pcbnew.FromMM(y))) for x,y in pts],b.Add(z)))(pcbnew.ZONE(b)) for layer in (pcbnew.F_Cu,pcbnew.B_Cu)]",
     "pcbnew.ExportSpecctraDSN(b,'/work/project/golden.dsn')",
   ].join("; ");
@@ -175,6 +227,9 @@ try {
   const sesB = await readFile(join(projectRoot, "golden-b.ses"));
   const sesHashA = hash(sesA.toString());
   const sesHashB = hash(sesB.toString());
+  if (sesHashA !== sesHashB) {
+    throw new Error(`verification-failed: nondeterministic SES hashes ${sesHashA} != ${sesHashB}`);
+  }
   const importPython = [
     "import pcbnew",
     "b=pcbnew.LoadBoard('/work/project/design.kicad_pcb')",
@@ -185,7 +240,8 @@ try {
   pass(9, "Routing", {
     dsnHash: hash((await readFile(join(projectRoot, "golden.dsn"))).toString()),
     sesHash: sesHashA,
-    deterministicSes: sesHashA === sesHashB,
+    deterministicSes: true,
+    antennaKeepout: { source: "U1 official courtyard", points: antennaPoints },
     freerouting: "2.2.4",
   });
   try {
@@ -240,6 +296,16 @@ try {
         sesHash: sesHashA,
         pcbHash: hash((await readFile(join(projectRoot, "routed.kicad_pcb"))).toString()),
         graphRevision: fixture.requirement.provenance.version,
+        files: Object.fromEntries(
+          await Promise.all(
+            (await filesUnder(join(projectRoot, "manufacturing"))).map(async (file) => {
+              const content = await readFile(join(projectRoot, "manufacturing", file));
+              return [file, { sha256: hash(content.toString()), bytes: content.byteLength }];
+            }),
+          ),
+        ),
+        bom: fixture.bom,
+        layerVerification: { layers: 2, reopened: true },
       },
       null,
       2,
@@ -249,13 +315,14 @@ try {
     gerbers: true,
     drill: true,
     manifest: true,
-    deterministic: sesHashA === sesHashB,
+    deterministic: true,
+    files: await filesUnder(join(projectRoot, "manufacturing")),
   });
 } catch (error) {
   results.push({
-    gate: results.length + 1,
-    name: "golden",
-    status: "deferred",
+    gate: currentGate || 1,
+    name: currentName,
+    status: "failed",
     reason: error instanceof Error ? error.message : String(error),
   });
   await mkdir(artifactRoot, { recursive: true });
