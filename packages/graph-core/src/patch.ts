@@ -109,20 +109,21 @@ const applyOperation = (graph: DesignGraph, operation: PatchOperation): void => 
   }
   if (Array.isArray(parent)) {
     const index =
-      parent === graph.entities
-        ? key === "-"
-          ? parent.length
-          : entityIndex(graph.entities, key)
-        : Number(key);
-    if (operation.op === "add" && key === "-") {
-      parent.push(clone(operation.value));
+      key === "-"
+        ? parent.length
+        : parent === graph.entities && key.startsWith("@id:")
+          ? entityIndex(graph.entities, key)
+          : Number(key);
+    if (operation.op === "add" && Number.isInteger(index) && index >= 0 && index <= parent.length) {
+      parent.splice(index, 0, clone(operation.value));
       return;
     }
     if (!Number.isInteger(index) || index < 0 || index >= parent.length) {
       throw new GraphCoreError("patch-conflict", `array path not found: ${operation.path}`);
     }
     if (operation.op === "remove") parent.splice(index, 1);
-    else parent[index] = clone(operation.value);
+    else if (operation.op === "replace") parent[index] = clone(operation.value);
+    else throw new GraphCoreError("patch-conflict", `unsupported array operation: ${operation.op}`);
     return;
   }
   if (!parent || typeof parent !== "object") {
@@ -193,5 +194,9 @@ export class PatchEngine {
     };
     this.accepted.set(patch.patchId, result);
     return result;
+  }
+
+  seedAccepted(patch: Patch, result: PatchResult): void {
+    this.accepted.set(patch.patchId, result);
   }
 }

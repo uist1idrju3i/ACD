@@ -35,14 +35,25 @@ docker run --rm -v "$ROOT/$OUT:/work" "$IMAGE" kicad-cli pcb export step \
   -o /work/board.step /work/project/design.kicad_pcb
 docker run --rm -v "$ROOT/$OUT:/work" "$IMAGE" kicad-cli sch erc \
   --exit-code-violations --output /work/reports/erc.rpt /work/project/design.kicad_sch
-find "$ROOT/$OUT" -type f -print0 | sort -z | xargs -0 sha256sum > "$ROOT/$OUT/SHA256SUMS"
+find "$ROOT/$OUT" -type f \
+  ! -name 'SHA256SUMS' ! -name 'STABLE-SHA256SUMS' -print0 |
+  sort -z | xargs -0 sha256sum > "$ROOT/$OUT/SHA256SUMS"
 while IFS= read -r -d '' artifact; do
   normalized="$(mktemp)"
   sed -E \
-    -e 's/[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9:.+-]+/TIMESTAMP/g' \
-    -e 's/[0-9]{4}-[0-9]{2}-[0-9]{2} [0-9:]+/TIMESTAMP/g' \
+    -e 's/^%TF\.CreationDate,.*/%TF.CreationDate,TIMESTAMP*%/' \
+    -e 's/^G04 Created by KiCad .* date .*\*/G04 Created by KiCad date TIMESTAMP*/' \
+    -e 's/^; DRILL file KiCad .* date .*/; DRILL file KiCad date TIMESTAMP/' \
+    -e 's/^; #@! TF\.CreationDate,.*/; #@! TF.CreationDate,TIMESTAMP/' \
+    -e "s/^FILE_NAME\\('board.step','[^']*'/FILE_NAME('board.step','TIMESTAMP'/" \
+    -e 's/^\*\* Created on .*\*\*/** Created on TIMESTAMP **/' \
+    -e 's/^ERC report [(][^,]*,/ERC report (TIMESTAMP,/' \
     "$artifact" > "$normalized"
   sha256sum "$normalized" | sed "s#${normalized}#${artifact}#"
   rm -f "$normalized"
-done < <(find "$ROOT/$OUT" -type f \( -name '*.gbr' -o -name '*.gtl' -o -name '*.gbl' -o -name '*.gto' -o -name '*.gbo' -o -name '*.gm1' -o -name '*.drl' -o -name '*.step' -o -name '*.rpt' \) -print0 | sort -z) > "$ROOT/$OUT/STABLE-SHA256SUMS"
+done < <(find "$ROOT/$OUT" -type f \
+  ! -name 'SHA256SUMS' ! -name 'STABLE-SHA256SUMS' \
+  \( -name '*.gbr' -o -name '*.gtl' -o -name '*.gbl' -o -name '*.gto' \
+  -o -name '*.gbo' -o -name '*.gm1' -o -name '*.drl' -o -name '*.step' \
+  -o -name '*.rpt' \) -print0 | sort -z) > "$ROOT/$OUT/STABLE-SHA256SUMS"
 echo "KiCad spike completed: $ROOT/$OUT"

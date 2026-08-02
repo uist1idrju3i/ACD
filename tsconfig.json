@@ -3,6 +3,7 @@
   "references": [
     { "path": "./packages/schema" },
     { "path": "./packages/graph-core" },
-    { "path": "./packages/adapters/kicad" }
+    { "path": "./packages/adapters/kicad" },
+    { "path": "./packages/adapters/storage-fs" }
   ]
 }

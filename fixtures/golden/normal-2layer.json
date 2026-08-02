@@ -1,0 +1,13 @@
+{
+  "taskId": "golden:normal-2layer",
+  "kind": "verification",
+  "inputFixture": "design-graphs/normal-2layer.json",
+  "expected": {
+    "outcome": "pass",
+    "jidoka": "continue",
+    "errorCode": null
+  },
+  "scenario": {
+    "description": "Minimal deterministic two-layer fixture"
+  }
+}

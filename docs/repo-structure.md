@@ -15,6 +15,7 @@ packages/
   graph-core/             # snapshot、Entity、semantic validation、Repository契約
   adapters/
     kicad/                # Graph -> KiCad、再オープン、artifact manifest
+    storage-fs/           # snapshot、patch、event logのファイル実装
     freerouting/          # DSN/SES境界
     simulation/           # SPICE等のtyped worker adapter（後続）
   tool-contract/          # tool request/result/error envelope

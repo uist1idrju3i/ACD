@@ -2,6 +2,7 @@ import { readFile } from "node:fs/promises";
 import { describe, expect, it } from "vitest";
 
 const fixtureNames = [
+  "normal-2layer",
   "erc-fail",
   "drc-fail",
   "patch-conflict",
@@ -16,12 +17,13 @@ describe("golden task fixtures", () => {
         await readFile(new URL(`./golden/${fixtureName}.json`, import.meta.url), "utf8"),
       ) as {
         taskId: string;
-        expected: { outcome: string; jidoka: string; errorCode: string };
+        expected: { outcome: string; jidoka: string; errorCode: string | null };
       };
       expect(fixture.taskId).toBe(`golden:${fixtureName}`);
-      expect(fixture.expected.outcome).toBe("fail");
-      expect(fixture.expected.jidoka).toBe("stop");
-      expect(fixture.expected.errorCode).toMatch(/^[a-z-]+$/);
+      expect(["pass", "fail"]).toContain(fixture.expected.outcome);
+      expect(["continue", "stop"]).toContain(fixture.expected.jidoka);
+      if (fixture.expected.errorCode !== null)
+        expect(fixture.expected.errorCode).toMatch(/^[a-z-]+$/);
     });
   }
 });

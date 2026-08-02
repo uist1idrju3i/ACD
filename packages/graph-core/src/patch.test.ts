@@ -70,6 +70,31 @@ describe("PatchEngine", () => {
     expect(second.snapshotHash).toBe(first.snapshotHash);
   });
 
+  it("uses RFC 6902 insert semantics for array add", () => {
+    const engine = new PatchEngine();
+    const result = engine.apply(
+      graph,
+      0,
+      patch({
+        patchId: "patch:test:insert",
+        operations: [
+          {
+            op: "add",
+            path: "/entities/1",
+            value: {
+              id: "constraint:test",
+              type: "Constraint",
+              revision: 0,
+              name: "Inserted",
+            },
+          },
+        ],
+      }),
+    );
+    expect(result.graph.entities[1]?.id).toBe("constraint:test");
+    expect(result.graph.entities[2]?.id).toBe("requirement:test");
+  });
+
   it("rejects duplicate entity IDs", () => {
     const engine = new PatchEngine();
     const invalid = structuredClone(graph);
