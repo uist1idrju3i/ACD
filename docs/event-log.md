@@ -27,6 +27,10 @@ Phase 0の実行、patch、検証、停止、再開を追記専用で記録し�
 `baseRevision`、`resultRevision`、`payloadHash`です。`payload`はイベント種別
 ごとのtyped payloadとし、hashはcanonical JSON化したpayloadへ適用します。
 
+Gate 20のknowledge eventにおける`baseRevision`/`resultRevision`は設計graphの
+revisionではなく、knowledge event log内で単調増加するカウンタです。Gate 19の
+fab feedback logとは別のappend-only logとして管理し、ログを混在させません。
+
 ## イベント種別
 
 Phase 0では少なくとも次を扱います。

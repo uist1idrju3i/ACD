@@ -427,7 +427,7 @@ try {
   enter(20);
   const passingFindings = fabFeedback.findings
     .filter((finding) => finding.verdict === "pass")
-    .sort((left, right) => left.findingId.localeCompare(right.findingId));
+    .sort((left, right) => compareIds(left.findingId, right.findingId));
   if (passingFindings.length === 0) {
     throw new Error("verification-failed: fab feedback produced no passing findings");
   }
