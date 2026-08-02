@@ -1,6 +1,6 @@
 # KiCad CIプロファイル
 
-**ステータス：Draft**
+**ステータス：Draft（KiCad 10.0.5 spike実測済み）**
 
 ## 目的と権威範囲
 
@@ -16,7 +16,8 @@ container digest、実際のKiCad patch版、利用可能なライブラリ、�
   provenanceへ記録する。
 - CI実行時の無条件ネットワーク取得を禁止する。必要なライブラリはcontainer
   または明示的fixture artifactとして提供する。
-- 最終的なcontainer image digestは、KiCad再現性spikeの成功後に記録する。
+- 実測image：`kicad/kicad:10.0`、KiCad `10.0.5`、
+  digest `sha256:182c8005cb775a2c448a4c18681d489f1ff472a761885eba3e08b07e3c0564de`。
 
 ## Capability probe
 
@@ -24,13 +25,13 @@ container digest、実際のKiCad patch版、利用可能なライブラリ、�
 
 ```sh
 kicad-cli --version
-kicad-cli help
-kicad-cli sch help
-kicad-cli pcb help
-kicad-cli pcb export help
+kicad-cli --help
+kicad-cli sch --help
+kicad-cli pcb --help
+kicad-cli pcb export --help
 ```
 
-probeでは`sch erc`、`pcb drc`、`pcb gerbers`、`pcb drill`、`pcb export step`
+probeでは`sch erc`、`pcb drc`、`pcb export gerbers`、`pcb export drill`、`pcb export step`
 の有無と引数を確認し、未対応操作を暗黙に縮退させません。
 
 ## 基準コマンド
@@ -41,8 +42,8 @@ profileへ確定した完全なcommand lineを記録します。
 ```sh
 kicad-cli sch erc --exit-code-violations --output artifacts/erc.rpt design.kicad_sch
 kicad-cli pcb drc --exit-code-violations --output artifacts/drc.rpt design.kicad_pcb
-kicad-cli pcb gerbers -o artifacts/gerbers/ design.kicad_pcb
-kicad-cli pcb drill -o artifacts/drill/ design.kicad_pcb
+kicad-cli pcb export gerbers -o artifacts/gerbers/ design.kicad_pcb
+kicad-cli pcb export drill -o artifacts/drill/ design.kicad_pcb
 kicad-cli pcb export step -o artifacts/board.step design.kicad_pcb
 ```
 
@@ -63,6 +64,9 @@ hashを保存します。
 KiCadの回路図IPCはPhase 0/1の前提にしない。回路図投影は生成ファイルの再読込
 と、利用可能な場合だけ能力検出されたIPCで補助検証する。
 
+実行ラッパーは`pnpm kicad:spike`（`scripts/kicad-spike.sh`）です。Dockerがない、
+またはimageが取得できない環境では、ラッパーは`SKIP`を返して終了します。
+
 ## 期待artifact
 
 少なくとも次を保存します。
@@ -75,13 +79,16 @@ KiCadの回路図IPCはPhase 0/1の前提にしない。回路図投影は生成
 - input snapshot／patch／revision
 - tool、library、container provenance
 - 各artifactのSHA-256 hash
+- `STABLE-SHA256SUMS`（KiCadが埋め込む時刻metadataを正規化した比較用hash）
 
 ## 合否
 
-固定fixtureを同じcontainerで二回以上実行し、許容された時刻・一時ディレクトリ
-差分を除いて同じreportとartifact hashになることを成功条件とします。KiCadの
-非決定的なmetadataがある場合は、除外規則を勝手に追加せず、原因と許容差を
-profileで明示します。
+KiCad 10.0.5で実測した結果、ERC/DRCはともに違反0、Gerber一式、drill、
+STEPを生成し、再実行時の`STABLE-SHA256SUMS`は一致しました。生artifactの
+`SHA256SUMS`はGerber、drill、STEP、reportに生成時刻metadataが含まれるため
+再実行で変化します。この差分は時刻metadataに限定され、比較時は
+`STABLE-SHA256SUMS`を使用します。KiCadが埋め込む非決定的metadataの除外規則は
+このprofileで明示したものに限ります。
 
 ## 関連文書
 

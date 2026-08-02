@@ -1,5 +1,7 @@
 # Phase 0実装計画
 
+**ステータス：実装中（Schema、graph-core、KiCad投影spikeを実装済み）**
+
 **ステータス：Draft**
 
 ## 目的と権威範囲
