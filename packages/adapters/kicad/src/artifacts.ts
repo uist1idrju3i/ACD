@@ -19,8 +19,5 @@ export const hashFile = async (path: string): Promise<ArtifactHash> => {
   };
 };
 
-export const hashFiles = async (
-  directory: string,
-  filenames: string[],
-): Promise<ArtifactHash[]> =>
+export const hashFiles = async (directory: string, filenames: string[]): Promise<ArtifactHash[]> =>
   Promise.all(filenames.sort().map((filename) => hashFile(join(directory, filename))));

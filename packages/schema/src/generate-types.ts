@@ -1,10 +1,6 @@
 import { readFile, writeFile } from "node:fs/promises";
 import { compile } from "json-schema-to-typescript";
-import {
-  designGraphSchemaPath,
-  eventSchemaPath,
-  patchSchemaPath,
-} from "./paths.js";
+import { designGraphSchemaPath, eventSchemaPath, patchSchemaPath } from "./paths.js";
 
 const generatedDirectory = new URL("./generated/", import.meta.url);
 

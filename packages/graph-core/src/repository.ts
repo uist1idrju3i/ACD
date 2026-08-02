@@ -1,4 +1,4 @@
-import { mkdir, readFile, writeFile } from "node:fs/promises";
+import { appendFile, mkdir, readFile, writeFile } from "node:fs/promises";
 import { dirname } from "node:path";
 import type { PatchEnvelope as Patch } from "@acd/schema";
 import { FileEventLog, type EventEnvelope } from "./event-log.js";
@@ -34,6 +34,10 @@ export class FileRepository implements Repository {
     return `${this.directory}/snapshot.json`;
   }
 
+  private patchesPath(): string {
+    return `${this.directory}/patches.jsonl`;
+  }
+
   async load(): Promise<Snapshot> {
     if (!this.snapshot) {
       await mkdir(dirname(this.snapshotPath()), { recursive: true });
@@ -43,7 +47,8 @@ export class FileRepository implements Repository {
         this.snapshot = parsed;
       } catch (error) {
         if ((error as NodeJS.ErrnoException).code !== "ENOENT") throw error;
-        if (!this.initialGraph) throw new GraphCoreError("reference-integrity", "repository has no initial graph");
+        if (!this.initialGraph)
+          throw new GraphCoreError("reference-integrity", "repository has no initial graph");
         validateSemanticGraph(this.initialGraph, 0);
         this.snapshot = { revision: 0, graph: this.initialGraph, hash: sha256(this.initialGraph) };
         await writeFile(this.snapshotPath(), JSON.stringify(this.snapshot, null, 2), "utf8");
@@ -57,6 +62,7 @@ export class FileRepository implements Repository {
     const result = this.patchEngine.apply(current.graph, current.revision, patch);
     this.snapshot = { revision: result.revision, graph: result.graph, hash: result.snapshotHash };
     await writeFile(this.snapshotPath(), JSON.stringify(this.snapshot, null, 2), "utf8");
+    await appendFile(this.patchesPath(), `${JSON.stringify(patch)}\n`, "utf8");
     const event: EventEnvelope = {
       eventId: `event:${patch.patchId}`,
       type: "patch.accepted",

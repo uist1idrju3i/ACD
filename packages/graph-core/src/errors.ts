@@ -4,7 +4,10 @@ export type ErrorCode =
   | "patch-conflict"
   | "revision-invalid"
   | "event-replay-failure"
-  | "stale-result";
+  | "stale-result"
+  | "verification-failed"
+  | "reopen-failure"
+  | "tool-timeout";
 
 export type ErrorSeverity = "warning" | "error" | "critical";
 
