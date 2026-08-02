@@ -78,9 +78,7 @@ const evaluateCondition = (
   if (observed === undefined) return "unknown";
   const values = Array.isArray(observed) ? observed : [observed];
   const normalize = (value: string): string =>
-    conditionToEvaluate.field === "footprintId" && value.startsWith("footprint:")
-      ? value.slice("footprint:".length)
-      : value;
+    conditionToEvaluate.field === "footprintId" ? (value.split(":").at(-1) ?? value) : value;
   const matches = values.map(normalize).includes(normalize(conditionToEvaluate.value));
   return (conditionToEvaluate.operator === "equals" ? matches : !matches) ? "pass" : "fail";
 };
@@ -116,8 +114,7 @@ const assertPromotionMetadata = (item: KnowledgeItem): void => {
     item.sourceEventIds.length === 0 ||
     item.provenance.length === 0 ||
     item.appliesWhen.length === 0 ||
-    item.excludesWhen.length === 0 ||
-    !item.appliesWhen.some((entry) => entry.field === "reproductionCondition")
+    item.excludesWhen.length === 0
   ) {
     throw new GraphCoreError(
       "schema-invalid",
@@ -162,7 +159,11 @@ const conditionsForFinding = (
     ...(finding.references.footprintId
       ? [condition("footprintId", "equals", finding.references.footprintId)]
       : []),
-    ...rule.reproductionConditions.map((value) =>
+    ...(finding.references.ruleId
+      ? [condition("ruleId", "equals", finding.references.ruleId)]
+      : []),
+    condition("classification", "equals", finding.classification),
+    ...finding.reproductionConditions.map((value) =>
       condition("reproductionCondition", "equals", value),
     ),
     ...rule.appliesWhen.filter(
@@ -215,7 +216,6 @@ export const createKnowledgeCandidate = (input: {
         contentHash: input.report.rawReport.contentHash,
         designRevision: input.designRevision,
         fabProfileId: input.report.fabProfileId,
-        ...(input.finding.references.ruleId ? { ruleId: input.finding.references.ruleId } : {}),
         derivationInputHash: input.derivationInputHash,
         derivationOutputHash: input.derivationOutputHash,
       },
@@ -330,8 +330,6 @@ export const reviseKnowledgeItem = (
     scope: "project-local",
   });
   delete revised.approvalId;
-  delete revised.rejectionReason;
-  delete revised.staleReason;
   return revised;
 };
 
