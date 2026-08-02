@@ -49,7 +49,7 @@ N7は、親和図でStep 1の要求・自由記述をクラスタリングし、
 
 ## KnowledgeItemのライフサイクル
 
-状態は`candidate`→`reviewed`→`adopted`→`deprecated`とします（Schemaの`KnowledgeItem.status`）。昇格には出所、再現条件、適用条件と除外条件が必要です。出所は`provenance`、適用条件は`appliesWhen`、除外条件は`excludesWhen`へ記録し、適用条件（fab、材料、部品、版、期間）を外れる再利用は禁止します。誤りが判明した知識は`deprecated`にし、その知識を根拠に行った判断と`VerificationResult`を洗い出して再検証対象にします。内容を黙って書き換えません。却下した案、失敗したspike、再現しなかった結果も条件付きで残し、同じ検討の反復を防ぎます。
+状態は`candidate`→`reviewed`→`adopted`→`deprecated`とします（Schemaの`KnowledgeItem.status`）。検討を打ち切った候補は`rejected`と理由を記録して保持します。昇格にはsource event、provenance、再現条件、適用条件と除外条件が必要です。出所は`provenance`、適用条件は`appliesWhen`、除外条件は`excludesWhen`へ記録し、適用条件（fab、材料、部品、版、期間）を外れる再利用は禁止します。`library-wide`へのscope昇格には対象を限定した有効期限付きapprovalが必要です。誤りが判明した知識は`deprecated`にし、その知識を根拠に行った判断と`VerificationResult`をグラフ参照から探索して再検証対象（stale）にします。内容を黙って書き換えず、変更は旧版を参照する新しいKnowledgeItem revisionとして記録します。却下した案、失敗したspike、再現しなかった結果も条件付きで残し、同じ検討の反復を防ぎます。
 
 ## 説明可能性
 

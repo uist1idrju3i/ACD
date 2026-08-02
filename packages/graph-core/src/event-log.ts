@@ -11,7 +11,10 @@ export type EventType =
   | "checkpoint.created"
   | "run.stopped"
   | "run.resumed"
-  | "fab.feedback.received";
+  | "fab.feedback.received"
+  | "knowledge.candidate.created"
+  | "knowledge.transitioned"
+  | "knowledge.applied";
 
 export type EventEnvelope = {
   eventId: string;

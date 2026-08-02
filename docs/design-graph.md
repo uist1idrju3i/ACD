@@ -40,6 +40,10 @@
 | `Approval`             | 人間または認可主体による範囲付き承認                  | approval ID, scope, expiry                     |
 | `Waiver`               | 検証警告・免除の理由と期限                            | gate, risk, approval ID, expiry                |
 
+`KnowledgeItem`は`sourceEventIds`、`provenance`、`scope`、`status`、`appliesWhen`、
+`excludesWhen`を必須のライフサイクル情報として持ちます。版の変更は
+`previousRevisionId`で旧版を参照し、却下理由、承認ID、信頼度、stale理由を追加記録できます。
+
 ## 設計根拠
 
 `Rationale`は最低限、次を持ちます。
