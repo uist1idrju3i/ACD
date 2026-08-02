@@ -16,7 +16,7 @@ projectionを使用できますが、non-smoke fixtureへ適用する場合はji
 ESP32級goldenではFreeroutingのDSN/SES境界、または将来承認されるADRの外部routing
 toolを使用します。Phase 1で一般用途routerを実装することは許可しません。
 
-## 目的と範囲
+## 目的と権威範囲
 
 Phase 1は、事前変換済みの`Requirement` fixtureから、決定論的な検証を通過した
 2層基板と人手発注可能な製造packageを生成する。自然言語入力、LLMによる要求変換、
@@ -61,8 +61,9 @@ Phase 1 fixtureは次を含む。
 | 12   | Pre-order readiness     | 全artifact、BOM、cost、availability       | 人手発注に必要な情報が揃い、未解決order-relevant unknownなし          | 発注準備を停止                                     |
 | 13   | Physical completion     | 実機測定Evidence                          | golden taskのTestItemが条件・基準付きでpass                           | 後続継続を停止／再設計                             |
 
-各gateはgraph revision、input hash、tool/version、library／model provenance、output
-hash、status、uncertainty、停止理由をEvidenceまたはVerificationResultへ記録する。
+各gateの合否、対象gate、入力revision、入力hash、tool version、判定時刻は`VerificationResult`へ
+記録する。測定・tool output・library／model provenance、output hash、uncertainty、停止理由は
+`Evidence`として記録し、`VerificationResult`からID参照する。
 
 ## BOM／manufacturing package契約
 
@@ -89,9 +90,10 @@ MPN、quantity、supplier情報の欠落、fixture AVL外の選択、またはli
 
 ```yaml
 id: evidence:phase1-golden:board-bringup
+type: Evidence
 revision: 0
-kind: measurement
-status: passed
+evidenceKind: measurement
+observedAt: "<RFC3339>"
 board:
   projectId: project:phase1-golden
   graphRevision: 0
@@ -106,21 +108,27 @@ conditions:
   instruments:
     - id: "<instrument-id>"
       calibrationDue: "<RFC3339>"
-measurements:
+observations:
   - testItemId: test:power-rail
+    claim: "Power rail measurement"
     procedure: "<procedure>"
-    observed: "<value and unit>"
+    value: "<value>"
+    unit: "<unit>"
     expected: "<range and unit>"
     pass: true
   - testItemId: test:communication
+    claim: "Communication test"
     procedure: "<procedure>"
-    observed: "<result>"
+    value: "<result>"
     expected: "<criterion>"
     pass: true
 provenance:
-  toolVersion: "<measurement-tool-version>"
-  operator: "<operator-or-redacted-id>"
-  capturedAt: "<RFC3339>"
+  - kind: measurement
+    locator: "measurement://phase1-golden/board-bringup"
+    toolVersion: "<measurement-tool-version>"
+    capturedAt: "<RFC3339>"
+    capturedBy: "<operator-or-redacted-id>"
+    contentHash: "sha256:<hash>"
 uncertainty:
   state: verified
   description: "<remaining uncertainty or none>"
@@ -138,7 +146,9 @@ unknown、stale result、実機Evidence不足はjidoka停止である。修正�
 
 未配線ratsnestをwaiverでPhase 1発注準備へ通すことは許可しない。routingが収束しない
 場合は、入力fixtureを単純化するか、決定論的な代替routingを実装し、失敗Evidenceを
-保存する。
+保存する。fixture単純化は要求・受入範囲の変更として扱い、変更理由、影響分析、必要な承認、
+再検証範囲を経てから再開する。代替routingはPhase 1境界内（外部toolまたは承認済みADR）
+に限る。
 
 ## 関連文書
 

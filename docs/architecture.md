@@ -18,11 +18,11 @@
 
 ### 決定論的WASM層
 
-トポロジー検査、軽量ERC/DRC、設計グラフのスキーマ検証、Gerber/IPC-2581の構造検査など、ブラウザで安全に実行できる検査をWASMまたは同等のサンドボックスで実行します。AIの出力を合否判定に使わず、同一入力・同一ツールバージョンから再現可能な結果を返します。
+トポロジー検査、軽量ERC/DRC、設計グラフのスキーマ検証、Gerber/IPC-2581の構造検査など、ブラウザで安全に実行できる検査をWASMまたは同等のサンドボックスで実行します。AIの出力を合否判定に使わず、同一入力・同一ツールバージョンから再現可能な結果を返します。これはtarget architectureであり、Phase 0/1では独自WASM engineを受入対象とせず、既存CLI、fixture runner、外部tool境界を使います。
 
 ### 任意のローカル／サーバーワーカー
 
-ブラウザだけでは重い、長時間、または秘密情報を扱う処理をワーカーへ委譲できます。
+ブラウザだけでは重い、長時間、または秘密情報を扱う処理をワーカーへ委譲できます。これはtarget architectureであり、Phase 0/1ではworker実装を受入対象とせず、既存CLI、fixture runner、外部tool境界を使います。
 
 - ローカルLLMまたはサーバーLLM推論
 - 大規模な自動配線
@@ -55,7 +55,7 @@ ACDの要件取得、設計グラフ参照、候補生成、検証実行、差�
 
 ### KiCad境界
 
-KiCadは相互運用・レビュー・退避先です。`kicad-cli`はバッチ検証・エクスポート、IPC APIは稼働中エディタへの検査・ガード付き変更を担当します。KiCad 10を最低対応にするか、KiCad 11の回路図IPCを必須にするかは未決定（[ADR-0007](adr/0007-kicad-minimum-version.md)で決定）です。回路図を正にせず設計グラフから投影します（詳細は[`kicad-interop.md`](kicad-interop.md)）。
+KiCadは相互運用・レビュー・退避先です。`kicad-cli`はバッチ検証・エクスポート、IPC APIは稼働中エディタへの検査・ガード付き変更を担当します。KiCad 10を最低対応にするか、KiCad 11の回路図IPCを必須にするかは未決定（[ADR-0007](adr/0007-kicad-minimum-version.md)で決定予定）です。Phase 0/1 CIは[ADR-0009](adr/0009-provisional-kicad-ci-baseline.md)の暫定基準に従います。回路図を正にせず設計グラフから投影します（詳細は[`kicad-interop.md`](kicad-interop.md)）。
 
 ### 機械CAD境界
 
