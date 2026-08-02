@@ -876,8 +876,28 @@ try {
     throw new Error("verification-failed: no adopted mask-sliver knowledge for library patch");
   }
   const libraryPatch = createLibraryPatchCandidate(adoptedKnowledgeForLibraryPatch);
+  const writeLibraryPatchFailure = async (
+    failureReason: string,
+    verification?: Record<string, unknown>,
+    boardHash?: string,
+  ): Promise<void> => {
+    const evidence = {
+      patch: libraryPatch,
+      failureReason,
+      verification: verification ?? null,
+      boardHash: boardHash ?? null,
+    };
+    await writeFile(
+      join(artifactRoot, "library-patch.json"),
+      `${JSON.stringify({ ...evidence, inputHash: hash(JSON.stringify(evidence)) }, null, 2)}\n`,
+    );
+  };
   const geometryVerification = verifyLibraryPatchGeometry(libraryPatch);
   if (geometryVerification.geometry !== "passed") {
+    await writeLibraryPatchFailure(
+      geometryVerification.failureEvidence ?? "library patch geometry failed",
+      geometryVerification,
+    );
     throw new Error(
       `verification-failed: library patch geometry failed: ${geometryVerification.failureEvidence}`,
     );
@@ -990,6 +1010,11 @@ try {
   };
   const adoptedLibraryPatch = adoptVerifiedLibraryPatch(libraryPatch, verification);
   if (adoptedLibraryPatch.status !== "adopted") {
+    await writeLibraryPatchFailure(
+      "library patch verification did not pass",
+      verification,
+      patchedBoardHash,
+    );
     throw new Error("verification-failed: library patch was not adopted");
   }
   await writeFile(
