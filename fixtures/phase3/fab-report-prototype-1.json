@@ -6,7 +6,7 @@
   "source": {
     "kind": "fixture",
     "locator": "fixtures/phase3/fab-report-prototype-1.json",
-    "contentHash": "sha256:25e3b2f8cb23060d5205b6f3f1aa1700da87ff3921f1ae7b1bdae74242a7a33a",
+    "contentHash": "sha256:0a427783f1eb3605b2fd7db687b13f8c6fade547d2f3cd08397301dea6b0fbd6",
     "fixtureDerived": true,
     "fixtureId": "fixture:fab-report-prototype-1-jlcpcb"
   },

@@ -112,8 +112,8 @@ describe("KiCad library overlay patches", () => {
   it("materializes a library overlay into every matching footprint instance", () => {
     const patch = createLibraryPatchCandidate(adoptedKnowledge());
     const board = [
-      '(kicad_pcb (footprint "R_0603_1608Metric" (pad "1" smd roundrect (size 0.8 0.95))))',
-      '(footprint "R_0603_1608Metric" (pad "1" smd roundrect (size 0.8 0.95)))',
+      `(kicad_pcb (footprint "${patch.footprintId}" (pad "1" smd roundrect (size 0.8 0.95))))`,
+      `(footprint "${patch.footprintId}" (pad "1" smd roundrect (size 0.8 0.95)))`,
     ].join("\n");
     const patched = materializeLibraryPatchInBoardSource(
       board,

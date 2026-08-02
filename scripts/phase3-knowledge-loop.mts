@@ -233,9 +233,7 @@ const adopted = transitionKnowledgeItem(reviewed, {
 const context = createTargetDesignKnowledgeContext({
   designRevision: "prototype-2",
   fabProfileId: fixture.manufacturingProfile!.fabProfileId,
-  footprintIds: ["USB_C_Receptacle_GCT_USB4135-GF-A_6P_TopMnt_Horizontal"],
-  ruleIds: [],
-  classifications: [],
+  footprintIds: ["footprint:Connector_USB:USB_C_Receptacle_GCT_USB4135-GF-A_6P_TopMnt_Horizontal"],
   reproductionConditions: fixture.manufacturingProfile!.processConditions,
 });
 const decisions = evaluateKnowledgeApplications([adopted], context);
