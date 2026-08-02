@@ -178,11 +178,11 @@ read-only投影へ延期します。配線は`unrouted=0`を必須とし、未�
   patch conflict、stale result、再オープン失敗時の停止とエラー分類を確認した。
   正常系のgraph hashは
   `sha256:7be6a9ed61680e3d5a9abca9f14a73afdf69ca467b62ae82c82c96601c8af325`。
-- `pnpm kicad:spike`：終了コード0。ただし
-  `kicad/kicad:10.0`タグが取得済みでなかったため、`SKIP: Docker or KiCad image unavailable`
-  となり、spike本体は未実行。これは成功とは扱わない。条件6のKiCad再オープン、
-  ERC/DRC、Gerber/drill、hash検証は、上記digest固定イメージを使用した
-  `pnpm golden`の正常系fixtureで実証した。
+- `pnpm kicad:spike`：既定の`kicad/kicad:10.0`タグは検証機に取得されておらず
+  `SKIP: Docker or KiCad image unavailable`となるため、`KICAD_IMAGE`へ上記digest
+  固定イメージを指定して実行した。終了コード0。`kicad-cli`は`10.0.5`、DRC 0
+  violations／0 unconnected items、Gerber 8面とdrill、STEP、ERC 0 violationsを
+  生成した。SKIPは成功として扱わない。
 
 ## 関連文書
 
