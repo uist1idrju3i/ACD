@@ -43,3 +43,6 @@ ADRはACDの技術選定を、理由・代替案・前提・結果とともに�
 - [`0018-golden-routing-technology.md`](0018-golden-routing-technology.md)
 - [`0019-repair-loop-llm-proposal-with-deterministic-validation.md`](0019-repair-loop-llm-proposal-with-deterministic-validation.md)
 - [`0020-spice-engine-ngspice-external-process.md`](0020-spice-engine-ngspice-external-process.md)
+- [`0021-fab-feedback-intake-source.md`](0021-fab-feedback-intake-source.md)
+- [`0022-knowledge-scope-promotion-approval-boundary.md`](0022-knowledge-scope-promotion-approval-boundary.md)
+- [`0023-library-versioning-official-snapshot-overlay-patch.md`](0023-library-versioning-official-snapshot-overlay-patch.md)
