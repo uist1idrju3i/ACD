@@ -22,6 +22,7 @@ export type FabProfileRule = {
     | "spacing"
     | "solderability";
   confidence: number;
+  minimumSliverMm?: number;
   reproductionConditions: string[];
   appliesWhen: ApplicabilityCondition[];
   excludesWhen: ApplicabilityCondition[];
