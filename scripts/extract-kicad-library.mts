@@ -9,6 +9,7 @@ const libraryRoot = join(root, "packages/adapters/kicad/library-snapshot");
 const fixturePaths = [
   join(root, "fixtures/phase1/smoke.json"),
   join(root, "fixtures/phase1/golden-esp32.json"),
+  join(root, "fixtures/phase1/prototype-2.json"),
 ];
 const license = "CC-BY-SA-4.0-with-exception";
 
@@ -285,7 +286,11 @@ const main = async (): Promise<void> => {
   };
   const symbolsByFixture = Object.fromEntries(
     fixtures.map(({ path, fixture }) => [
-      path.endsWith("smoke.json") ? "smoke" : "golden",
+      path.endsWith("smoke.json")
+        ? "smoke"
+        : path.endsWith("prototype-2.json")
+          ? "prototype2"
+          : "golden",
       symbolsForFixture(fixture),
     ]),
   );

@@ -164,12 +164,15 @@ sliverを拡大し、同findingが0件になることを検証する。
 
 ### WP6：電子部品ライブラリの本格整備
 
-**状態：未着手。**
+**状態：実装中（部品データschema／provenance recordsを追加済み、公式snapshot再抽出とCI確認が残る）。**
 
 **作業**
 
 - library snapshotの対象を2次試作のgolden taskが必要とする範囲へ拡張し、抽出scriptで
   manifestを再生成する。
+- `fixtures/phase3/component-library.json`に、1次・2次試作で使用するsymbolと
+  footprint候補を記録する。未取得のdatasheetと実装上の注意は`unknown`として保持し、
+  Phase 4以降のlive sourcingを行わない。
 - 部品エントリにdatasheet参照、footprint候補、既知の注意（実装上の制約、修正履歴）を
   出所付きで持たせる。
 - ライセンス帰属（CC-BY-SA-4.0-with-exception）とNOTICEの範囲を拡張分にも維持する。
