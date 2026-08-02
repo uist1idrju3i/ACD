@@ -174,7 +174,7 @@ const makeReport = (board: string): FabFeedbackReport => {
     severityReported: "high" as const,
     references: {
       partId: "part:p2-j1",
-      footprintId: patch.footprintId,
+      footprintId: `footprint:Connector_USB:${patch.footprintId}`,
       ...(measurement.violates ? { ruleId: "mask-sliver-min" } : {}),
     },
   };
@@ -275,7 +275,8 @@ if (patch.sourceKnowledgeId !== adopted.knowledgeId) {
 const maskRule = profileRules.rules.find((rule) => rule.ruleId === "mask-sliver-min");
 if (
   !maskRule?.correction ||
-  patch.footprintId !== controlReport.rawFindings[0]?.references.footprintId
+  controlReport.rawFindings[0]?.references.footprintId !==
+    `footprint:Connector_USB:${patch.footprintId}`
 ) {
   throw new Error("verification-failed: library patch does not match mask-sliver applicability");
 }
