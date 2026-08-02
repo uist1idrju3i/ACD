@@ -1,4 +1,6 @@
-import { readFile } from "node:fs/promises";
+import { mkdtemp, readFile, writeFile } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { intakeFabFeedback } from "@acd/graph-core";
 import { FixtureFabFeedbackReader, referenceIndexFromPhase1Fixture } from "./index.js";
@@ -12,6 +14,23 @@ describe("fixture fab feedback adapter", () => {
     expect(report.source.kind).toBe("fixture");
     expect(report.source.fixtureDerived).toBe(true);
     expect(report.rawFindings).toHaveLength(3);
+  });
+
+  it("rejects a report that claims to be live data", async () => {
+    const report = JSON.parse(
+      await readFile(
+        new URL("../../../../fixtures/phase3/fab-report-prototype-1.json", import.meta.url),
+        "utf8",
+      ),
+    ) as { source: { kind: string; fixtureDerived: boolean } };
+    report.source = { ...report.source, kind: "live", fixtureDerived: false };
+    const directory = await mkdtemp(join(tmpdir(), "acd-fab-feedback-"));
+    const path = join(directory, "report.json");
+    await writeFile(path, JSON.stringify(report));
+
+    await expect(new FixtureFabFeedbackReader(path).read()).rejects.toThrow(
+      "fixture fab feedback reader requires source.kind to be fixture",
+    );
   });
 
   it("builds a reference index from the Phase 1 golden fixture", async () => {

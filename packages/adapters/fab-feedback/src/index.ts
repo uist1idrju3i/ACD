@@ -39,6 +39,9 @@ export class FixtureFabFeedbackReader implements FabFeedbackReader {
       );
     }
     const typed = report as FabFeedbackReport;
+    if (typed.source.kind !== "fixture") {
+      throw new Error("fixture fab feedback reader requires source.kind to be fixture");
+    }
     const rawHash = sha256Text(typed.rawReport.content);
     if (typed.rawReport.contentHash !== rawHash)
       throw new Error("fab feedback raw report body hash mismatch");
