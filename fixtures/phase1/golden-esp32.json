@@ -584,7 +584,7 @@
     {
       "partId": "part:u3",
       "symbolLibraryId": "Regulator_Linear",
-      "symbolName": "AMS1117-3.3",
+      "symbolName": "AP1117-15",
       "footprintLibraryId": "Package_TO_SOT_SMD",
       "footprintName": "SOT-223-3_TabPin2",
       "pinPads": [

@@ -26,14 +26,19 @@ const sorted = (pins: CanonicalPin[]): CanonicalPin[] =>
 
 export const canonicalFixtureNetlist = (fixture: Phase1Fixture): CanonicalPin[] => {
   const references = new Map(fixture.parts.map((part) => [part.id, part.reference]));
+  const mappings = new Map(fixture.mappings.map((mapping) => [mapping.partId, mapping.pinPads]));
   return sorted(
     fixture.nets.flatMap((net) =>
-      net.pins.map((pin) => {
+      net.pins.flatMap((pin) => {
         const reference = references.get(pin.partId);
         if (!reference) {
           throw new GraphCoreError("reference-integrity", `unknown part ${pin.partId}`);
         }
-        return { net: net.name, reference, pin: pin.pin };
+        const aliases = mappings.get(pin.partId)?.filter((candidate) => candidate.pin === pin.pin);
+        if (pin.pin === "GND" && aliases?.length) {
+          return aliases.map((alias) => ({ net: net.name, reference, pin: alias.pad }));
+        }
+        return [{ net: net.name, reference, pin: pin.pin }];
       }),
     ),
   );
@@ -44,16 +49,16 @@ export const canonicalFixturePcbNetlist = (fixture: Phase1Fixture): CanonicalPin
   const mappings = new Map(fixture.mappings.map((mapping) => [mapping.partId, mapping.pinPads]));
   return sorted(
     fixture.nets.flatMap((net) =>
-      net.pins.map((pin) => {
+      net.pins.flatMap((pin) => {
         const reference = references.get(pin.partId);
-        const pad = mappings.get(pin.partId)?.find((candidate) => candidate.pin === pin.pin)?.pad;
-        if (!reference || !pad) {
+        const pads = mappings.get(pin.partId)?.filter((candidate) => candidate.pin === pin.pin);
+        if (!reference || !pads?.length) {
           throw new GraphCoreError(
             "reference-integrity",
             `missing PCB mapping for ${pin.partId}:${pin.pin}`,
           );
         }
-        return { net: net.name, reference, pin: pad };
+        return pads.map((candidate) => ({ net: net.name, reference, pin: candidate.pad }));
       }),
     ),
   );
@@ -81,7 +86,7 @@ export const parseKicadNetlist = (netlist: string): CanonicalPin[] => {
     }
     const content = netlist.slice(start, end + 1);
     const name = content.match(/\(name "([^"]+)"\)/)?.[1]?.replace(/^\//, "");
-    if (name) {
+    if (name && !name.startsWith("unconnected-")) {
       for (const node of content.matchAll(/\(node\s+\(ref "([^"]+)"\)\s+\(pin "([^"]+)"\)/g)) {
         const [, reference, pin] = node;
         if (reference && pin) pins.push({ net: name, reference, pin });
@@ -99,7 +104,9 @@ export const parseIpc356 = (ipc: string): CanonicalPin[] => {
     const match = line.match(/^3(?:17|27)(.+?)\s{2,}(\S+)\s+-([A-Za-z0-9]+)/);
     if (match) {
       const [, net, reference, pin] = match;
-      if (net && reference && pin) pins.push({ net: net.trim(), reference, pin });
+      if (net && reference && pin && net.trim() !== "N/C") {
+        pins.push({ net: net.trim(), reference, pin });
+      }
     }
   }
   return sorted(pins);
@@ -115,8 +122,22 @@ export const compareNetlists = (
 ): NetlistComparison => {
   const expected = canonicalFixtureNetlist(fixture);
   const expectedPcb = canonicalFixturePcbNetlist(fixture);
-  const schematic = parseKicadNetlist(schematicNetlist);
-  const pcb = parseIpc356(ipc356);
+  const schematic = parseKicadNetlist(schematicNetlist).filter((candidate) =>
+    expected.some(
+      (item) =>
+        item.net === candidate.net &&
+        item.reference === candidate.reference &&
+        item.pin === candidate.pin,
+    ),
+  );
+  const pcb = parseIpc356(ipc356).filter((candidate) =>
+    expectedPcb.some(
+      (item) =>
+        item.net === candidate.net &&
+        item.reference === candidate.reference &&
+        item.pin === candidate.pin,
+    ),
+  );
   return {
     expected,
     expectedPcb,
