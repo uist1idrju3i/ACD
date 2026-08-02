@@ -17,7 +17,9 @@ golden routingでは、KiCad 10.0.5の`pcbnew` Python APIを固定container内�
 1. KiCadが生成した`design.kicad_pcb`から`ExportSpecctraDSN`でDSNを生成する。
 2. 固定Freerouting containerでDSNをroutingする。
 3. 同じKiCad containerの`ImportSpecctraSES`でSESをPCBへ取り込む。
-4. KiCad DRC reportを受入判定の権威とし、`unrouted=0`、DRC violations=0、
+4. ESP32 antenna regionはKiCad board rule-areaとして作成し、KiCad DSN exporter
+   が生成するF.Cu/B.Cu keepoutとしてFreeroutingへ渡す。
+5. KiCad DRC reportを受入判定の権威とし、`unrouted=0`、DRC violations=0、
    unconnected=0、footprint errors=0を要求する。
 
 Freeroutingの境界はGPL external-processのままとし、jarや実装をACDへvendor、

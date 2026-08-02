@@ -153,6 +153,8 @@ try {
   const routePython = [
     "import pcbnew",
     "b=pcbnew.LoadBoard('/work/project/design.kicad_pcb')",
+    "pts=[(5.75,0),(54.25,0),(54.25,1.69),(5.75,1.69)]",
+    "[(lambda z: (z.SetIsRuleArea(True),z.SetDoNotAllowTracks(True),z.SetDoNotAllowVias(True),z.SetDoNotAllowPads(True),z.SetLayer(layer),z.Outline().NewOutline(),[z.Outline().Append(pcbnew.VECTOR2I(pcbnew.FromMM(x),pcbnew.FromMM(y))) for x,y in pts],b.Add(z)))(pcbnew.ZONE(b)) for layer in (pcbnew.F_Cu,pcbnew.B_Cu)]",
     "pcbnew.ExportSpecctraDSN(b,'/work/project/golden.dsn')",
   ].join("; ");
   await mkdir(join(projectRoot, "manufacturing"), { recursive: true });
