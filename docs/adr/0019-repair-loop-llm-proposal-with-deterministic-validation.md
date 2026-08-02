@@ -1,6 +1,6 @@
 # ADR-0019：自動修復ループはLLM提案＋決定論的gate判定とする
 
-**ステータス：Accepted（Phase 2 WP5の境界。実装は未着手）**
+**ステータス：Accepted（Phase 2 WP5の境界。Gate 17として実装済み）**
 
 ## 背景
 
