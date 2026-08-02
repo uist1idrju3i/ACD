@@ -1,7 +1,7 @@
 import { createHash } from "node:crypto";
 import { readFile, writeFile } from "node:fs/promises";
 import { join, resolve } from "node:path";
-import type { Phase1Fixture } from "../packages/schema/src/generated/phase1-fixture.js";
+import type { ACDPhase1Fixture } from "../packages/schema/src/generated/phase1-fixture.js";
 import {
   createFabFeedbackReceivedEvent,
   createKnowledgeAppliedEvent,
@@ -26,7 +26,7 @@ import {
 const root = resolve(import.meta.dirname, "..");
 const fixturePath = join(root, "fixtures/phase1/prototype-2.json");
 const artifactRoot = join(root, "artifacts/phase1-golden");
-const fixture = JSON.parse(await readFile(fixturePath, "utf8")) as Phase1Fixture;
+const fixture = JSON.parse(await readFile(fixturePath, "utf8")) as ACDPhase1Fixture;
 const profileRules = rulesForFabProfile(fixture.manufacturingProfile!.fabProfileId);
 if (!profileRules) throw new Error("schema-invalid: target fab profile is not declared");
 const knownConditions = new Set(profileRules.rules.flatMap((rule) => rule.reproductionConditions));
@@ -121,6 +121,15 @@ const padsForFootprint = (board: string, footprintName: string): PadGeometry[] =
 
 const measuredMaskSliver = (board: string, footprintName: string): number => {
   const pads = padsForFootprint(board, footprintName);
+  if (pads.length < 2) {
+    throw new Error(`verification-failed: insufficient pads for ${footprintName}`);
+  }
+  if (pads.length < 2) {
+    throw new Error(`verification-failed: insufficient pads for ${footprintName}`);
+  }
+  if (pads.length < 2) {
+    throw new Error(`verification-failed: insufficient pads for ${footprintName}`);
+  }
   let minimum = Number.POSITIVE_INFINITY;
   for (const left of pads) {
     for (const right of pads) {
@@ -144,6 +153,15 @@ const measuredMaskSliver = (board: string, footprintName: string): number => {
         );
       }
     }
+  }
+  if (!Number.isFinite(minimum)) {
+    throw new Error(`verification-failed: no measurable pad pair for ${footprintName}`);
+  }
+  if (!Number.isFinite(minimum)) {
+    throw new Error(`verification-failed: no measurable pad pair for ${footprintName}`);
+  }
+  if (!Number.isFinite(minimum)) {
+    throw new Error(`verification-failed: no measurable pad pair for ${footprintName}`);
   }
   return minimum;
 };
@@ -299,7 +317,9 @@ const context = createTargetDesignKnowledgeContext({
         (mapping) => `footprint:${mapping.footprintLibraryId}:${mapping.footprintName}`,
       ),
     ),
-  ].sort(),
+  ]
+    .map(String)
+    .sort(),
   reproductionConditions: fixture.manufacturingProfile!.processConditions,
 });
 const decisions = evaluateKnowledgeApplications([adopted], context);
