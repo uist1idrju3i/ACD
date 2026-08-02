@@ -198,6 +198,66 @@ describe("knowledge lifecycle", () => {
     expect(adopted.scope).toBe("library-wide");
   });
 
+  it("allows already-library-wide knowledge to be deprecated or rejected", () => {
+    const adopted = transitionKnowledgeItem(
+      transitionKnowledgeItem(item(), {
+        status: "reviewed",
+        now: "2026-01-01T00:00:00.000Z",
+      }),
+      {
+        status: "adopted",
+        scope: "library-wide",
+        now: "2026-01-01T00:00:00.000Z",
+        approval: {
+          approvalId: "approval:test",
+          subject: item().knowledgeId,
+          scope: "library-wide",
+          approvedBy: "user:test",
+          approvedAt: "2026-01-01T00:00:00.000Z",
+          expiresAt: "2026-01-02T00:00:00.000Z",
+        },
+      },
+    );
+    expect(
+      transitionKnowledgeItem(adopted, {
+        status: "deprecated",
+        now: "2026-01-01T00:00:00.000Z",
+      }).status,
+    ).toBe("deprecated");
+    expect(
+      transitionKnowledgeItem(adopted, {
+        status: "rejected",
+        rejectionReason: "superseded",
+        now: "2026-01-01T00:00:00.000Z",
+      }).status,
+    ).toBe("rejected");
+    const deprecated = transitionKnowledgeItem(adopted, {
+      status: "deprecated",
+      now: "2026-01-01T00:00:00.000Z",
+    });
+    const stale = propagateKnowledgeDeprecation(
+      {
+        entities: [
+          deprecated,
+          {
+            id: "verification:library",
+            type: "VerificationResult",
+            revision: 0,
+            gate: "knowledge",
+            status: "passed",
+            inputRevision: 0,
+            toolVersion: "test",
+            checkedAt: "2026-01-01T00:00:00.000Z",
+            links: [deprecated.id],
+          },
+        ],
+      },
+      deprecated.id,
+      "knowledge deprecated",
+    );
+    expect(stale.staleEntityIds).toContain("verification:library");
+  });
+
   it("rejects silent rewrites and creates explicit revisions", () => {
     expect(() =>
       reviseKnowledgeItem(item(), {
@@ -214,6 +274,36 @@ describe("knowledge lifecycle", () => {
     expect(revised.previousRevisionId).toBe(item().id);
     expect(revised.id).toBe(`${item().knowledgeId}:r1`);
     expect(revised.knowledgeId).toBe(item().knowledgeId);
+  });
+
+  it("returns content revisions to candidate and project-local scope", () => {
+    const adopted = transitionKnowledgeItem(
+      transitionKnowledgeItem(item(), {
+        status: "reviewed",
+        now: "2026-01-01T00:00:00.000Z",
+      }),
+      {
+        status: "adopted",
+        scope: "library-wide",
+        now: "2026-01-01T00:00:00.000Z",
+        approval: {
+          approvalId: "approval:test",
+          subject: item().knowledgeId,
+          scope: "library-wide",
+          approvedBy: "user:test",
+          approvedAt: "2026-01-01T00:00:00.000Z",
+          expiresAt: "2026-01-02T00:00:00.000Z",
+        },
+      },
+    );
+    const revised = reviseKnowledgeItem(adopted, {
+      content: "updated content",
+      sourceEventIds: adopted.sourceEventIds,
+      provenance: adopted.provenance,
+    });
+    expect(revised.status).toBe("candidate");
+    expect(revised.scope).toBe("project-local");
+    expect(revised.approvalId).toBeUndefined();
   });
 
   it("propagates deprecation through recorded graph references", () => {
