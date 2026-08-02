@@ -53,6 +53,7 @@ try {
   );
 }
 const patch = patchArtifact.patch;
+const targetDesignRevision = fixture.requirement.provenance.version;
 const hash = (value: string): string =>
   `sha256:${createHash("sha256").update(value).digest("hex")}`;
 const fileHash = async (path: string): Promise<string> => hash(await readFile(path, "utf8"));
@@ -267,6 +268,28 @@ const adopted = transitionKnowledgeItem(reviewed, {
   status: "adopted",
   now: "2026-01-03T00:00:00.000Z",
 });
+if (patch.sourceKnowledgeId !== adopted.knowledgeId) {
+  throw new Error(
+    "verification-failed: library patch source knowledge does not match adopted item",
+  );
+}
+const maskRule = profileRules.rules.find((rule) => rule.ruleId === "mask-sliver-min");
+if (
+  !maskRule?.correction ||
+  patch.footprintId !== controlReport.rawFindings[0]?.references.footprintId
+) {
+  throw new Error("verification-failed: library patch does not match mask-sliver applicability");
+}
+if (
+  patch.operations.length === 0 ||
+  patch.operations.some(
+    (operation) =>
+      operation.target !== maskRule.correction.target ||
+      operation.requiredValueMm !== maskRule.correction.requiredValueMm,
+  )
+) {
+  throw new Error("verification-failed: patch operation does not match fab rule correction");
+}
 const context = createTargetDesignKnowledgeContext({
   designRevision: "prototype-2",
   fabProfileId: fixture.manufacturingProfile!.fabProfileId,
@@ -340,7 +363,7 @@ for (const event of events) await eventLog.append(event);
 const recordedEvents = await eventLog.readAll();
 const output = {
   fixture: fixture.fixtureId,
-  targetDesignRevision: "prototype-2",
+  targetDesignRevision,
   control: {
     libraryRevision: officialLibraryRevision(),
     boardHash: controlBoardHash,
