@@ -57,11 +57,12 @@ import {
 } from "../packages/adapters/fab-feedback/src/index.js";
 import {
   gateByOrder,
+  loadSchemaValidator,
   loadGateMatrix,
   missingExecutedGates,
   validatePhase1FixtureReferences,
 } from "../packages/schema/src/index.js";
-import { loadSchemaValidator } from "../packages/schema/src/validator.js";
+
 import type { Phase1Fixture } from "../packages/schema/src/generated/phase1-fixture.js";
 import preOrder from "./pre-order.ts";
 
