@@ -843,6 +843,11 @@ try {
     libraryPatch.operations,
   );
   if (patchedBoardContent === unpatchedBoardContent) {
+    await writeLibraryPatchFailure(
+      "library patch did not change the projected board",
+      { boardInputHash: unpatchedBoardHash },
+      unpatchedBoardHash,
+    );
     throw new Error("verification-failed: library patch did not change the projected board");
   }
   if (
@@ -850,6 +855,11 @@ try {
       `ACD_LibraryOverlay" "pad-mask-clearance=${libraryPatch.operations[0]?.requiredValueMm}`,
     )
   ) {
+    await writeLibraryPatchFailure(
+      "projected board lacks the library correction",
+      { boardInputHash: unpatchedBoardHash },
+      unpatchedBoardHash,
+    );
     throw new Error("verification-failed: projected board lacks the library correction");
   }
   const patchedPads = parseFootprintSource(libraryPatch.footprintId, patchedBoardContent).filter(
@@ -859,6 +869,14 @@ try {
     patchedPads.length === 0 ||
     patchedPads.some((pad) => pad.solderMaskMargin !== libraryPatch.operations[0]?.requiredValueMm)
   ) {
+    await writeLibraryPatchFailure(
+      "patched board pads lack declared solder mask margin",
+      {
+        boardInputHash: unpatchedBoardHash,
+        patchedPadCount: patchedPads.length,
+      },
+      unpatchedBoardHash,
+    );
     throw new Error("verification-failed: patched board pads lack declared solder mask margin");
   }
   const patchedBoardHash = hash(patchedBoardContent);
