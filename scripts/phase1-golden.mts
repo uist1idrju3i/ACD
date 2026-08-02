@@ -912,11 +912,15 @@ try {
   ) {
     throw new Error("verification-failed: projected board lacks the library correction");
   }
-  const patchedPads = parseFootprintSource(adoptedLibraryPatch.footprintId, patchedBoardContent)
-    .filter((pad) => pad.solderMaskMargin !== undefined);
+  const patchedPads = parseFootprintSource(
+    adoptedLibraryPatch.footprintId,
+    patchedBoardContent,
+  ).filter((pad) => pad.solderMaskMargin !== undefined);
   if (
     patchedPads.length === 0 ||
-    patchedPads.some((pad) => pad.solderMaskMargin !== adoptedLibraryPatch.operations[0]?.requiredValueMm)
+    patchedPads.some(
+      (pad) => pad.solderMaskMargin !== adoptedLibraryPatch.operations[0]?.requiredValueMm,
+    )
   ) {
     throw new Error("verification-failed: patched board pads lack declared solder mask margin");
   }
