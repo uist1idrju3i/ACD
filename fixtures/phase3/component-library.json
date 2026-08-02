@@ -19,7 +19,18 @@
         }
       ],
       "datasheetReferences": [],
-      "implementationNotes": []
+      "implementationNotes": [
+        {
+          "text": "The official USB-C footprint has an adopted ACD mask-sliver correction: solder_mask_margin -0.02 mm is materialized through the library overlay to increase the measured mask sliver from 0.29000000000000004 mm to 0.33000000000000007 mm against the 0.3 mm fab minimum.",
+          "status": "verified",
+          "provenance": {
+            "source": "https://github.com/uist1idrju3i/ACD/blob/main/fixtures/phase3/fab-report-prototype-1.json",
+            "retrievalBasis": "fab.feedback.received finding JLC-DFM-001, adopted KnowledgeItem knowledge:fab-report:prototype-1-jlcpcb-001:JLC-DFM-001:r2, and library revision library:overlay:b5856b8ee9f5e3fbc7c2cb1a31fa188fc8632b9aa43b1d238d53689514d0722e recorded by the Phase 3 golden run",
+            "license": "project fixture data",
+            "contentHash": "sha256:9109c1b219db4f35728aae73f6d757e4f3a757bd317625b215ca1e3b242821be"
+          }
+        }
+      ]
     },
     {
       "id": "Connector_Generic:Conn_01x06",
