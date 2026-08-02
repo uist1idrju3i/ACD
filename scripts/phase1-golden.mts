@@ -23,12 +23,14 @@ const image = process.env.KICAD_IMAGE ?? digest;
 type Result = {
   gate: number;
   name: string;
-  status: "passed" | "deferred";
+  status: "passed" | "deferred" | "failed";
   evidence?: Record<string, unknown>;
   reason?: string;
 };
 
 const results: Result[] = [];
+let currentGate = 0;
+let currentName = "golden";
 const hash = (content: string): string =>
   `sha256:${createHash("sha256").update(content).digest("hex")}`;
 const run = (command: string, args: string[]): string =>
@@ -49,9 +51,13 @@ const docker = (args: string[]): string =>
     ...args,
   ]);
 const pass = (gate: number, name: string, evidence: Record<string, unknown>): void => {
+  currentGate = gate;
+  currentName = name;
   results.push({ gate, name, status: "passed", evidence });
 };
 const defer = (gate: number, name: string, reason: string): void => {
+  currentGate = gate;
+  currentName = name;
   results.push({ gate, name, status: "deferred", reason });
 };
 
@@ -63,22 +69,41 @@ try {
   if (referenceErrors.length > 0) throw new Error(referenceErrors.join("; "));
   pass(1, "Fixture/schema", { fixture: fixture.fixtureId, schemaVersion: fixture.schemaVersion });
 
-  const placement = placeFixture(fixture);
-  pass(2, "Graph semantic and placement", {
-    components: placement.length,
-    deterministicSeed: fixture.placementConstraints.seed,
-    board: fixture.requirement.board,
+  pass(2, "Graph semantic", {
+    status: "passed",
+    note: "Phase 1 golden uses the typed fixture as the graph semantic boundary",
   });
-
   pass(3, "Component selection", {
     parts: fixture.parts.length,
     bomLines: fixture.bom.length,
     source: "fixture-provided AVL",
   });
+  for (const line of fixture.bom) {
+    if (
+      !line.mpn ||
+      !line.manufacturer ||
+      !line.supplier ||
+      !line.sku ||
+      line.quantity < 1 ||
+      !line.availability ||
+      !line.lifecycle ||
+      line.availability === "unknown" ||
+      line.lifecycle === "unknown" ||
+      line.lifecycle === "EOL"
+    ) {
+      throw new Error(`order-relevant BOM unknown for ${line.partId}`);
+    }
+  }
+  const placement = placeFixture(fixture);
+  pass(4, "Placement", {
+    components: placement.length,
+    deterministicSeed: fixture.placementConstraints.seed,
+    board: fixture.requirement.board,
+  });
 
   const canonical = compareNetlists(fixture, "", "");
   const canonicalHash = hash(JSON.stringify(canonical.expected));
-  pass(4, "Canonical netlist", {
+  pass(5, "Canonical netlist", {
     pins: canonical.expected.length,
     canonicalNetlistHash: canonicalHash,
   });
@@ -102,14 +127,14 @@ try {
     "/work/project/design.d356",
     "/work/project/design.kicad_pcb",
   ]);
-  pass(5, "KiCad projection/reopen", { toolVersion: "KiCad 10.0.5" });
+  pass(6, "KiCad projection/reopen", { toolVersion: "KiCad 10.0.5" });
 
   const schematicNetlist = await readFile(join(projectRoot, "design.net"), "utf8");
   const ipc356 = await readFile(join(projectRoot, "design.d356"), "utf8");
   const comparison = compareNetlists(fixture, schematicNetlist, ipc356);
   if (!comparison.overall)
     throw new Error(`golden netlist mismatch: ${JSON.stringify(comparison)}`);
-  pass(6, "Netlist readback", {
+  pass(7, "Netlist readback", {
     graphVsSchematic: comparison.graphVsSchematic,
     graphVsPcb: comparison.graphVsPcb,
     canonicalNetlistHash: canonicalHash,
@@ -145,9 +170,9 @@ try {
   defer(11, "Manufacturing outputs", "WP4: golden manufacturing outputs are deferred");
 } catch (error) {
   results.push({
-    gate: results.length + 1,
-    name: "golden",
-    status: "deferred",
+    gate: currentGate || 1,
+    name: currentName,
+    status: "failed",
     reason: error instanceof Error ? error.message : String(error),
   });
   await mkdir(artifactRoot, { recursive: true });

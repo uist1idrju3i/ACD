@@ -1545,8 +1545,8 @@
       {
         "partId": "part:c4",
         "allowedLayers": ["F.Cu"],
-        "xMm": 10,
-        "yMm": 9,
+        "xMm": 8,
+        "yMm": 16,
         "rotationDeg": 0
       },
       {

@@ -34,9 +34,22 @@ for (const entry of manifest.files) {
 }
 
 const manifestPaths = new Set(manifest.files.map((entry) => entry.path));
-const snapshotPaths = (await readdir(snapshotRoot, { recursive: true }))
-  .filter((path) => path !== "manifest.json")
-  .map((path) => path.replaceAll("\\", "/"));
+const filesUnder = async (directory: string, prefix = ""): Promise<string[]> => {
+  const entries = await readdir(directory, { withFileTypes: true });
+  const paths: string[] = [];
+  for (const entry of entries) {
+    const relativePath = `${prefix}${entry.name}`;
+    if (entry.isDirectory()) {
+      paths.push(...(await filesUnder(join(directory, entry.name), `${relativePath}/`)));
+    } else {
+      paths.push(relativePath);
+    }
+  }
+  return paths;
+};
+const snapshotPaths = (await filesUnder(snapshotRoot)).filter(
+  (path) => path !== "manifest.json" && path !== "NOTICE.txt",
+);
 const orphanedPaths = snapshotPaths.filter((path) => !manifestPaths.has(path));
 if (orphanedPaths.length > 0) {
   throw new Error(`orphaned library snapshot files: ${orphanedPaths.join(", ")}`);

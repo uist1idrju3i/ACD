@@ -5,7 +5,7 @@ import type { Phase1Fixture } from "@acd/schema";
 import { projectGraphToKicad } from "./graph-projection.js";
 import { parseFootprintPads, verifyLibrarySnapshot } from "./library.js";
 import { snapshotFiles, snapshotManifest } from "./library-snapshot.js";
-import { smokeLibrarySymbols } from "./symbol-library.js";
+import { goldenLibrarySymbols, smokeLibrarySymbols } from "./symbol-library.js";
 import { KicadProjectionError } from "./errors.js";
 import { placeFixture } from "./placement.js";
 
@@ -513,7 +513,7 @@ const renderGoldenSchematic = (fixture: Phase1Fixture): string => {
 	(uuid "${uuid}")
 	(paper "A4")
 	(lib_symbols
-${smokeLibrarySymbols}
+${goldenLibrarySymbols}
 	)
 ${symbols.concat(flags).join("\n")}
 ${labels.join("\n")}
@@ -525,19 +525,7 @@ ${noConnects.join("\n")}
 )`;
 };
 
-export const renderSchematic = (fixture?: Phase1Fixture): string => {
-  if (!fixture) {
-    return `(kicad_sch
-  (version 20231120)
-  (generator eeschema)
-  (uuid ${uuid})
-  (paper "A4")
-  (lib_symbols)
-  (sheet_instances
-    (path "/" (page "1"))
-  )
-)`;
-  }
+export const renderSchematic = (fixture: Phase1Fixture): string => {
   if (fixture.fixtureKind === "golden") return renderGoldenSchematic(fixture);
   if (fixture.fixtureKind !== "smoke") {
     throw new KicadProjectionError(
@@ -697,18 +685,10 @@ export const projectToKicad = async (
     await writeFile(join(directory, "fp-lib-table"), renderFootprintLibraryTable(), "utf8");
     await writeFile(join(directory, "sym-lib-table"), renderSymbolLibraryTable(), "utf8");
   }
-  await writeFile(
-    schematicPath,
-    isPhase1Fixture(graph) ? renderSchematic(graph) : renderSchematic(),
-    "utf8",
-  );
+  await writeFile(schematicPath, renderSchematic(graph), "utf8");
   await writeFile(
     boardPath,
-    isPhase1Fixture(graph)
-      ? graph.fixtureKind === "golden"
-        ? renderGoldenBoard(graph)
-        : renderSmokeBoard(graph)
-      : renderBoard(),
+    graph.fixtureKind === "golden" ? renderGoldenBoard(graph) : renderSmokeBoard(graph),
     "utf8",
   );
   return { directory, projectPath, schematicPath, boardPath };
