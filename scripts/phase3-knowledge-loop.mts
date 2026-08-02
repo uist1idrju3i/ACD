@@ -5,13 +5,10 @@ import type { Phase1Fixture } from "../packages/schema/src/generated/phase1-fixt
 import {
   createFabFeedbackReceivedEvent,
   createKnowledgeAppliedEvent,
-  createKnowledgeCandidate,
-  createKnowledgeCandidateCreatedEvent,
-  createKnowledgeTransitionedEvent,
   createTargetDesignKnowledgeContext,
   evaluateKnowledgeApplications,
   recordKnowledgeApplications,
-  transitionKnowledgeItem,
+  InMemoryEventLog,
   type FabFeedbackReport,
   rulesForFabProfile,
 } from "../packages/graph-core/src/index.js";
@@ -30,10 +27,49 @@ const root = resolve(import.meta.dirname, "..");
 const fixturePath = join(root, "fixtures/phase1/prototype-2.json");
 const artifactRoot = join(root, "artifacts/phase1-golden");
 const fixture = JSON.parse(await readFile(fixturePath, "utf8")) as Phase1Fixture;
-const patchArtifact = JSON.parse(
-  await readFile(join(artifactRoot, "library-patch.json"), "utf8"),
-) as { patch: LibraryOverlayPatch; libraryRevision: string };
+const profileRules = rulesForFabProfile(fixture.manufacturingProfile!.fabProfileId);
+if (!profileRules) throw new Error("schema-invalid: target fab profile is not declared");
+const knownConditions = new Set(profileRules.rules.flatMap((rule) => rule.reproductionConditions));
+const unknownConditions = fixture.manufacturingProfile!.processConditions.filter(
+  (condition) => !knownConditions.has(condition),
+);
+if (unknownConditions.length > 0) {
+  throw new Error(
+    `schema-invalid: target process conditions drift: ${unknownConditions.join(", ")}`,
+  );
+}
+let patchArtifact: { patch: LibraryOverlayPatch; libraryRevision: string };
+try {
+  patchArtifact = JSON.parse(
+    await readFile(join(artifactRoot, "library-patch.json"), "utf8"),
+  ) as typeof patchArtifact;
+} catch (error) {
+  throw new Error(
+    `verification-failed: missing Phase 1 library-patch.json; run pnpm phase1:golden first (${error instanceof Error ? error.message : String(error)})`,
+  );
+}
 const patch = patchArtifact.patch;
+let knowledgeArtifact: {
+  knowledgeStates: Array<{ adopted: Parameters<typeof evaluateKnowledgeApplications>[0][number] }>;
+};
+try {
+  knowledgeArtifact = JSON.parse(
+    await readFile(join(artifactRoot, "knowledge.json"), "utf8"),
+  ) as typeof knowledgeArtifact;
+} catch (error) {
+  throw new Error(
+    `verification-failed: missing Phase 1 knowledge.json; run pnpm phase1:golden first (${error instanceof Error ? error.message : String(error)})`,
+  );
+}
+const adopted = knowledgeArtifact.knowledgeStates
+  .map((state) => state.adopted)
+  .find((item) => item.knowledgeId === patch.sourceKnowledgeId);
+if (!adopted) {
+  throw new Error(
+    `verification-failed: Phase 1 adopted KnowledgeItem not found for library patch source ${patch.sourceKnowledgeId}`,
+  );
+}
+const targetDesignRevision = fixture.requirement.provenance.version;
 const hash = (value: string): string =>
   `sha256:${createHash("sha256").update(value).digest("hex")}`;
 const fileHash = async (path: string): Promise<string> => hash(await readFile(path, "utf8"));
@@ -46,8 +82,8 @@ type PadGeometry = {
   maskMargin: number;
 };
 
-const blockFor = (source: string, marker: string): string => {
-  const start = source.indexOf(marker);
+const blockFor = (source: string, marker: string, offset = 0): string => {
+  const start = source.indexOf(marker, offset);
   if (start < 0) return "";
   let depth = 0;
   for (let index = start; index < source.length; index += 1) {
@@ -63,7 +99,7 @@ const padsForFootprint = (board: string, footprintName: string): PadGeometry[] =
     board.match(/\(setup\s+\(pad_to_mask_clearance\s+(-?[\d.]+)/)?.[1] ?? 0,
   );
   return [...footprint.matchAll(/\(pad\s+"[^"]+"\s+smd\b/g)].flatMap((match) => {
-    const block = blockFor(footprint, match[0]!);
+    const block = blockFor(footprint, match[0]!, match.index);
     const at = block.match(/\(at\s+(-?[\d.]+)\s+(-?[\d.]+)(?:\s+(-?[\d.]+))?/);
     const size = block.match(/\(size\s+([\d.]+)\s+([\d.]+)/);
     if (!at || !size) return [];
@@ -115,9 +151,7 @@ const measuredMaskSliver = (board: string, footprintName: string): number => {
 const detectMaskSliver = (
   board: string,
 ): { violates: boolean; measuredMm: number; minimumMm: number } => {
-  const rule = rulesForFabProfile("fab:jlcpcb-class-2layer")?.rules.find(
-    (candidate) => candidate.ruleId === "mask-sliver-min",
-  );
+  const rule = profileRules.rules.find((candidate) => candidate.ruleId === "mask-sliver-min");
   if (!rule?.minimumSliverMm) {
     throw new Error("schema-invalid: mask-sliver rule lacks numeric minimum");
   }
@@ -140,13 +174,29 @@ const makeReport = (board: string): FabFeedbackReport => {
     severityReported: "high" as const,
     references: {
       partId: "part:p2-j1",
-      footprintId: "footprint:Connector_USB:USB_C_Receptacle_GCT_USB4135-GF-A_6P_TopMnt_Horizontal",
+      footprintId: `footprint:Connector_USB:${patch.footprintId}`,
       ...(measurement.violates ? { ruleId: "mask-sliver-min" } : {}),
     },
   };
-  const findingText = measurement.violates
-    ? finding.originalText
-    : `Deterministic DFM scan measured ${measurement.measuredMm.toFixed(3)}mm, meeting the ${measurement.minimumMm.toFixed(3)}mm minimum.`;
+  if (!measurement.violates) {
+    return {
+      schemaVersion: "0.1.0-draft",
+      reportId: "fab-report:prototype-2-knowledge-loop",
+      fabJobId: "job:prototype-2-knowledge-loop",
+      fabProfileId: fixture.manufacturingProfile!.fabProfileId,
+      source: {
+        kind: "fixture",
+        locator: "scripts/phase3-knowledge-loop.mts",
+        contentHash: hash(""),
+        fixtureDerived: true,
+        fixtureId: fixture.fixtureId,
+      },
+      target: { projectId: fixture.fixtureId, designRevision: "prototype-2" },
+      rawReport: { contentType: "text/plain", content: "", contentHash: hash("") },
+      rawFindings: [] as never,
+    } as FabFeedbackReport;
+  }
+  const findingText = finding.originalText;
   const content = `Prototype-2 deterministic DFM scan\n${findingText}\n`;
   const contentHash = hash(content);
   return {
@@ -198,7 +248,11 @@ const maskFindingCount = (intake: ReturnType<typeof intakeFabFeedback>): number 
   intake.findings.filter(
     (item) => item.references.ruleId === "mask-sliver-min" && item.verdict === "pass",
   ).length;
-if (maskFindingCount(controlIntake) !== 1 || maskFindingCount(enabledIntake) !== 0) {
+if (
+  enabledIntake.verdict === "unknown" ||
+  maskFindingCount(controlIntake) !== 1 ||
+  maskFindingCount(enabledIntake) !== 0
+) {
   throw new Error(
     "verification-failed: prototype-2 control/knowledge-enabled DFM comparison did not change",
   );
@@ -213,29 +267,39 @@ const sourceEvent = createFabFeedbackReceivedEvent({
   report: controlReport,
   intake: controlIntake,
 });
-const candidate = createKnowledgeCandidate({
-  finding: controlIntake.findings[0]!,
-  report: controlReport,
-  sourceEventId: sourceEvent.eventId,
-  designRevision: "prototype-2",
-  derivationInputHash: controlIntake.evidence.value.derivationInputHash,
-  derivationOutputHash: controlIntake.evidence.value.derivationOutputHash,
-  createdAt: "2026-01-03T00:00:00.000Z",
-});
-const reviewed = transitionKnowledgeItem(candidate, {
-  status: "reviewed",
-  now: "2026-01-03T00:00:00.000Z",
-});
-const adopted = transitionKnowledgeItem(reviewed, {
-  status: "adopted",
-  now: "2026-01-03T00:00:00.000Z",
-});
+if (patch.sourceKnowledgeId !== adopted.knowledgeId) {
+  throw new Error(
+    "verification-failed: library patch source knowledge does not match adopted item",
+  );
+}
+const maskRule = profileRules.rules.find((rule) => rule.ruleId === "mask-sliver-min");
+if (
+  !maskRule?.correction ||
+  controlReport.rawFindings[0]?.references.footprintId !==
+    `footprint:Connector_USB:${patch.footprintId}`
+) {
+  throw new Error("verification-failed: library patch does not match mask-sliver applicability");
+}
+if (
+  patch.operations.length === 0 ||
+  patch.operations.some(
+    (operation) =>
+      operation.target !== maskRule.correction.target ||
+      operation.requiredValueMm !== maskRule.correction.requiredValueMm,
+  )
+) {
+  throw new Error("verification-failed: patch operation does not match fab rule correction");
+}
 const context = createTargetDesignKnowledgeContext({
   designRevision: "prototype-2",
   fabProfileId: fixture.manufacturingProfile!.fabProfileId,
-  footprintIds: ["USB_C_Receptacle_GCT_USB4135-GF-A_6P_TopMnt_Horizontal"],
-  ruleIds: [],
-  classifications: [],
+  footprintIds: [
+    ...new Set(
+      fixture.mappings.map(
+        (mapping) => `footprint:${mapping.footprintLibraryId}:${mapping.footprintName}`,
+      ),
+    ),
+  ].sort(),
   reproductionConditions: fixture.manufacturingProfile!.processConditions,
 });
 const decisions = evaluateKnowledgeApplications([adopted], context);
@@ -248,35 +312,6 @@ if (applied.applicableKnowledgeIds.length !== 1 || !applied.decisions[0]?.applie
 const projectionArtifactId = "artifact:phase1-golden:prototype-2-knowledge-enabled";
 const events = [
   sourceEvent,
-  createKnowledgeCandidateCreatedEvent({
-    eventId: "event:knowledge:candidate:prototype-2:P2-DFM-001",
-    occurredAt: "2026-01-03T00:00:00.000Z",
-    actor: "fixture:phase3-knowledge-loop",
-    projectId: fixture.fixtureId,
-    baseRevision: 0,
-    resultRevision: 0,
-    knowledgeItem: candidate,
-  }),
-  createKnowledgeTransitionedEvent({
-    eventId: "event:knowledge:reviewed:prototype-2:P2-DFM-001",
-    occurredAt: "2026-01-03T00:00:00.000Z",
-    actor: "fixture:phase3-knowledge-loop",
-    projectId: fixture.fixtureId,
-    baseRevision: 0,
-    resultRevision: 0,
-    knowledgeItem: reviewed,
-    previousStatus: "candidate",
-  }),
-  createKnowledgeTransitionedEvent({
-    eventId: "event:knowledge:adopted:prototype-2:P2-DFM-001",
-    occurredAt: "2026-01-03T00:00:00.000Z",
-    actor: "fixture:phase3-knowledge-loop",
-    projectId: fixture.fixtureId,
-    baseRevision: 0,
-    resultRevision: 0,
-    knowledgeItem: adopted,
-    previousStatus: "reviewed",
-  }),
   createKnowledgeAppliedEvent({
     eventId: "event:knowledge:applied:prototype-2:P2-DFM-001",
     occurredAt: "2026-01-03T00:00:00.000Z",
@@ -287,16 +322,19 @@ const events = [
     payload: {
       knowledgeItemId: adopted.id,
       targetProjectId: fixture.fixtureId,
-      targetRevision: 2,
+      targetRevision: Number(fixture.requirement.provenance.version.match(/\d+$/)?.[0] ?? 0),
       appliedAt: "2026-01-03T00:00:00.000Z",
       libraryRevision: patchArtifact.libraryRevision,
       projectionArtifactId,
     },
   }),
 ];
+const eventLog = new InMemoryEventLog();
+for (const event of events) await eventLog.append(event);
+const recordedEvents = await eventLog.readAll();
 const output = {
   fixture: fixture.fixtureId,
-  targetDesignRevision: "prototype-2",
+  targetDesignRevision,
   control: {
     libraryRevision: officialLibraryRevision(),
     boardHash: controlBoardHash,
@@ -316,13 +354,13 @@ const output = {
     appliedKnowledgeItemId: adopted.id,
     projectionArtifactId,
   },
-  events,
+  events: recordedEvents,
 };
 await writeFile(join(artifactRoot, "knowledge-loop.json"), `${JSON.stringify(output, null, 2)}\n`);
 console.log(
   JSON.stringify({
-    controlFindings: 1,
-    knowledgeEnabledFindings: 0,
+    controlFindings: maskFindingCount(controlIntake),
+    knowledgeEnabledFindings: maskFindingCount(enabledIntake),
     libraryRevision: patchArtifact.libraryRevision,
   }),
 );
