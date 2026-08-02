@@ -27,7 +27,8 @@
       "source": "fixture",
       "version": "phase1-smoke-1",
       "license": "BSD-3-Clause",
-      "contentHash": "sha256:0000000000000000000000000000000000000000000000000000000000000000"
+      "contentHash": null,
+      "pendingReason": "fixture-local provenance snapshot is pending; source is controlled by this fixture"
     }
   },
   "parts": [
@@ -43,7 +44,8 @@
         "source": "fixture",
         "version": "phase1-smoke-1",
         "license": "BSD-3-Clause",
-        "contentHash": "sha256:0000000000000000000000000000000000000000000000000000000000000000"
+        "contentHash": null,
+        "pendingReason": "fixture-local provenance snapshot is pending; source is controlled by this fixture"
       }
     },
     {
@@ -58,7 +60,8 @@
         "source": "fixture",
         "version": "phase1-smoke-1",
         "license": "BSD-3-Clause",
-        "contentHash": "sha256:0000000000000000000000000000000000000000000000000000000000000000"
+        "contentHash": null,
+        "pendingReason": "fixture-local provenance snapshot is pending; source is controlled by this fixture"
       }
     },
     {
@@ -73,7 +76,8 @@
         "source": "fixture",
         "version": "phase1-smoke-1",
         "license": "BSD-3-Clause",
-        "contentHash": "sha256:0000000000000000000000000000000000000000000000000000000000000000"
+        "contentHash": null,
+        "pendingReason": "fixture-local provenance snapshot is pending; source is controlled by this fixture"
       }
     },
     {
@@ -88,7 +92,8 @@
         "source": "fixture",
         "version": "phase1-smoke-1",
         "license": "BSD-3-Clause",
-        "contentHash": "sha256:0000000000000000000000000000000000000000000000000000000000000000"
+        "contentHash": null,
+        "pendingReason": "fixture-local provenance snapshot is pending; source is controlled by this fixture"
       }
     }
   ],
@@ -100,14 +105,23 @@
       "footprintLibraryId": "Connector_JST",
       "footprintName": "JST_PH_B2B-PH-K_1x02_P2.00mm_Vertical",
       "pinPads": [
-        { "pin": "1", "pad": "1", "electricalType": "power-input" },
-        { "pin": "2", "pad": "2", "electricalType": "power-input" }
+        {
+          "pin": "1",
+          "pad": "1",
+          "electricalType": "power-input"
+        },
+        {
+          "pin": "2",
+          "pad": "2",
+          "electricalType": "power-input"
+        }
       ],
       "provenance": {
         "source": "KiCad official libraries",
         "version": "10.0.5",
         "license": "CC-BY-SA-4.0-with-exception",
-        "contentHash": "sha256:0000000000000000000000000000000000000000000000000000000000000000"
+        "contentHash": null,
+        "pendingReason": "fixture-local provenance snapshot is pending; source is controlled by this fixture"
       }
     },
     {
@@ -117,14 +131,23 @@
       "footprintLibraryId": "Resistor_SMD",
       "footprintName": "R_0603_1608Metric",
       "pinPads": [
-        { "pin": "1", "pad": "1", "electricalType": "passive" },
-        { "pin": "2", "pad": "2", "electricalType": "passive" }
+        {
+          "pin": "1",
+          "pad": "1",
+          "electricalType": "passive"
+        },
+        {
+          "pin": "2",
+          "pad": "2",
+          "electricalType": "passive"
+        }
       ],
       "provenance": {
         "source": "KiCad official libraries",
         "version": "10.0.5",
         "license": "CC-BY-SA-4.0-with-exception",
-        "contentHash": "sha256:0000000000000000000000000000000000000000000000000000000000000000"
+        "contentHash": null,
+        "pendingReason": "fixture-local provenance snapshot is pending; source is controlled by this fixture"
       }
     },
     {
@@ -134,14 +157,23 @@
       "footprintLibraryId": "LED_SMD",
       "footprintName": "LED_0603_1608Metric",
       "pinPads": [
-        { "pin": "1", "pad": "1", "electricalType": "passive" },
-        { "pin": "2", "pad": "2", "electricalType": "passive" }
+        {
+          "pin": "1",
+          "pad": "1",
+          "electricalType": "passive"
+        },
+        {
+          "pin": "2",
+          "pad": "2",
+          "electricalType": "passive"
+        }
       ],
       "provenance": {
         "source": "KiCad official libraries",
         "version": "10.0.5",
         "license": "CC-BY-SA-4.0-with-exception",
-        "contentHash": "sha256:0000000000000000000000000000000000000000000000000000000000000000"
+        "contentHash": null,
+        "pendingReason": "fixture-local provenance snapshot is pending; source is controlled by this fixture"
       }
     },
     {
@@ -151,14 +183,23 @@
       "footprintLibraryId": "Capacitor_SMD",
       "footprintName": "C_0603_1608Metric",
       "pinPads": [
-        { "pin": "1", "pad": "1", "electricalType": "passive" },
-        { "pin": "2", "pad": "2", "electricalType": "passive" }
+        {
+          "pin": "1",
+          "pad": "1",
+          "electricalType": "passive"
+        },
+        {
+          "pin": "2",
+          "pad": "2",
+          "electricalType": "passive"
+        }
       ],
       "provenance": {
         "source": "KiCad official libraries",
         "version": "10.0.5",
         "license": "CC-BY-SA-4.0-with-exception",
-        "contentHash": "sha256:0000000000000000000000000000000000000000000000000000000000000000"
+        "contentHash": null,
+        "pendingReason": "fixture-local provenance snapshot is pending; source is controlled by this fixture"
       }
     }
   ],
@@ -168,9 +209,18 @@
       "name": "+5V",
       "class": "power",
       "pins": [
-        { "partId": "part:j1", "pin": "1" },
-        { "partId": "part:r1", "pin": "1" },
-        { "partId": "part:c1", "pin": "1" }
+        {
+          "partId": "part:j1",
+          "pin": "1"
+        },
+        {
+          "partId": "part:r1",
+          "pin": "1"
+        },
+        {
+          "partId": "part:c1",
+          "pin": "1"
+        }
       ]
     },
     {
@@ -178,8 +228,14 @@
       "name": "LED_A",
       "class": "signal",
       "pins": [
-        { "partId": "part:r1", "pin": "2" },
-        { "partId": "part:d1", "pin": "2" }
+        {
+          "partId": "part:r1",
+          "pin": "2"
+        },
+        {
+          "partId": "part:d1",
+          "pin": "2"
+        }
       ]
     },
     {
@@ -187,19 +243,52 @@
       "name": "GND",
       "class": "ground",
       "pins": [
-        { "partId": "part:j1", "pin": "2" },
-        { "partId": "part:d1", "pin": "1" },
-        { "partId": "part:c1", "pin": "2" }
+        {
+          "partId": "part:j1",
+          "pin": "2"
+        },
+        {
+          "partId": "part:d1",
+          "pin": "1"
+        },
+        {
+          "partId": "part:c1",
+          "pin": "2"
+        }
       ]
     }
   ],
   "placementConstraints": {
     "seed": 1,
     "components": [
-      { "partId": "part:j1", "allowedLayers": ["F.Cu"], "xMm": 3, "yMm": 7.5, "rotationDeg": 90 },
-      { "partId": "part:r1", "allowedLayers": ["F.Cu"], "xMm": 8, "yMm": 5, "rotationDeg": 0 },
-      { "partId": "part:d1", "allowedLayers": ["F.Cu"], "xMm": 12, "yMm": 5, "rotationDeg": 0 },
-      { "partId": "part:c1", "allowedLayers": ["F.Cu"], "xMm": 8, "yMm": 10, "rotationDeg": 0 }
+      {
+        "partId": "part:j1",
+        "allowedLayers": ["F.Cu"],
+        "xMm": 3,
+        "yMm": 7.5,
+        "rotationDeg": 90
+      },
+      {
+        "partId": "part:r1",
+        "allowedLayers": ["F.Cu"],
+        "xMm": 8,
+        "yMm": 5,
+        "rotationDeg": 0
+      },
+      {
+        "partId": "part:d1",
+        "allowedLayers": ["F.Cu"],
+        "xMm": 12,
+        "yMm": 5,
+        "rotationDeg": 0
+      },
+      {
+        "partId": "part:c1",
+        "allowedLayers": ["F.Cu"],
+        "xMm": 8,
+        "yMm": 10,
+        "rotationDeg": 0
+      }
     ]
   },
   "bom": [
@@ -217,7 +306,8 @@
         "source": "fixture AVL",
         "version": "phase1-smoke-1",
         "license": "BSD-3-Clause",
-        "contentHash": "sha256:0000000000000000000000000000000000000000000000000000000000000000"
+        "contentHash": null,
+        "pendingReason": "fixture-local provenance snapshot is pending; source is controlled by this fixture"
       }
     },
     {
@@ -234,7 +324,8 @@
         "source": "fixture AVL",
         "version": "phase1-smoke-1",
         "license": "BSD-3-Clause",
-        "contentHash": "sha256:0000000000000000000000000000000000000000000000000000000000000000"
+        "contentHash": null,
+        "pendingReason": "fixture-local provenance snapshot is pending; source is controlled by this fixture"
       }
     },
     {
@@ -251,7 +342,8 @@
         "source": "fixture AVL",
         "version": "phase1-smoke-1",
         "license": "BSD-3-Clause",
-        "contentHash": "sha256:0000000000000000000000000000000000000000000000000000000000000000"
+        "contentHash": null,
+        "pendingReason": "fixture-local provenance snapshot is pending; source is controlled by this fixture"
       }
     },
     {
@@ -268,7 +360,8 @@
         "source": "fixture AVL",
         "version": "phase1-smoke-1",
         "license": "BSD-3-Clause",
-        "contentHash": "sha256:0000000000000000000000000000000000000000000000000000000000000000"
+        "contentHash": null,
+        "pendingReason": "fixture-local provenance snapshot is pending; source is controlled by this fixture"
       }
     }
   ]

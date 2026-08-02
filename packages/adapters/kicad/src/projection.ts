@@ -8,9 +8,24 @@ const uuid = "00000000-0000-4000-8000-000000000001";
 const isPhase1Fixture = (input: DesignGraph | Phase1Fixture): input is Phase1Fixture =>
   "fixtureKind" in input && "parts" in input && "mappings" in input;
 
+export class KicadProjectionError extends Error {
+  readonly code = "projection-geometry-unsupported";
+  readonly name = "KicadProjectionError";
+}
+
+const padGeometry: Record<string, Record<string, [number, number]>> = {
+  "part:j1": { "1": [0, -1], "2": [0, 1] },
+  "part:r1": { "1": [-0.75, 0], "2": [0.75, 0] },
+  "part:d1": { "1": [-0.75, 0], "2": [0.75, 0] },
+  "part:c1": { "1": [-0.75, 0], "2": [0.75, 0] },
+};
+
 const padOffset = (partId: string, pad: string): [number, number] => {
-  if (partId === "part:j1") return [0, pad === "1" ? -1 : 1];
-  return [pad === "1" ? -0.75 : 0.75, 0];
+  const geometry = padGeometry[partId]?.[pad];
+  if (!geometry) {
+    throw new KicadProjectionError(`unsupported spike geometry for ${partId} pad ${pad}`);
+  }
+  return geometry;
 };
 
 const renderSmokeFootprint = (
@@ -64,6 +79,11 @@ export const renderBoard = (): string => `(kicad_pcb
 )`;
 
 export const renderSmokeBoard = (fixture: Phase1Fixture): string => {
+  if (fixture.fixtureKind !== "smoke") {
+    throw new KicadProjectionError(
+      `Phase 1 board projection currently supports fixtureKind=smoke, received ${fixture.fixtureKind}`,
+    );
+  }
   const netByPin = new Map<string, { code: number; name: string }>();
   const netLines = fixture.nets.map((net, index) => {
     const code = index + 1;
@@ -169,8 +189,10 @@ export const projectToKicad = async (
     throw new Error("graph project entity must have type Project");
   }
   await writeFile(projectPath, renderProject(), "utf8");
-  await writeFile(join(directory, "fp-lib-table"), renderFootprintLibraryTable(), "utf8");
-  await writeFile(join(directory, "sym-lib-table"), renderSymbolLibraryTable(), "utf8");
+  if (isPhase1Fixture(graph)) {
+    await writeFile(join(directory, "fp-lib-table"), renderFootprintLibraryTable(), "utf8");
+    await writeFile(join(directory, "sym-lib-table"), renderSymbolLibraryTable(), "utf8");
+  }
   await writeFile(schematicPath, renderSchematic(), "utf8");
   await writeFile(
     boardPath,

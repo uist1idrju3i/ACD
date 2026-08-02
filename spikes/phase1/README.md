@@ -53,6 +53,12 @@ spike-onlyなのは、手書きSpecctra DSN、embedded footprintの簡略形、�
 real-pin ERC、Freerouting SESのKiCad re-import、完全routingです。Phase 1の
 `unrouted=0` gateは満たしていないため、この結果だけで受入・発注準備完了とはしません。
 
+PCB/DSNのpad geometryは、現在のsmoke fixtureに含まれるJ1/R1/D1/C1の2-pad
+tableだけを明示的に持ちます。未知のpartまたはpad番号はprojection/DSN生成を
+即時停止します。`fixtureKind=golden`のprojectionも、ESP32級の実geometryを
+追加するまでは停止します。これは意図したspike限界であり、任意部品を2-padとして
+推測するfallbackではありません。
+
 ## 次の停止条件と改善案
 
 1. official symbol/footprint snapshotをcontent hash付きで固定し、embedded footprintの

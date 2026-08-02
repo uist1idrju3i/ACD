@@ -7,6 +7,16 @@
  */
 
 export type Id = string;
+export type Provenance = {
+  [k: string]: unknown;
+} & {
+  source: string;
+  version: string;
+  license: string;
+  contentHash: string | null;
+  pendingReason?: string;
+  capturedAt?: string;
+};
 
 /**
  * Typed Phase 1 input fixture. It complements the Phase 0 design graph schema without changing it.
@@ -65,13 +75,6 @@ export interface Electrical {
   supplyVoltageV: number;
   maxCurrentMa: number;
   interfaces: string[];
-}
-export interface Provenance {
-  source: string;
-  version: string;
-  license: string;
-  contentHash: string;
-  capturedAt?: string;
 }
 export interface Part {
   id: Id;

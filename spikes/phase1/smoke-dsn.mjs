@@ -10,6 +10,12 @@ const placement = new Map(
 );
 const parts = new Map(fixture.parts.map((part) => [part.id, part]));
 const mappings = new Map(fixture.mappings.map((mapping) => [mapping.partId, mapping]));
+const padGeometry = {
+  "part:j1": { 1: [0, -1000], 2: [0, 1000] },
+  "part:r1": { 1: [-750, 0], 2: [750, 0] },
+  "part:d1": { 1: [-750, 0], 2: [750, 0] },
+  "part:c1": { 1: [-750, 0], 2: [750, 0] },
+};
 const nets = fixture.nets.map((net) => ({
   ...net,
   pins: net.pins.map((pin) => `${parts.get(pin.partId).reference}-${pin.pin}`),
@@ -17,33 +23,50 @@ const nets = fixture.nets.map((net) => ({
 
 const imageFor = (partId) => {
   const mapping = mappings.get(partId);
+  if (!mapping) throw new Error(`missing mapping for ${partId}`);
   return `${mapping.footprintLibraryId}:${mapping.footprintName}`;
 };
 const pinsFor = (partId) => {
   const mapping = mappings.get(partId);
-  const offsets =
-    partId === "part:j1" ? { 1: [0, -1000], 2: [0, 1000] } : { 1: [-750, 0], 2: [750, 0] };
+  if (!mapping) throw new Error(`missing mapping for ${partId}`);
+  const offsets = padGeometry[partId];
+  if (!offsets) throw new Error(`unsupported spike geometry for ${partId}`);
   return mapping.pinPads
     .map((pinPad) => {
-      const [x, y] = offsets[pinPad.pad];
+      const offset = offsets[pinPad.pad];
+      if (!offset) throw new Error(`unsupported spike geometry for ${partId} pad ${pinPad.pad}`);
+      const [x, y] = offset;
       return `      (pin Rect[A]Pad_1200.000000x1200.000000_um ${pinPad.pad} ${x} ${y})`;
     })
     .join("\n");
 };
-const imageBlocks = [...parts.keys()]
-  .map((partId) => {
-    return `    (image "${imageFor(partId)}"
+const partsByImage = new Map();
+for (const partId of parts.keys()) {
+  const image = imageFor(partId);
+  const grouped = partsByImage.get(image) ?? [];
+  grouped.push(partId);
+  partsByImage.set(image, grouped);
+}
+const imageBlocks = [...partsByImage.entries()]
+  .map(([image, partIds]) => {
+    return `    (image "${image}"
       (outline (rect signal -1200 -1200 1200 1200))
-${pinsFor(partId)}
+${pinsFor(partIds[0])}
     )`;
   })
   .join("\n");
-const placements = [...parts.keys()]
-  .map((partId) => {
-    const part = parts.get(partId);
-    const position = placement.get(partId);
-    return `    (component "${imageFor(partId)}"
-      (place ${part.reference} ${Math.round(position.xMm * 1000)} ${Math.round(position.yMm * 1000)} front ${position.rotationDeg} (PN ${part.reference}))
+const placements = [...partsByImage.entries()]
+  .map(([image, partIds]) => {
+    const places = partIds
+      .map((partId) => {
+        const part = parts.get(partId);
+        const position = placement.get(partId);
+        if (!position) throw new Error(`missing placement for ${partId}`);
+        return `      (place ${part.reference} ${Math.round(position.xMm * 1000)} ${Math.round(position.yMm * 1000)} front ${position.rotationDeg} (PN ${part.reference}))`;
+      })
+      .join("\n");
+    return `    (component "${image}"
+${places}
     )`;
   })
   .join("\n");

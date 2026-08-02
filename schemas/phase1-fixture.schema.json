@@ -37,9 +37,18 @@
         "source": { "type": "string", "minLength": 1 },
         "version": { "type": "string", "minLength": 1 },
         "license": { "type": "string", "minLength": 1 },
-        "contentHash": { "type": "string", "pattern": "^sha256:[0-9a-f]{64}$" },
+        "contentHash": {
+          "anyOf": [{ "type": "string", "pattern": "^sha256:[0-9a-f]{64}$" }, { "type": "null" }]
+        },
+        "pendingReason": { "type": "string", "minLength": 1 },
         "capturedAt": { "type": "string", "format": "date-time" }
-      }
+      },
+      "allOf": [
+        {
+          "if": { "properties": { "contentHash": { "const": null } } },
+          "then": { "required": ["pendingReason"] }
+        }
+      ]
     },
     "requirement": {
       "type": "object",
