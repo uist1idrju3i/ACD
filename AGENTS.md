@@ -22,7 +22,7 @@ This file defines the working contract for coding agents contributing to ACD.
 4. Prefer small, focused changes. Preserve existing user changes.
 5. Treat the typed design graph as canonical; schematic, KiCad, Gerber, and firmware artifacts are projections or outputs.
 6. Keep jidoka behavior: deterministic gates decide, abnormal runs stop and notify, and defective artifacts do not flow downstream.
-7. Keep human review optional by default. Orders within the total budget cap (board fabrication, components, assembly, shipping, and taxes) may execute automatically without an approval ID after the pre-order final gate passes. Require explicit approval IDs for budget overruns, waivers, other configured approvals, and irreversible operations outside this budget-capped ordering exception.
+7. Keep human review optional by default. Orders within the total budget cap (board fabrication, components, assembly, shipping, taxes, and enclosure/mechanical parts) may execute automatically without an approval ID after the pre-order final gate passes. Require explicit approval IDs for budget overruns, waivers, other configured approvals, and irreversible operations outside this budget-capped ordering exception.
 8. Keep artifact generation pull-based and budget-capped.
 
 ## Phase do-not-do list
@@ -37,12 +37,12 @@ These boundaries come from README §7:
 - **Phase 5 — Firmware and virtual hardware:** do not build a proprietary simulator.
 - **Phase 6 — Autonomous ordering:** do not target large-scale boards.
 - **Phase 7 — Scale and operations:** no additional prohibition is specified; preserve regression gates.
-- **Phase 8 — Local manufacturing:** no additional prohibition is specified; preserve printer-profile verification.
+- **Phase 8 — Local manufacturing:** no additional prohibition is specified; preserve printer/manufacturing-profile verification.
 
 ## Communication and code quality
 
-- Write code comments, GitHub Issues, and Pull Requests in English.
-- Keep user-facing design documentation in Japanese unless the file is explicitly agent-facing.
+- This project is conducted in Japanese. Write `README.md`, `docs/`, and ADRs in Japanese; write GitHub Issues and Pull Requests in Japanese as well.
+- Keep source-code comments and identifiers in English. `AGENTS.md` is agent-facing and remains in English.
 - Do not commit or push unless the lead explicitly requests it.
 - Do not weaken deterministic checks to make an AI-generated artifact pass.
 

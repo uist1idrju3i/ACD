@@ -22,8 +22,9 @@
 5. [`verification-gates.md`](verification-gates.md) — 決定論的な合否判定
 6. [`agent-runtime.md`](agent-runtime.md) — 長時間実行ハーネス
 7. [`knowledge-base.md`](knowledge-base.md) — 知識の蓄積と書き戻し
-8. [`kicad-interop.md`](kicad-interop.md)、[`testing.md`](testing.md) — 外部連携と評価
-9. [`adr/README.md`](adr/README.md) — ADR運用と既存の設計判断
+8. [`qc-tools.md`](qc-tools.md) — QC七つ道具・新QC七つ道具の生成分析
+9. [`kicad-interop.md`](kicad-interop.md)、[`testing.md`](testing.md) — 外部連携と評価
+10. [`adr/README.md`](adr/README.md) — ADR運用と既存の設計判断
 
 ## ステータス凡例
 
