@@ -7,17 +7,11 @@
       "name": "Fixture/schema",
       "phase": 1,
       "status": "implemented",
-      "appliesTo": [
-        "smoke",
-        "golden"
-      ],
+      "appliesTo": ["smoke", "golden"],
       "inputs": "Requirement fixture、typed Phase 1 schema",
       "passCondition": "Schema valid、全参照解決、MPN/AVLとmappingが存在",
       "onFailure": "`schema-invalid`／`reference-integrity`で停止",
-      "errorCodes": [
-        "schema-invalid",
-        "reference-integrity"
-      ]
+      "errorCodes": ["schema-invalid", "reference-integrity"]
     },
     {
       "order": 2,
@@ -25,17 +19,11 @@
       "name": "Graph semantic",
       "phase": 1,
       "status": "implemented",
-      "appliesTo": [
-        "smoke",
-        "golden"
-      ],
+      "appliesTo": ["smoke", "golden"],
       "inputs": "graph snapshot",
       "passCondition": "ID重複なし、revision整合、Component/Pin/Net参照整合",
       "onFailure": "`reference-integrity`／`revision-invalid`で停止",
-      "errorCodes": [
-        "reference-integrity",
-        "revision-invalid"
-      ]
+      "errorCodes": ["reference-integrity", "revision-invalid"]
     },
     {
       "order": 3,
@@ -43,17 +31,11 @@
       "name": "Component selection",
       "phase": 1,
       "status": "implemented",
-      "appliesTo": [
-        "smoke",
-        "golden"
-      ],
+      "appliesTo": ["smoke", "golden"],
       "inputs": "fixture Part/AVL",
       "passCondition": "選択Partがfixture許可範囲、数量・package・lifecycle・provenanceが確定",
       "onFailure": "未確定Partを下流へ流さず停止",
-      "errorCodes": [
-        "verification-failed",
-        "unknown-impact"
-      ]
+      "errorCodes": ["verification-failed", "unknown-impact"]
     },
     {
       "order": 4,
@@ -61,16 +43,11 @@
       "name": "Placement",
       "phase": 1,
       "status": "implemented",
-      "appliesTo": [
-        "smoke",
-        "golden"
-      ],
+      "appliesTo": ["smoke", "golden"],
       "inputs": "outline、keepout、placement constraints",
       "passCondition": "deterministic座標、outline・穴・高さ・keepout違反なし",
       "onFailure": "`verification-failed`で停止",
-      "errorCodes": [
-        "verification-failed"
-      ]
+      "errorCodes": ["verification-failed"]
     },
     {
       "order": 5,
@@ -78,16 +55,11 @@
       "name": "Netlist consistency",
       "phase": 1,
       "status": "implemented",
-      "appliesTo": [
-        "smoke",
-        "golden"
-      ],
+      "appliesTo": ["smoke", "golden"],
       "inputs": "graph Component/Pin/Net",
       "passCondition": "graph canonical netlistと投影前のcanonical netlistが一致",
       "onFailure": "接続差分、pin/pad ambiguityで停止",
-      "errorCodes": [
-        "verification-failed"
-      ]
+      "errorCodes": ["verification-failed"]
     },
     {
       "order": 6,
@@ -95,17 +67,11 @@
       "name": "KiCad projection/reopen",
       "phase": 1,
       "status": "implemented",
-      "appliesTo": [
-        "smoke",
-        "golden"
-      ],
+      "appliesTo": ["smoke", "golden"],
       "inputs": "schematic、PCB、library manifest",
       "passCondition": "固定containerで再オープン、symbol/pad/netが読戻し可能",
       "onFailure": "`reopen-failure`で停止",
-      "errorCodes": [
-        "reopen-failure",
-        "tool-failure"
-      ]
+      "errorCodes": ["reopen-failure", "tool-failure"]
     },
     {
       "order": 7,
@@ -113,16 +79,11 @@
       "name": "Netlist readback",
       "phase": 1,
       "status": "implemented",
-      "appliesTo": [
-        "smoke",
-        "golden"
-      ],
+      "appliesTo": ["smoke", "golden"],
       "inputs": "KiCad schematic netlist、PCB pad table",
       "passCondition": "reference、pin、pad、net接続集合がgraphと完全一致",
       "onFailure": "`verification-failed`で停止",
-      "errorCodes": [
-        "verification-failed"
-      ]
+      "errorCodes": ["verification-failed"]
     },
     {
       "order": 8,
@@ -130,16 +91,11 @@
       "name": "ERC/topology",
       "phase": 1,
       "status": "implemented",
-      "appliesTo": [
-        "smoke",
-        "golden"
-      ],
+      "appliesTo": ["smoke", "golden"],
       "inputs": "KiCad schematic、graph rules",
       "passCondition": "ERC errors=0、許容warningは明示waiverのみ",
       "onFailure": "下流へ流さず停止",
-      "errorCodes": [
-        "verification-failed"
-      ]
+      "errorCodes": ["verification-failed"]
     },
     {
       "order": 9,
@@ -147,17 +103,11 @@
       "name": "Routing",
       "phase": 1,
       "status": "implemented",
-      "appliesTo": [
-        "smoke",
-        "golden"
-      ],
+      "appliesTo": ["smoke", "golden"],
       "inputs": "PCB、routing profile",
       "passCondition": "**unrouted=0**、ratsnestなし、同一入力でdeterministic",
       "onFailure": "`convergence-failure`／`verification-failed`で停止",
-      "errorCodes": [
-        "convergence-failure",
-        "verification-failed"
-      ]
+      "errorCodes": ["convergence-failure", "verification-failed"]
     },
     {
       "order": 10,
@@ -165,16 +115,11 @@
       "name": "DRC/DFM",
       "phase": 1,
       "status": "implemented",
-      "appliesTo": [
-        "smoke",
-        "golden"
-      ],
+      "appliesTo": ["smoke", "golden"],
       "inputs": "routed PCB、fab profile",
       "passCondition": "DRC violations=0、unconnected=0、fab critical/high=0",
       "onFailure": "下流へ流さず停止",
-      "errorCodes": [
-        "verification-failed"
-      ]
+      "errorCodes": ["verification-failed"]
     },
     {
       "order": 11,
@@ -182,16 +127,11 @@
       "name": "Manufacturing outputs",
       "phase": 1,
       "status": "implemented",
-      "appliesTo": [
-        "smoke",
-        "golden"
-      ],
+      "appliesTo": ["smoke", "golden"],
       "inputs": "Gerber、drill、BOM、必要なpick-and-place",
       "passCondition": "再読込可能、層／部品／net数とrevision/hashが一致",
       "onFailure": "`verification-failed`で停止",
-      "errorCodes": [
-        "verification-failed"
-      ]
+      "errorCodes": ["verification-failed"]
     },
     {
       "order": 12,
@@ -199,17 +139,11 @@
       "name": "Pre-order readiness",
       "phase": 1,
       "status": "implemented",
-      "appliesTo": [
-        "golden"
-      ],
+      "appliesTo": ["golden"],
       "inputs": "全artifact、BOM、cost、availability",
       "passCondition": "人手発注に必要な情報が揃い、未解決order-relevant unknownなし",
       "onFailure": "発注準備を停止",
-      "errorCodes": [
-        "budget-exceeded",
-        "approval-required",
-        "unknown-impact"
-      ]
+      "errorCodes": ["budget-exceeded", "approval-required", "unknown-impact"]
     },
     {
       "order": 13,
@@ -217,16 +151,11 @@
       "name": "Physical completion",
       "phase": 1,
       "status": "contract-only",
-      "appliesTo": [
-        "golden"
-      ],
+      "appliesTo": ["golden"],
       "inputs": "実機測定Evidence",
       "passCondition": "golden taskのTestItemが条件・基準付きでpass",
       "onFailure": "後続継続を停止／再設計",
-      "errorCodes": [
-        "verification-failed",
-        "stale-result"
-      ]
+      "errorCodes": ["verification-failed", "stale-result"]
     },
     {
       "order": 14,
@@ -235,15 +164,11 @@
       "phase": 2,
       "runsAfter": "gate:netlist-consistency",
       "status": "implemented",
-      "appliesTo": [
-        "golden"
-      ],
+      "appliesTo": ["golden"],
       "inputs": "Typed fixture（part parameters、net role／nominal voltage）",
       "passCondition": "全ruleがpass。failは0件、unknownも0件（unknownは検証を広げるためblocked扱い）",
       "onFailure": "`verification-failed`で停止し、rule ID・対象・期待値・実測値・根拠を記録",
-      "errorCodes": [
-        "verification-failed"
-      ]
+      "errorCodes": ["verification-failed"]
     },
     {
       "order": 15,
@@ -252,15 +177,11 @@
       "phase": 2,
       "runsAfter": "gate:electrical-lint",
       "status": "implemented",
-      "appliesTo": [
-        "golden"
-      ],
+      "appliesTo": ["golden"],
       "inputs": "Typed fixtureのrationale（決定、代替案、仮定、リスク、出所）と要求・部品",
       "passCondition": "要求・機能ブロック・全部品にrationaleが対応し、参照が解決し、仮定に検証手段があり、rationaleがEvidenceとして引用されていない",
       "onFailure": "`verification-failed`で停止し、未記録の判断・未解決参照・未検証の仮定を記録",
-      "errorCodes": [
-        "verification-failed"
-      ]
+      "errorCodes": ["verification-failed"]
     },
     {
       "order": 16,
@@ -269,15 +190,11 @@
       "phase": 2,
       "runsAfter": "gate:design-rationale",
       "status": "implemented",
-      "appliesTo": [
-        "golden"
-      ],
+      "appliesTo": ["golden"],
       "inputs": "要求のacceptance criteria、電気parameter、net宣言、lint rule、rationaleの未確認仮定",
       "passCondition": "全acceptance criteriaに検証方法が割り当たり、rationaleが宣言したTestItemが生成され、各TestItemの方法・条件・合格基準が解決している",
       "onFailure": "`verification-failed`で停止し、未検証の要求・未生成のTestItem・未解決の合格基準を記録",
-      "errorCodes": [
-        "verification-failed"
-      ]
+      "errorCodes": ["verification-failed"]
     },
     {
       "order": 17,
@@ -286,17 +203,11 @@
       "phase": 2,
       "runsAfter": "gate:test-plan",
       "status": "implemented",
-      "appliesTo": [
-        "golden"
-      ],
+      "appliesTo": ["golden"],
       "inputs": "注入した設計欠陥のcase、記録済み修復提案（hash固定）、Gate 14〜16のrule",
       "passCondition": "各caseで欠陥が期待rule IDで検出され、決定論的gateが受理したpatchだけで全findingが解消し、反復上限内で収束する",
       "onFailure": "`verification-failed`で停止し、収束しないcase・未解消のfinding・却下理由を記録",
-      "errorCodes": [
-        "verification-failed",
-        "convergence-failure",
-        "stale-result"
-      ]
+      "errorCodes": ["verification-failed", "convergence-failure", "stale-result"]
     },
     {
       "order": 18,
@@ -305,18 +216,11 @@
       "phase": 2,
       "runsAfter": "gate:repair-loop",
       "status": "implemented",
-      "appliesTo": [
-        "golden"
-      ],
+      "appliesTo": ["golden"],
       "inputs": "typed fixtureから導出したnominal解析deck、固定digest containerのngspice",
       "passCondition": "全解析が収束し、測定値が期待範囲に入り、モデルの出所とライセンスが記録されている（unknownはblocked）",
       "onFailure": "`verification-failed`で停止。収束失敗は`convergence-failure`、tool異常終了は`tool-failure`として記録",
-      "errorCodes": [
-        "verification-failed",
-        "convergence-failure",
-        "tool-failure",
-        "tool-timeout"
-      ]
+      "errorCodes": ["verification-failed", "convergence-failure", "tool-failure", "tool-timeout"]
     },
     {
       "order": 19,
@@ -325,9 +229,7 @@
       "phase": 3,
       "runsAfter": "gate:spice",
       "status": "implemented",
-      "appliesTo": [
-        "golden"
-      ],
+      "appliesTo": ["golden"],
       "inputs": "記録済みfab report fixture、対象設計revision、fab profile",
       "passCondition": "source provenance、対象参照、重複統合、構造化結果とderivation hashが一致し、unknownは合格扱いにしない",
       "onFailure": "`fab-feedback-unknown`で停止し、fab-feedback.jsonをEvidenceとして保持したうえで下流検証範囲を広げる",
@@ -345,17 +247,11 @@
       "phase": 3,
       "runsAfter": "gate:fab-feedback-intake",
       "status": "implemented",
-      "appliesTo": [
-        "golden"
-      ],
+      "appliesTo": ["golden"],
       "inputs": "gate 19 intake result、source event、applicability metadata、approval",
       "passCondition": "candidate生成、遷移・scope承認・改訂・deprecation伝播が決定論的に検証され、却下候補とstale結果が保持される",
       "onFailure": "`verification-failed`または`schema-invalid`で停止し、承認不足・不正遷移・stale対象を記録",
-      "errorCodes": [
-        "verification-failed",
-        "schema-invalid",
-        "stale-result"
-      ]
+      "errorCodes": ["verification-failed", "schema-invalid", "stale-result"]
     }
   ]
 }
