@@ -96,6 +96,12 @@
       "manufacturer": "Advanced Monolithic Systems",
       "quantity": 1,
       "package": "SOT-223-3",
+      "parameters": {
+        "source": "datasheet:AMS1117-3.3 (fixture-owned annotation)",
+        "outputVoltageV": 3.3,
+        "inputCapacitanceMinUf": 10,
+        "outputCapacitanceMinUf": 22
+      },
       "provenance": {
         "source": "fixture",
         "version": "phase1-golden-1",
@@ -128,6 +134,10 @@
       "manufacturer": "Yageo",
       "quantity": 1,
       "package": "0603",
+      "parameters": {
+        "source": "mpn:RC0603FR-0710KL",
+        "resistanceOhm": 10000
+      },
       "provenance": {
         "source": "fixture",
         "version": "phase1-golden-1",
@@ -144,6 +154,10 @@
       "manufacturer": "Yageo",
       "quantity": 1,
       "package": "0603",
+      "parameters": {
+        "source": "mpn:RC0603FR-0710KL",
+        "resistanceOhm": 10000
+      },
       "provenance": {
         "source": "fixture",
         "version": "phase1-golden-1",
@@ -160,6 +174,10 @@
       "manufacturer": "Yageo",
       "quantity": 1,
       "package": "0603",
+      "parameters": {
+        "source": "mpn:RC0603FR-07330RL",
+        "resistanceOhm": 330
+      },
       "provenance": {
         "source": "fixture",
         "version": "phase1-golden-1",
@@ -176,6 +194,11 @@
       "manufacturer": "Yageo",
       "quantity": 1,
       "package": "0603",
+      "parameters": {
+        "source": "mpn:CC0603ZRY5V8BB104",
+        "capacitanceUf": 0.1,
+        "ratedVoltageV": 50
+      },
       "provenance": {
         "source": "fixture",
         "version": "phase1-golden-1",
@@ -192,6 +215,11 @@
       "manufacturer": "Yageo",
       "quantity": 1,
       "package": "0603",
+      "parameters": {
+        "source": "mpn:CC0603ZRY5V8BB104",
+        "capacitanceUf": 0.1,
+        "ratedVoltageV": 50
+      },
       "provenance": {
         "source": "fixture",
         "version": "phase1-golden-1",
@@ -208,6 +236,11 @@
       "manufacturer": "Yageo",
       "quantity": 1,
       "package": "0603",
+      "parameters": {
+        "source": "mpn:CC0603ZRY5V8BB104",
+        "capacitanceUf": 0.1,
+        "ratedVoltageV": 50
+      },
       "provenance": {
         "source": "fixture",
         "version": "phase1-golden-1",
@@ -224,6 +257,12 @@
       "manufacturer": "Lite-On",
       "quantity": 1,
       "package": "0603",
+      "parameters": {
+        "source": "datasheet:LTST-C190KRKT (fixture-owned annotation)",
+        "forwardVoltageV": 2.0,
+        "forwardCurrentMinMa": 1,
+        "forwardCurrentMaxMa": 20
+      },
       "provenance": {
         "source": "fixture",
         "version": "phase1-golden-1",
@@ -272,6 +311,10 @@
       "manufacturer": "Yageo",
       "quantity": 1,
       "package": "0603",
+      "parameters": {
+        "source": "mpn:RC0603FR-075K1L",
+        "resistanceOhm": 5100
+      },
       "provenance": {
         "source": "fixture",
         "version": "phase1-golden-1",
@@ -288,6 +331,10 @@
       "manufacturer": "Yageo",
       "quantity": 1,
       "package": "0603",
+      "parameters": {
+        "source": "mpn:RC0603FR-075K1L",
+        "resistanceOhm": 5100
+      },
       "provenance": {
         "source": "fixture",
         "version": "phase1-golden-1",
@@ -304,6 +351,11 @@
       "manufacturer": "Samsung Electro-Mechanics",
       "quantity": 1,
       "package": "0805",
+      "parameters": {
+        "source": "mpn:CL21A106KOQNNNE",
+        "capacitanceUf": 10,
+        "ratedVoltageV": 16
+      },
       "provenance": {
         "source": "fixture",
         "version": "phase1-golden-1",
@@ -320,6 +372,11 @@
       "manufacturer": "Samsung Electro-Mechanics",
       "quantity": 1,
       "package": "0805",
+      "parameters": {
+        "source": "mpn:CL21A226MQQNNNE",
+        "capacitanceUf": 22,
+        "ratedVoltageV": 6.3
+      },
       "provenance": {
         "source": "fixture",
         "version": "phase1-golden-1",
@@ -336,6 +393,50 @@
       "manufacturer": "Yageo",
       "quantity": 1,
       "package": "0603",
+      "parameters": {
+        "source": "mpn:RC0603FR-0710KL",
+        "resistanceOhm": 10000
+      },
+      "provenance": {
+        "source": "fixture",
+        "version": "phase1-golden-1",
+        "license": "BSD-3-Clause",
+        "contentHash": null,
+        "pendingReason": "fixture-owned provenance snapshot is pending; source is controlled by this fixture"
+      }
+    },
+    {
+      "id": "part:r8",
+      "reference": "R8",
+      "kind": "resistor",
+      "mpn": "RC0603FR-074K7L",
+      "manufacturer": "Yageo",
+      "quantity": 1,
+      "package": "0603",
+      "parameters": {
+        "source": "mpn:RC0603FR-074K7L",
+        "resistanceOhm": 4700
+      },
+      "provenance": {
+        "source": "fixture",
+        "version": "phase1-golden-1",
+        "license": "BSD-3-Clause",
+        "contentHash": null,
+        "pendingReason": "fixture-owned provenance snapshot is pending; source is controlled by this fixture"
+      }
+    },
+    {
+      "id": "part:r9",
+      "reference": "R9",
+      "kind": "resistor",
+      "mpn": "RC0603FR-074K7L",
+      "manufacturer": "Yageo",
+      "quantity": 1,
+      "package": "0603",
+      "parameters": {
+        "source": "mpn:RC0603FR-074K7L",
+        "resistanceOhm": 4700
+      },
       "provenance": {
         "source": "fixture",
         "version": "phase1-golden-1",
@@ -1085,6 +1186,56 @@
         "license": "CC-BY-SA-4.0-with-exception",
         "contentHash": "sha256:7190ac4a00125b807e54129ef0d87d87f2a658eeb74d025a7028203419b09f23"
       }
+    },
+    {
+      "partId": "part:r8",
+      "symbolLibraryId": "Device",
+      "symbolName": "R",
+      "footprintLibraryId": "Resistor_SMD",
+      "footprintName": "R_0603_1608Metric",
+      "pinPads": [
+        {
+          "pin": "1",
+          "pad": "1",
+          "electricalType": "passive"
+        },
+        {
+          "pin": "2",
+          "pad": "2",
+          "electricalType": "passive"
+        }
+      ],
+      "provenance": {
+        "source": "KiCad official libraries",
+        "version": "10.0.5",
+        "license": "CC-BY-SA-4.0-with-exception",
+        "contentHash": "sha256:7190ac4a00125b807e54129ef0d87d87f2a658eeb74d025a7028203419b09f23"
+      }
+    },
+    {
+      "partId": "part:r9",
+      "symbolLibraryId": "Device",
+      "symbolName": "R",
+      "footprintLibraryId": "Resistor_SMD",
+      "footprintName": "R_0603_1608Metric",
+      "pinPads": [
+        {
+          "pin": "1",
+          "pad": "1",
+          "electricalType": "passive"
+        },
+        {
+          "pin": "2",
+          "pad": "2",
+          "electricalType": "passive"
+        }
+      ],
+      "provenance": {
+        "source": "KiCad official libraries",
+        "version": "10.0.5",
+        "license": "CC-BY-SA-4.0-with-exception",
+        "contentHash": "sha256:7190ac4a00125b807e54129ef0d87d87f2a658eeb74d025a7028203419b09f23"
+      }
     }
   ],
   "nets": [
@@ -1092,6 +1243,7 @@
       "id": "net:5v",
       "name": "+5V",
       "class": "power",
+      "nominalVoltageV": 5,
       "pins": [
         {
           "partId": "part:j1",
@@ -1119,6 +1271,7 @@
       "id": "net:3v3",
       "name": "3V3",
       "class": "power",
+      "nominalVoltageV": 3.3,
       "pins": [
         {
           "partId": "part:u1",
@@ -1163,6 +1316,14 @@
         {
           "partId": "part:c5",
           "pin": "1"
+        },
+        {
+          "partId": "part:r8",
+          "pin": "2"
+        },
+        {
+          "partId": "part:r9",
+          "pin": "2"
         }
       ]
     },
@@ -1242,6 +1403,10 @@
         {
           "partId": "part:c5",
           "pin": "2"
+        },
+        {
+          "partId": "part:r5",
+          "pin": "2"
         }
       ]
     },
@@ -1249,6 +1414,7 @@
       "id": "net:i2c-sda",
       "name": "I2C_SDA",
       "class": "signal",
+      "role": "i2c",
       "pins": [
         {
           "partId": "part:u1",
@@ -1261,6 +1427,10 @@
         {
           "partId": "part:j2",
           "pin": "5"
+        },
+        {
+          "partId": "part:r8",
+          "pin": "1"
         }
       ]
     },
@@ -1268,6 +1438,7 @@
       "id": "net:i2c-scl",
       "name": "I2C_SCL",
       "class": "clock",
+      "role": "i2c",
       "pins": [
         {
           "partId": "part:u1",
@@ -1280,6 +1451,10 @@
         {
           "partId": "part:j2",
           "pin": "6"
+        },
+        {
+          "partId": "part:r9",
+          "pin": "1"
         }
       ]
     },
@@ -1287,6 +1462,7 @@
       "id": "net:uart-rx",
       "name": "UART_RX",
       "class": "signal",
+      "role": "uart",
       "pins": [
         {
           "partId": "part:u1",
@@ -1302,6 +1478,7 @@
       "id": "net:uart-tx",
       "name": "UART_TX",
       "class": "signal",
+      "role": "uart",
       "pins": [
         {
           "partId": "part:u1",
@@ -1317,6 +1494,7 @@
       "id": "net:en",
       "name": "EN",
       "class": "signal",
+      "role": "bootstrap",
       "pins": [
         {
           "partId": "part:u1",
@@ -1336,6 +1514,7 @@
       "id": "net:io0",
       "name": "IO0",
       "class": "signal",
+      "role": "bootstrap",
       "pins": [
         {
           "partId": "part:u1",
@@ -1355,6 +1534,7 @@
       "id": "net:led-a",
       "name": "LED_A",
       "class": "signal",
+      "role": "led",
       "pins": [
         {
           "partId": "part:u1",
@@ -1370,6 +1550,7 @@
       "id": "net:led-k",
       "name": "LED_K",
       "class": "signal",
+      "role": "led",
       "pins": [
         {
           "partId": "part:r3",
@@ -1385,6 +1566,7 @@
       "id": "net:usb-cc1",
       "name": "USB_CC1",
       "class": "signal",
+      "role": "usb-cc",
       "pins": [
         {
           "partId": "part:j1",
@@ -1400,6 +1582,7 @@
       "id": "net:usb-cc2",
       "name": "USB_CC2",
       "class": "signal",
+      "role": "usb-cc",
       "pins": [
         {
           "partId": "part:j1",
@@ -1561,6 +1744,20 @@
         "allowedLayers": ["F.Cu"],
         "xMm": 52,
         "yMm": 14,
+        "rotationDeg": 0
+      },
+      {
+        "partId": "part:r8",
+        "allowedLayers": ["F.Cu"],
+        "xMm": 47,
+        "yMm": 21,
+        "rotationDeg": 0
+      },
+      {
+        "partId": "part:r9",
+        "allowedLayers": ["F.Cu"],
+        "xMm": 51,
+        "yMm": 21,
         "rotationDeg": 0
       }
     ]
@@ -1942,6 +2139,46 @@
         "license": "BSD-3-Clause",
         "contentHash": null,
         "pendingReason": "fixture-owned provenance snapshot is pending; source is controlled by this fixture"
+      },
+      "unitPrice": 0.35,
+      "currency": "USD"
+    },
+    {
+      "partId": "part:r8",
+      "referenceDesignators": ["R8"],
+      "quantity": 1,
+      "mpn": "RC0603FR-074K7L",
+      "manufacturer": "Yageo",
+      "supplier": "Digi-Key",
+      "sku": "13-RC0603FR-074K7LCT-ND",
+      "availability": "in-stock",
+      "lifecycle": "active",
+      "provenance": {
+        "source": "fixture-provided AVL",
+        "version": "phase1-golden-1",
+        "license": "BSD-3-Clause",
+        "contentHash": null,
+        "pendingReason": "AVL source is fixture-provided; distributor availability must be rechecked before ordering"
+      },
+      "unitPrice": 0.35,
+      "currency": "USD"
+    },
+    {
+      "partId": "part:r9",
+      "referenceDesignators": ["R9"],
+      "quantity": 1,
+      "mpn": "RC0603FR-074K7L",
+      "manufacturer": "Yageo",
+      "supplier": "Digi-Key",
+      "sku": "13-RC0603FR-074K7LCT-ND",
+      "availability": "in-stock",
+      "lifecycle": "active",
+      "provenance": {
+        "source": "fixture-provided AVL",
+        "version": "phase1-golden-1",
+        "license": "BSD-3-Clause",
+        "contentHash": null,
+        "pendingReason": "AVL source is fixture-provided; distributor availability must be rechecked before ordering"
       },
       "unitPrice": 0.35,
       "currency": "USD"

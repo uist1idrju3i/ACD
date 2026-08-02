@@ -17,6 +17,10 @@ export interface ACDGateMatrix {
       id: string;
       name: string;
       phase: number;
+      /**
+       * Gate id this gate executes after. Lets a later phase insert a gate without renumbering the stable gate order.
+       */
+      runsAfter?: string;
       status: "implemented" | "contract-only" | "planned";
       /**
        * @minItems 1
@@ -35,6 +39,10 @@ export interface ACDGateMatrix {
       id: string;
       name: string;
       phase: number;
+      /**
+       * Gate id this gate executes after. Lets a later phase insert a gate without renumbering the stable gate order.
+       */
+      runsAfter?: string;
       status: "implemented" | "contract-only" | "planned";
       /**
        * @minItems 1

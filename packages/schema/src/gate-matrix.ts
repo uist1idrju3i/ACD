@@ -8,10 +8,44 @@ export type GateScope = GateDefinition["appliesTo"][number];
 export const loadGateMatrix = async (): Promise<GateMatrix> =>
   JSON.parse(await readFile(gateMatrixDataPath, "utf8")) as GateMatrix;
 
+/**
+ * Orders gates for execution. `order` is the stable gate number used by documentation
+ * and evidence; a gate declaring `runsAfter` executes directly after the gate it names,
+ * so a later phase can insert a gate without renumbering the existing contract.
+ */
+export const gatesInExecutionOrder = (matrix: GateMatrix): GateDefinition[] => {
+  const byId = new Map(matrix.gates.map((gate) => [gate.id, gate]));
+  const followers = new Map<string, GateDefinition[]>();
+  for (const gate of matrix.gates) {
+    if (gate.runsAfter === undefined) continue;
+    if (!byId.has(gate.runsAfter)) {
+      throw new Error(
+        `reference-integrity: gate ${gate.id} runs after unknown gate ${gate.runsAfter}`,
+      );
+    }
+    followers.set(gate.runsAfter, [...(followers.get(gate.runsAfter) ?? []), gate]);
+  }
+  const ordered: GateDefinition[] = [];
+  const append = (gate: GateDefinition): void => {
+    if (ordered.includes(gate)) throw new Error(`reference-integrity: gate ${gate.id} is cyclic`);
+    ordered.push(gate);
+    for (const follower of [...(followers.get(gate.id) ?? [])].sort(
+      (left, right) => left.order - right.order,
+    )) {
+      append(follower);
+    }
+  };
+  for (const gate of [...matrix.gates].sort((left, right) => left.order - right.order)) {
+    if (gate.runsAfter === undefined) append(gate);
+  }
+  if (ordered.length !== matrix.gates.length) {
+    throw new Error("reference-integrity: gate matrix execution order is incomplete");
+  }
+  return ordered;
+};
+
 export const gatesForScope = (matrix: GateMatrix, scope: GateScope): GateDefinition[] =>
-  matrix.gates
-    .filter((gate) => gate.appliesTo.includes(scope))
-    .sort((left, right) => left.order - right.order);
+  gatesInExecutionOrder(matrix).filter((gate) => gate.appliesTo.includes(scope));
 
 export const gateByOrder = (matrix: GateMatrix, order: number): GateDefinition => {
   const gate = matrix.gates.find((candidate) => candidate.order === order);
@@ -38,9 +72,14 @@ export const gateMatrixSectionEnd = "<!-- generated:gate-matrix:end -->";
 
 const columns = ["順序", "Gate", "Phase", "状態", "適用", "入力", "合格条件", "不合格時"];
 
-export const renderGateMatrixTable = (matrix: GateMatrix): string => {
-  const rows = [...matrix.gates]
-    .sort((left, right) => left.order - right.order)
+export type GateTableOptions = { phases?: readonly number[] };
+
+export const renderGateMatrixTable = (
+  matrix: GateMatrix,
+  { phases }: GateTableOptions = {},
+): string => {
+  const rows = gatesInExecutionOrder(matrix)
+    .filter((gate) => phases === undefined || phases.includes(gate.phase))
     .map((gate) =>
       [
         String(gate.order),
@@ -83,14 +122,18 @@ const normalizeTable = (table: string): string[][] =>
     .filter((cells) => !cells.every((cell) => /^:?-+:?$/.test(cell)));
 
 /** Compares a document's generated section with the matrix, ignoring table padding. */
-export const gateMatrixSectionMatches = (document: string, matrix: GateMatrix): boolean => {
+export const gateMatrixSectionMatches = (
+  document: string,
+  matrix: GateMatrix,
+  options: GateTableOptions = {},
+): boolean => {
   const start = document.indexOf(gateMatrixSectionStart);
   const end = document.indexOf(gateMatrixSectionEnd);
   if (start < 0 || end < 0 || end < start) return false;
   const section = document.slice(start + gateMatrixSectionStart.length, end);
   return (
     JSON.stringify(normalizeTable(section)) ===
-    JSON.stringify(normalizeTable(renderGateMatrixTable(matrix)))
+    JSON.stringify(normalizeTable(renderGateMatrixTable(matrix, options)))
   );
 };
 

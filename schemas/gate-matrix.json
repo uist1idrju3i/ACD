@@ -156,6 +156,19 @@
       "passCondition": "golden taskのTestItemが条件・基準付きでpass",
       "onFailure": "後続継続を停止／再設計",
       "errorCodes": ["verification-failed", "stale-result"]
+    },
+    {
+      "order": 14,
+      "id": "gate:electrical-lint",
+      "name": "Electrical topology lint",
+      "phase": 2,
+      "runsAfter": "gate:netlist-consistency",
+      "status": "implemented",
+      "appliesTo": ["golden"],
+      "inputs": "Typed fixture（part parameters、net role／nominal voltage）",
+      "passCondition": "全ruleがpass。failは0件、unknownも0件（unknownは検証を広げるためblocked扱い）",
+      "onFailure": "`verification-failed`で停止し、rule ID・対象・期待値・実測値・根拠を記録",
+      "errorCodes": ["verification-failed"]
     }
   ]
 }

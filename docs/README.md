@@ -30,8 +30,9 @@
     [`kicad-ci-profile.md`](kicad-ci-profile.md)、[`golden-tasks.md`](golden-tasks.md)、
     [`../schemas/phase1-fixture.schema.json`](../schemas/phase1-fixture.schema.json) —
     Phase 1受入gate、完了計画、KiCad、fixture契約
-12. [`phase2-plan.md`](phase2-plan.md)、[`../schemas/gate-matrix.json`](../schemas/gate-matrix.json) —
-    Phase 2実装計画と、machine-readableなgate契約
+12. [`phase2-plan.md`](phase2-plan.md)、[`gates.md`](gates.md)、[`electrical-lint.md`](electrical-lint.md)、
+    [`../schemas/gate-matrix.json`](../schemas/gate-matrix.json) —
+    Phase 2実装計画、全Phaseのgate matrix、topology-level electrical lint、machine-readableなgate契約
 13. [`error-taxonomy.md`](error-taxonomy.md) — エラー分類
 14. [`repo-structure.md`](repo-structure.md)、[`tool-contract.md`](tool-contract.md)、
     [`dependency-inventory.md`](dependency-inventory.md)、[`kicad-interop.md`](kicad-interop.md)、

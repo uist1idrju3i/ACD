@@ -8,6 +8,7 @@ import {
   eventSchemaPath,
   gateMatrixDataPath,
   gateMatrixSchemaPath,
+  gatesDocPath,
   patchSchemaPath,
   phase1FixtureSchemaPath,
   phase1GatesDocPath,
@@ -89,8 +90,14 @@ for (const gate of gateMatrix.gates) {
     }
   }
 }
-if (!gateMatrixSectionMatches(await readFile(phase1GatesDocPath, "utf8"), gateMatrix)) {
-  throw new Error("docs/phase1-gates.md gate matrix is out of sync with schemas/gate-matrix.json");
+const gateMatrixDocs = [
+  { path: phase1GatesDocPath, name: "docs/phase1-gates.md", options: { phases: [0, 1] } },
+  { path: gatesDocPath, name: "docs/gates.md", options: {} },
+];
+for (const doc of gateMatrixDocs) {
+  if (!gateMatrixSectionMatches(await readFile(doc.path, "utf8"), gateMatrix, doc.options)) {
+    throw new Error(`${doc.name} gate matrix is out of sync with schemas/gate-matrix.json`);
+  }
 }
 process.stdout.write("validated data: schemas/gate-matrix.json\n");
 

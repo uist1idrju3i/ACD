@@ -1,6 +1,6 @@
 # Phase 2実装計画
 
-**ステータス：Draft（WP1実装中、WP2以降は未着手）**
+**ステータス：Draft（WP1・WP2実装済み、WP3以降は未着手）**
 
 ## 目的と権威範囲
 
@@ -26,7 +26,7 @@ READMEの「やらないこと」により、Phase 2では高忠実度SI／熱�
 
 ### WP1：gate matrixのmachine-readable single source
 
-**状態：本PRで実装。**
+**状態：実装済み。**
 
 **作業**
 
@@ -49,7 +49,8 @@ READMEの「やらないこと」により、Phase 2では高忠実度SI／熱�
 
 ### WP2：topology-level electrical lint gate
 
-**状態：未着手。**
+**状態：実装済み。** rule定義と受入結果は[`electrical-lint.md`](electrical-lint.md)、
+gate契約はgate 14（`gate:electrical-lint`、gate 5の直後に実行）。
 
 Phase 1レビューでUSB-C CC終端欠落、LED電流不足、レギュレータbulk容量欠落、
 footprint／MPN不整合が後段で発見されました。KiCad ERCはこれらを検出しません。
@@ -69,6 +70,14 @@ footprint／MPN不整合が後段で発見されました。KiCad ERCはこれ�
 - 既知の4件（CC終端、LED電流、bulk容量、footprint／MPN不整合）を注入したfixtureが
   それぞれ固有のrule IDで停止する。
 - 各findingがrule ID、対象entity、期待値、実測値、根拠（datasheet／要求／規格）を持つ。
+
+**実装で判明した事項**
+
+- golden fixtureにI2C pull-up（SDA/SCL）が存在せず、BME280のSDO_SEL抵抗R5のpin 2が
+  どのnetにも接続されていませんでした。いずれもgate 1〜12を通過していた実在の欠陥のため、
+  lintを緩めずfixture側を修正しました（R8/R9=4.7 kΩ追加、R5 pin 2をGNDへ接続）。
+- gate番号の振り直しを避けるため、gate matrixへ`runsAfter`を追加し、後続Phaseのgateが
+  既存番号を保ったまま実行位置だけを宣言できるようにしました。
 
 ### WP3：設計根拠（Design Rationale）の構造化記録
 

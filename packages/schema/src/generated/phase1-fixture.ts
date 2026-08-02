@@ -85,7 +85,23 @@ export interface Part {
   manufacturer: string;
   quantity: number;
   package: string;
+  parameters?: PartParameters;
   provenance: Provenance;
+}
+/**
+ * Electrical parameters used by the topology-level electrical lint. Absent values are evaluated as unknown, which widens verification instead of passing.
+ */
+export interface PartParameters {
+  source: string;
+  resistanceOhm?: number;
+  capacitanceUf?: number;
+  ratedVoltageV?: number;
+  forwardVoltageV?: number;
+  forwardCurrentMinMa?: number;
+  forwardCurrentMaxMa?: number;
+  outputVoltageV?: number;
+  inputCapacitanceMinUf?: number;
+  outputCapacitanceMinUf?: number;
 }
 export interface Mapping {
   partId: Id;
@@ -117,6 +133,8 @@ export interface Net {
   id: Id;
   name: string;
   class: "power" | "ground" | "signal" | "clock" | "differential" | "other";
+  role?: "usb-cc" | "i2c" | "uart" | "led" | "bootstrap" | "other";
+  nominalVoltageV?: number;
   /**
    * @minItems 1
    */

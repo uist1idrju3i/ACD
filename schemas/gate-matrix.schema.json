@@ -45,6 +45,11 @@
             "type": "integer",
             "minimum": 0
           },
+          "runsAfter": {
+            "description": "Gate id this gate executes after. Lets a later phase insert a gate without renumbering the stable gate order.",
+            "type": "string",
+            "pattern": "^gate:[a-z0-9]+(?:-[a-z0-9]+)*$"
+          },
           "status": {
             "enum": ["implemented", "contract-only", "planned"]
           },

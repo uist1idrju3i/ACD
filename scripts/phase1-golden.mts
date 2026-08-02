@@ -7,6 +7,7 @@ import {
   placeFixture,
   projectToKicad,
 } from "../packages/adapters/kicad/src/index.js";
+import { failedFindings, lintElectricalTopology } from "../packages/graph-core/src/index.js";
 import {
   gateByOrder,
   loadGateMatrix,
@@ -124,6 +125,19 @@ try {
   pass(5, {
     pins: canonical.expected.length,
     canonicalNetlistHash: canonicalHash,
+  });
+
+  const lint = lintElectricalTopology(fixture);
+  if (lint.verdict !== "pass") {
+    throw new Error(
+      `verification-failed: electrical lint ${lint.verdict}: ${JSON.stringify(failedFindings(lint))}`,
+    );
+  }
+  pass(14, {
+    verdict: lint.verdict,
+    rulesEvaluated: lint.rulesEvaluated.length,
+    findings: lint.findings.length,
+    findingsHash: hash(JSON.stringify(lint.findings)),
   });
 
   await projectToKicad(fixture, projectRoot);

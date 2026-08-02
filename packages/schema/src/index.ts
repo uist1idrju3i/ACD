@@ -10,6 +10,7 @@ export { evaluatePhysicalEvidence } from "./physical-evidence.js";
 export type { PhysicalEvidenceVerdict } from "./physical-evidence.js";
 export {
   gateByOrder,
+  gatesInExecutionOrder,
   gateMatrixSectionEnd,
   gateMatrixSectionMatches,
   gateMatrixSectionStart,
@@ -19,5 +20,5 @@ export {
   renderGateMatrixTable,
   replaceGateMatrixSection,
 } from "./gate-matrix.js";
-export type { GateDefinition, GateMatrix, GateScope } from "./gate-matrix.js";
-export { gateMatrixDataPath, phase1GatesDocPath } from "./paths.js";
+export type { GateDefinition, GateMatrix, GateScope, GateTableOptions } from "./gate-matrix.js";
+export { gateMatrixDataPath, gatesDocPath, phase1GatesDocPath, repositoryRoot } from "./paths.js";
