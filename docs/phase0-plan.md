@@ -1,6 +1,6 @@
 # Phase 0実装計画
 
-**ステータス：Draft（完了条件1〜7をCIで再現可能。残存制約は「実装状況」参照）**
+**ステータス：完了（完了条件1〜7を同一検証環境で再現。残存制約は「実装状況」参照）**
 
 ## 目的と権威範囲
 
@@ -160,6 +160,29 @@ read-only投影へ延期します。配線は`unrouted=0`を必須とし、未�
 
 完了時には、実行コマンド、Node/pnpm/KiCadの版、fixture hash、生成物hash、
 既知の未決定事項、失敗したspikeと縮退方針をイベントとCI artifactへ残します。
+
+### Phase 0完了検証（2026-08-02）
+
+- 検証環境：Node.js `v22.23.2`、pnpm `11.18.0`、Docker `27.4.1`、
+  KiCad `10.0.5`、digest固定イメージ
+  `kicad/kicad@sha256:182c8005cb775a2c448a4c18681d489f1ff472a761885eba3e08b07e3c0564de`
+- `pnpm schema:validate`：終了コード0。全Schema、sample、fixtureを検証。
+- `pnpm typegen-sync`：終了コード0。型を生成し、`src/generated`の差分なし。
+- `pnpm test`：終了コード0。13 test files、37 testsすべてpass。
+- `pnpm lint`：終了コード0。
+- `pnpm typecheck`：終了コード0。全workspace packageの型チェックpass。
+- `pnpm golden`：終了コード0。6 fixtureすべてpass、期待結果との不一致なし。
+  `artifacts/golden/summary.json`および各fixtureの`result.json`に証拠を保存した。
+  正常系ではschematic/PCB netlist readback、ERC/DRC、Gerber/drill、
+  再投影artifact hash一致を確認し、失敗系ではERC/DRC失敗、
+  patch conflict、stale result、再オープン失敗時の停止とエラー分類を確認した。
+  正常系のgraph hashは
+  `sha256:7be6a9ed61680e3d5a9abca9f14a73afdf69ca467b62ae82c82c96601c8af325`。
+- `pnpm kicad:spike`：終了コード0。ただし
+  `kicad/kicad:10.0`タグが取得済みでなかったため、`SKIP: Docker or KiCad image unavailable`
+  となり、spike本体は未実行。これは成功とは扱わない。条件6のKiCad再オープン、
+  ERC/DRC、Gerber/drill、hash検証は、上記digest固定イメージを使用した
+  `pnpm golden`の正常系fixtureで実証した。
 
 ## 関連文書
 
