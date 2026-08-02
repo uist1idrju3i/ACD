@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
-trap 'status=$?; echo "::error file=scripts/kicad-spike.sh,line=${BASH_LINENO[0]}::KiCad spike command failed with exit status ${status}"; exit "$status"' ERR
+current_step="initialization"
+trap 'status=$?; echo "::error file=scripts/kicad-spike.sh::KiCad spike failed during ${current_step} with exit status ${status}"; exit "$status"' ERR
 
 IMAGE="${KICAD_IMAGE:-kicad/kicad:10.0}"
 OUT="${KICAD_OUT:-artifacts/kicad}"
@@ -24,18 +25,26 @@ await projectToKicad({
 }, directory);
 NODE
 
+current_step="capability version"
 docker run --rm -v "$ROOT/$OUT:/work" "$IMAGE" kicad-cli --version | tee "$ROOT/$OUT/capability.txt"
+current_step="capability help"
 docker run --rm -v "$ROOT/$OUT:/work" "$IMAGE" kicad-cli --help > "$ROOT/$OUT/kicad-cli-help.txt"
+current_step="DRC"
 docker run --rm -v "$ROOT/$OUT:/work" "$IMAGE" kicad-cli pcb drc \
   --exit-code-violations --output /work/reports/drc.rpt /work/project/design.kicad_pcb
+current_step="Gerber export"
 docker run --rm -v "$ROOT/$OUT:/work" "$IMAGE" kicad-cli pcb export gerbers \
   -o /work/gerbers/ /work/project/design.kicad_pcb
+current_step="drill export"
 docker run --rm -v "$ROOT/$OUT:/work" "$IMAGE" kicad-cli pcb export drill \
   -o /work/drill/ /work/project/design.kicad_pcb
+current_step="STEP export"
 docker run --rm -v "$ROOT/$OUT:/work" "$IMAGE" kicad-cli pcb export step \
   -o /work/board.step /work/project/design.kicad_pcb
+current_step="ERC"
 docker run --rm -v "$ROOT/$OUT:/work" "$IMAGE" kicad-cli sch erc \
   --exit-code-violations --output /work/reports/erc.rpt /work/project/design.kicad_sch
+current_step="artifact manifests"
 find "$ROOT/$OUT" -type f \
   ! -name 'SHA256SUMS' ! -name 'STABLE-SHA256SUMS' -print0 |
   sort -z | xargs -0 sha256sum > "$ROOT/$OUT/SHA256SUMS"
