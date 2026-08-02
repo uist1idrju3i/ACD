@@ -156,7 +156,8 @@
         "sourceEventIds",
         "provenance",
         "content",
-        "status"
+        "status",
+        "knowledgeId"
       ],
       "properties": {
         "id": { "$ref": "#/$defs/id" },
@@ -174,12 +175,19 @@
           "type": "string",
           "enum": ["candidate", "reviewed", "adopted", "rejected", "deprecated"]
         },
+        "knowledgeId": { "$ref": "#/$defs/id" },
         "confidentiality": {
           "type": "string",
           "enum": ["project-confidential", "organization-confidential", "shareable"]
         },
-        "appliesWhen": { "type": "array", "items": { "type": "string" } },
-        "excludesWhen": { "type": "array", "items": { "type": "string" } },
+        "appliesWhen": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/applicabilityCondition" }
+        },
+        "excludesWhen": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/applicabilityCondition" }
+        },
         "changedDecisionIds": { "type": "array", "items": { "$ref": "#/$defs/id" } },
         "previousRevisionId": { "$ref": "#/$defs/id" },
         "rejectionReason": { "type": "string", "minLength": 1 },
@@ -189,6 +197,26 @@
         "reproduced": { "type": "boolean" }
       },
       "additionalProperties": true
+    },
+    "applicabilityCondition": {
+      "type": "object",
+      "required": ["field", "operator", "value"],
+      "additionalProperties": false,
+      "properties": {
+        "field": {
+          "type": "string",
+          "enum": [
+            "fabProfileId",
+            "partId",
+            "footprintId",
+            "ruleId",
+            "classification",
+            "reproductionCondition"
+          ]
+        },
+        "operator": { "type": "string", "enum": ["equals", "notEquals"] },
+        "value": { "type": "string", "minLength": 1 }
+      }
     },
     "taskLedgerEntry": {
       "type": "object",

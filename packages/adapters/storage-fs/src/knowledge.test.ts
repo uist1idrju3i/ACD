@@ -6,6 +6,7 @@ import { FileKnowledgeRepository } from "./knowledge.js";
 
 const item = {
   id: "knowledge:test",
+  knowledgeId: "knowledge:test",
   type: "KnowledgeItem" as const,
   revision: 0,
   scope: "project-local" as const,
@@ -13,8 +14,8 @@ const item = {
   provenance: [{ kind: "fab-rule" as const, locator: "fixture:test" }],
   content: "test",
   status: "candidate" as const,
-  appliesWhen: ["profile=test"],
-  excludesWhen: ["prototype=2"],
+  appliesWhen: [{ field: "fabProfileId", operator: "equals", value: "profile=test" } as const],
+  excludesWhen: [{ field: "fabProfileId", operator: "notEquals", value: "profile=test" } as const],
 };
 
 let directory: string | undefined;

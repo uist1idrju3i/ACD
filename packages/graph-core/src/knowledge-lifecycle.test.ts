@@ -1,9 +1,11 @@
 import { describe, expect, it } from "vitest";
+import type { Entity } from "@acd/schema";
 import {
   createKnowledgeAppliedEvent,
   createKnowledgeCandidate,
   createKnowledgeCandidateCreatedEvent,
   createKnowledgeTransitionedEvent,
+  evaluateKnowledgeApplicability,
   propagateKnowledgeDeprecation,
   reviseKnowledgeItem,
   transitionKnowledgeItem,
@@ -12,6 +14,7 @@ import {
 
 const item = (): KnowledgeItem => ({
   id: "knowledge:test:f1",
+  knowledgeId: "knowledge:test:f1",
   type: "KnowledgeItem",
   revision: 0,
   scope: "project-local",
@@ -27,8 +30,10 @@ const item = (): KnowledgeItem => ({
   ],
   content: "mask-clearance: solder mask sliver",
   status: "candidate",
-  appliesWhen: ["fabProfileId=fab:jlcpcb-class-2layer"],
-  excludesWhen: ["prototype-only"],
+  appliesWhen: [{ field: "fabProfileId", operator: "equals", value: "fab:jlcpcb-class-2layer" }],
+  excludesWhen: [
+    { field: "fabProfileId", operator: "notEquals", value: "fab:jlcpcb-class-2layer" },
+  ],
   confidence: 0.98,
 });
 
@@ -39,7 +44,11 @@ describe("knowledge lifecycle", () => {
         findingId: "F-1",
         originalText: "solder mask sliver",
         severityReported: "high" as const,
-        references: {},
+        references: {
+          ruleId: "mask-sliver-min",
+          partId: "part:r1",
+          footprintId: "footprint:r0603",
+        },
         classification: "mask-clearance" as const,
         confidence: 0.98,
         reproductionConditions: ["2-layer"],
@@ -55,10 +64,73 @@ describe("knowledge lifecycle", () => {
       designRevision: "phase1-golden-2",
       derivationInputHash: "sha256:" + "b".repeat(64),
       derivationOutputHash: "sha256:" + "c".repeat(64),
-      excludesWhen: ["prototype-only"],
       createdAt: "2026-01-01T00:00:00.000Z",
     } as unknown as Parameters<typeof createKnowledgeCandidate>[0];
     expect(createKnowledgeCandidate(input)).toEqual(createKnowledgeCandidate(input));
+  });
+
+  it("keeps originating revision in provenance while applying across revisions", () => {
+    const input = {
+      finding: {
+        findingId: "F-1",
+        originalText: "solder mask sliver",
+        severityReported: "high" as const,
+        references: {
+          ruleId: "mask-sliver-min",
+          partId: "part:r1",
+          footprintId: "footprint:r0603",
+        },
+        classification: "mask-clearance" as const,
+        confidence: 0.98,
+        reproductionConditions: ["2-layer"],
+        duplicateFindingIds: [],
+        verdict: "pass" as const,
+      },
+      report: {
+        reportId: "fab-report:prototype-1",
+        fabProfileId: "fab:jlcpcb-class-2layer",
+        rawReport: { contentHash: "sha256:" + "a".repeat(64) },
+      },
+      sourceEventId: "event:fab-feedback:prototype-1",
+      designRevision: "phase1-golden-2",
+      derivationInputHash: "sha256:" + "b".repeat(64),
+      derivationOutputHash: "sha256:" + "c".repeat(64),
+      createdAt: "2026-01-01T00:00:00.000Z",
+    } as unknown as Parameters<typeof createKnowledgeCandidate>[0];
+    const adopted = transitionKnowledgeItem(
+      transitionKnowledgeItem(createKnowledgeCandidate(input), {
+        status: "reviewed",
+        now: "2026-01-01T00:00:00.000Z",
+      }),
+      { status: "adopted", now: "2026-01-01T00:00:00.000Z" },
+    );
+    expect(adopted.provenance[0]).toMatchObject({ designRevision: "phase1-golden-2" });
+    expect(adopted.appliesWhen).not.toContainEqual({
+      field: "designRevision",
+      operator: "equals",
+      value: "phase1-golden-2",
+    });
+    expect(adopted.appliesWhen).toContainEqual({
+      field: "fabProfileId",
+      operator: "equals",
+      value: "fab:jlcpcb-class-2layer",
+    });
+    expect(adopted.appliesWhen).toContainEqual({
+      field: "footprintId",
+      operator: "equals",
+      value: "footprint:r0603",
+    });
+    expect(
+      evaluateKnowledgeApplicability(adopted, {
+        fabProfileId: "fab:jlcpcb-class-2layer",
+        partId: "part:r1",
+        footprintId: "footprint:r0603",
+        ruleId: "mask-sliver-min",
+        classification: "mask-clearance",
+        reproductionCondition: ["2-layer", "HASL", "0.1mm minimum mask sliver"],
+        designRevision: "prototype-2",
+      }),
+    ).toBe("pass");
   });
 
   it("allows forward transitions and retains rejected candidates", () => {
@@ -98,7 +170,7 @@ describe("knowledge lifecycle", () => {
     });
     const approval = {
       approvalId: "approval:test",
-      subject: reviewed.id,
+      subject: reviewed.knowledgeId,
       scope: "library-wide" as const,
       approvedBy: "user:test",
       approvedAt: "2026-01-01T00:00:00.000Z",
@@ -123,7 +195,11 @@ describe("knowledge lifecycle", () => {
 
   it("rejects silent rewrites and creates explicit revisions", () => {
     expect(() =>
-      reviseKnowledgeItem(item(), { ...item(), content: item().content } as never),
+      reviseKnowledgeItem(item(), {
+        content: item().content,
+        sourceEventIds: item().sourceEventIds,
+        provenance: item().provenance,
+      }),
     ).toThrow(/does not change/);
     const revised = reviseKnowledgeItem(item(), {
       content: "updated content",
@@ -131,7 +207,8 @@ describe("knowledge lifecycle", () => {
       provenance: item().provenance,
     });
     expect(revised.previousRevisionId).toBe(item().id);
-    expect(revised.id).not.toBe(item().id);
+    expect(revised.id).toBe(`${item().knowledgeId}:r1`);
+    expect(revised.knowledgeId).toBe(item().knowledgeId);
   });
 
   it("propagates deprecation through recorded graph references", () => {
@@ -156,12 +233,23 @@ describe("knowledge lifecycle", () => {
             checkedAt: "2026-01-01T00:00:00.000Z",
             findingIds: ["rationale:test"],
           },
+          {
+            id: "custom:test",
+            type: "CustomEntity",
+            revision: 0,
+          } as unknown as Entity,
         ],
       },
       item().id,
       "knowledge item deprecated",
     );
     expect(result.staleEntityIds).toEqual(["rationale:test", "verification:test"]);
+    expect(result.traversalBasis).toContain(
+      "rationale:test:Rationale:evidenceLinks,generatedTestItemIds,links",
+    );
+    expect(result.traversalBasis).toContain(
+      "custom:test:CustomEntity:no-declared-reference-fields:widened",
+    );
     expect(result.graph.entities[1]?.status).toBe("stale");
     expect(result.graph.entities[2]?.status).toBe("stale");
   });
