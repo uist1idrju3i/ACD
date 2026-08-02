@@ -38,11 +38,14 @@
     Phase 2実装計画、全Phaseのgate matrix、topology-level electrical lint、設計根拠gate、
     テスト項目の自動生成、故障注入と修復ループ、nominal SPICE解析、schematic readability、
     Phase 2の振り返り、machine-readableなgate契約
-13. [`error-taxonomy.md`](error-taxonomy.md) — エラー分類
-14. [`repo-structure.md`](repo-structure.md)、[`tool-contract.md`](tool-contract.md)、
+13. [`phase3-plan.md`](phase3-plan.md)、[`knowledge-base.md`](knowledge-base.md)、
+    [`../schemas/gate-matrix.json`](../schemas/gate-matrix.json) —
+    Phase 3実装計画、知識ループ、fabフィードバック取り込みとgate契約
+14. [`error-taxonomy.md`](error-taxonomy.md) — エラー分類
+15. [`repo-structure.md`](repo-structure.md)、[`tool-contract.md`](tool-contract.md)、
     [`dependency-inventory.md`](dependency-inventory.md)、[`kicad-interop.md`](kicad-interop.md)、
     [`testing.md`](testing.md) — 構成、ツール境界、依存関係、外部連携、評価
-15. [`adr/README.md`](adr/README.md) — ADR運用と既存の設計判断
+16. [`adr/README.md`](adr/README.md) — ADR運用と既存の設計判断
 
 ## ステータス凡例
 
