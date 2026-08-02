@@ -5,6 +5,7 @@ import {
   eventSchemaPath,
   fabFeedbackSchemaPath,
   gateMatrixSchemaPath,
+  libraryPatchSchemaPath,
   patchSchemaPath,
   phase1FixtureSchemaPath,
   physicalEvidenceSchemaPath,
@@ -20,6 +21,7 @@ const definitions = [
   ["phase1-fixture.schema.json", phase1FixtureSchemaPath],
   ["physical-evidence.schema.json", physicalEvidenceSchemaPath],
   ["gate-matrix.schema.json", gateMatrixSchemaPath],
+  ["library-patch.schema.json", libraryPatchSchemaPath],
 ] as const;
 
 for (const [filename, schemaPath] of definitions) {

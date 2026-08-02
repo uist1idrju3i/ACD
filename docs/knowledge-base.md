@@ -47,6 +47,13 @@ N7は、親和図でStep 1の要求・自由記述をクラスタリングし、
 
 停止、ゲート不合格、fab指摘、実機故障、および実害には至らなかったが停止条件に近い事象を同じ台帳へ記録し、症状→原因→是正→有効性確認→水平展開の順に閉じます。有効性確認は再現条件でのゲート再実行または実測`Evidence`で行い、説明だけで閉じません。水平展開では、同じ原因が影響し得る他プロジェクト、fixture、ライブラリ、fabプロファイル、ゲート規則を列挙し、対象外にしたものは理由を残します。是正が未完了の項目は次の設計の入力として残します。
 
+fab指摘からのfootprint修正は、採用済みまたはレビュー済みKnowledgeItemとversioned
+fab-profile ruleの宣言データから決定論的に`LibraryOverlayPatch`候補を生成します。
+patchは公式KiCad snapshotを変更せず、対象snapshot hash、footprint、source event、
+KnowledgeItem、操作内容、検証Evidence、明示的library revisionを記録します。geometry、
+再オープン、DRCの全てに合格しないpatchは却下理由付きで保持し、projectionへ流しません。
+`library-wide`への昇格にはKnowledgeItemと同じ期限付きapproval IDが必要です。
+
 ## KnowledgeItemのライフサイクル
 
 状態は`candidate`→`reviewed`→`adopted`→`deprecated`とします（Schemaの`KnowledgeItem.status`）。検討を打ち切った候補は`rejected`と理由を記録して保持します。昇格にはsource event、provenance、再現条件、適用条件と除外条件が必要です。`appliesWhen`と`excludesWhen`は`field`・`operator`・`value`を持つ構造化条件であり、WP4は文字列をparseせず決定論的に評価します。条件を評価できない場合は`unknown`として検証範囲を広げます。出所は`provenance`へ記録し、元の設計revisionは適用条件に含めず、fab profile、部品・footprint、rule、再現条件など次の設計で再現可能な条件だけを`appliesWhen`へ記録します。`library-wide`へのscope昇格には対象を限定した有効期限付きapprovalが必要です。内容を変更したrevisionは承認を継承せず、`candidate`かつ`project-local`へ戻り、`approvalId`を削除して再レビューします。誤りが判明した知識は`deprecated`にし、その知識を根拠に行った判断と`VerificationResult`を明示的な参照フィールドから探索して再検証対象（stale）にします。宣言されていないentity typeは依存の可能性を除外せず、探索根拠を記録して保守的に扱います。内容を黙って書き換えず、変更は旧版を参照する新しいKnowledgeItem revisionとして記録します。却下した案、失敗したspike、再現しなかった結果も条件付きで残し、同じ検討の反復を防ぎます。
