@@ -174,7 +174,7 @@ const makeReport = (board: string): FabFeedbackReport => {
     severityReported: "high" as const,
     references: {
       partId: "part:p2-j1",
-      footprintId: "footprint:Connector_USB:USB_C_Receptacle_GCT_USB4135-GF-A_6P_TopMnt_Horizontal",
+      footprintId: patch.footprintId,
       ...(measurement.violates ? { ruleId: "mask-sliver-min" } : {}),
     },
   };
