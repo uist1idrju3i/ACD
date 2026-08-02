@@ -1,0 +1,120 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://acd.example.invalid/schemas/design-graph.schema.json",
+  "title": "ACD Design Graph Phase-0 Draft",
+  "description": "Phase-0 draft canonical typed design graph. Implementation and ADR decisions may refine this schema.",
+  "type": "object",
+  "required": ["schemaVersion", "project", "entities"],
+  "properties": {
+    "schemaVersion": { "type": "string", "const": "0.1.0-draft" },
+    "project": { "$ref": "#/$defs/project" },
+    "entities": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/entity" }
+    },
+    "patches": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/patch" }
+    }
+  },
+  "$defs": {
+    "id": { "type": "string", "pattern": "^[A-Za-z][A-Za-z0-9._:-]*$" },
+    "entityType": {
+      "type": "string",
+      "enum": ["Project", "Requirement", "Constraint", "FunctionalBlock", "Component", "Part", "Footprint", "Net", "Pin", "Layout", "BoardStackup", "ManufacturingPackage", "FirmwarePackage", "TestItem", "Rationale", "Evidence", "KnowledgeItem", "TaskLedgerEntry"]
+    },
+    "provenance": {
+      "type": "object",
+      "description": "Traceable source and creation context.",
+      "required": ["kind", "locator"],
+      "properties": {
+        "kind": { "type": "string", "enum": ["datasheet", "fab-rule", "requirement", "simulation", "measurement", "sourcing", "tool-output", "human-observation", "other"] },
+        "locator": { "type": "string", "minLength": 1 },
+        "page": { "type": ["integer", "string"], "minimum": 1 },
+        "capturedAt": { "type": "string", "format": "date-time" },
+        "capturedBy": { "type": "string" },
+        "contentHash": { "type": "string" }
+      },
+      "additionalProperties": true
+    },
+    "uncertainty": {
+      "type": "object",
+      "required": ["state", "description"],
+      "properties": {
+        "state": { "type": "string", "enum": ["unknown", "assumed", "inferred", "verified", "rejected"] },
+        "description": { "type": "string", "minLength": 1 },
+        "resolution": { "type": "string" },
+        "dueAt": { "type": "string", "format": "date-time" }
+      },
+      "additionalProperties": false
+    },
+    "evidenceLink": {
+      "type": "object",
+      "required": ["evidenceId"],
+      "properties": {
+        "evidenceId": { "$ref": "#/$defs/id" },
+        "claim": { "type": "string" },
+        "locator": { "type": "string" }
+      },
+      "additionalProperties": false
+    },
+    "rationale": {
+      "type": "object",
+      "required": ["reason", "alternativesConsidered", "assumptions", "evidenceLinks", "risks", "tuningNeeded"],
+      "properties": {
+        "reason": { "type": "string", "minLength": 1 },
+        "alternativesConsidered": { "type": "array", "items": { "type": "string" } },
+        "assumptions": { "type": "array", "items": { "type": "string" } },
+        "evidenceLinks": { "type": "array", "items": { "$ref": "#/$defs/evidenceLink" } },
+        "risks": { "type": "array", "items": { "type": "string" } },
+        "tuningNeeded": { "type": "boolean" },
+        "generatedTestItemIds": { "type": "array", "items": { "$ref": "#/$defs/id" } }
+      },
+      "additionalProperties": false
+    },
+    "entity": {
+      "type": "object",
+      "required": ["id", "type", "revision"],
+      "properties": {
+        "id": { "$ref": "#/$defs/id" },
+        "type": { "$ref": "#/$defs/entityType" },
+        "revision": { "type": "integer", "minimum": 0 },
+        "name": { "type": "string" },
+        "status": { "type": "string" },
+        "provenance": { "type": "array", "items": { "$ref": "#/$defs/provenance" } },
+        "rationale": { "$ref": "#/$defs/rationale" },
+        "uncertainty": { "$ref": "#/$defs/uncertainty" },
+        "links": { "type": "array", "items": { "$ref": "#/$defs/id" } },
+        "attributes": { "type": "object", "additionalProperties": true }
+      },
+      "additionalProperties": true
+    },
+    "project": {
+      "allOf": [
+        { "$ref": "#/$defs/entity" },
+        {
+          "properties": {
+            "type": { "const": "Project" },
+            "requirements": { "type": "array", "items": { "$ref": "#/$defs/id" } },
+            "revisionIds": { "type": "array", "items": { "$ref": "#/$defs/id" } }
+          }
+        }
+      ]
+    },
+    "patch": {
+      "type": "object",
+      "required": ["patchId", "baseRevision", "operations", "createdAt"],
+      "properties": {
+        "patchId": { "$ref": "#/$defs/id" },
+        "baseRevision": { "type": "integer", "minimum": 0 },
+        "resultRevision": { "type": "integer", "minimum": 1 },
+        "operations": { "type": "array", "minItems": 1, "items": { "type": "object", "required": ["op", "path"], "properties": { "op": { "type": "string", "enum": ["add", "remove", "replace", "test"] }, "path": { "type": "string" }, "value": {} }, "additionalProperties": false } },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "createdBy": { "type": "string" },
+        "verificationResultIds": { "type": "array", "items": { "$ref": "#/$defs/id" } }
+      },
+      "additionalProperties": false
+    }
+  },
+  "additionalProperties": false
+}
