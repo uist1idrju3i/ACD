@@ -38,7 +38,7 @@
       "mpn": "B2B-PH-K-S(LF)(SN)",
       "manufacturer": "JST",
       "quantity": 1,
-      "package": "JST_PH:PH_B2B-PH-K_1x02_P2.00mm_Vertical",
+      "package": "JST_PH:JST_PH_B2B-PH-K_1x02_P2.00mm_Vertical",
       "provenance": {
         "source": "fixture",
         "version": "phase1-smoke-1",
