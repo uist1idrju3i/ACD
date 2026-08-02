@@ -17,8 +17,7 @@
     "test": "vitest run"
   },
   "dependencies": {
-    "@acd/schema": "workspace:*",
-    "fast-json-patch": "3.1.1"
+    "@acd/schema": "workspace:*"
   },
   "devDependencies": {
     "@types/node": "22.15.21",
