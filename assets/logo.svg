@@ -1,0 +1,65 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 760 200" width="760" height="200" role="img" aria-label="ACD - Autonomous Computer Design">
+  <defs>
+    <linearGradient id="tBoard" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#11835a"/>
+      <stop offset="1" stop-color="#0a5e3b"/>
+    </linearGradient>
+    <linearGradient id="tCopper" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#f0a44e"/>
+      <stop offset="1" stop-color="#c87533"/>
+    </linearGradient>
+  </defs>
+
+  <!-- ===== icon (same motif as favicon) ===== -->
+  <g transform="translate(24,32) scale(2.125)">
+    <rect x="2" y="2" width="60" height="60" rx="14" fill="url(#tBoard)"/>
+    <g stroke="#9fe0c0" stroke-width="2.5" fill="none" stroke-linecap="round">
+      <path d="M12 52 v-10 l8 -8"/>
+      <path d="M52 12 v10 l-8 8"/>
+      <path d="M12 12 h8 l4 4"/>
+      <path d="M52 52 h-8 l-4 -4"/>
+    </g>
+    <g fill="#9fe0c0">
+      <circle cx="12" cy="52" r="2.8"/>
+      <circle cx="52" cy="12" r="2.8"/>
+      <circle cx="12" cy="12" r="2.8"/>
+      <circle cx="52" cy="52" r="2.8"/>
+    </g>
+    <g stroke="#9fe0c0" stroke-width="3" stroke-linecap="round">
+      <path d="M24 16 v-3"/><path d="M32 16 v-3"/><path d="M40 16 v-3"/>
+      <path d="M24 48 v3"/><path d="M32 48 v3"/><path d="M40 48 v3"/>
+    </g>
+    <rect x="17" y="17" width="30" height="30" rx="6" fill="#0c2b1d" stroke="#9fe0c0" stroke-width="2.5"/>
+    <path d="M32 22.5 L41.5 41.5 H36.7 L34.9 37.6 H29.1 L27.3 41.5 H22.5 Z M32 30.2 L30.4 33.9 H33.6 Z" fill="url(#tCopper)"/>
+  </g>
+
+  <!-- ===== wordmark ===== -->
+  <g font-family="Verdana, 'DejaVu Sans', sans-serif" font-weight="bold">
+    <text x="196" y="124" font-size="104" letter-spacing="6">
+      <tspan fill="url(#tCopper)">A</tspan><tspan fill="#1e293b">CD</tspan>
+    </text>
+  </g>
+
+  <!-- anagram badge: CAD with swap arrows -->
+  <g transform="translate(560,44)">
+    <g font-family="Verdana, 'DejaVu Sans', sans-serif" font-weight="bold" font-size="30">
+      <text x="0" y="26" fill="#94a3b8" letter-spacing="3">C<tspan fill="#c87533">A</tspan>D</text>
+    </g>
+    <!-- arrows: A jumps to the front -->
+    <path d="M40 -8 C 28 -22, 6 -22, -4 -8" stroke="#c87533" stroke-width="3.5" fill="none" stroke-linecap="round"/>
+    <path d="M-4 -8 l -2.5 -8.5 8.5 3.5 z" fill="#c87533"/>
+  </g>
+  <text x="560" y="96" font-family="Verdana, 'DejaVu Sans', sans-serif" font-size="15" fill="#64748b" letter-spacing="1">anagram of CAD</text>
+
+  <!-- trace underline from wordmark -->
+  <g stroke="#0f7a4d" stroke-width="3.5" fill="none" stroke-linecap="round">
+    <path d="M198 148 H520 l16 -16 H700"/>
+  </g>
+  <g fill="#0f7a4d">
+    <circle cx="198" cy="148" r="5"/>
+    <circle cx="700" cy="132" r="5"/>
+  </g>
+
+  <!-- tagline -->
+  <text x="198" y="180" font-family="Verdana, 'DejaVu Sans', sans-serif" font-size="22" fill="#475569" letter-spacing="4">AUTONOMOUS COMPUTER DESIGN</text>
+</svg>
