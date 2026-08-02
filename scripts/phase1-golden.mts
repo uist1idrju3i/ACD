@@ -34,6 +34,7 @@ import {
 } from "../packages/graph-core/src/index.js";
 import {
   FixtureFabFeedbackReader,
+  fabFeedbackUnknownError,
   intakeFabFeedback,
   referenceIndexFromPhase1Fixture,
 } from "../packages/adapters/fab-feedback/src/index.js";
@@ -346,13 +347,10 @@ try {
     fabFeedbackReport,
     referenceIndexFromPhase1Fixture(fixture),
   );
-  if (fabFeedback.verdict !== "pass") {
-    throw new Error(
-      `verification-failed: fab feedback contains unknown findings: ${JSON.stringify(
-        fabFeedback.evidence.value.unknownFindingIds,
-      )}`,
-    );
-  }
+  const fabFeedbackUnknown =
+    fabFeedback.verdict === "unknown"
+      ? fabFeedbackUnknownError(fabFeedback.evidence.value.unknownFindingIds)
+      : undefined;
   const fabFeedbackEventLog = new InMemoryEventLog();
   await fabFeedbackEventLog.append(
     createFabFeedbackReceivedEvent({
@@ -372,6 +370,16 @@ try {
       {
         report: fabFeedbackReport,
         intake: fabFeedback,
+        ...(fabFeedbackUnknown
+          ? {
+              unknown: {
+                code: fabFeedbackUnknown.code,
+                severity: fabFeedbackUnknown.severity,
+                action: fabFeedbackUnknown.context.action,
+                findingIds: fabFeedbackUnknown.context.findingIds,
+              },
+            }
+          : {}),
         events: await fabFeedbackEventLog.readAll(),
       },
       null,
