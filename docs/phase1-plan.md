@@ -241,4 +241,5 @@ golden routingと`unrouted=0`はWP4で実装する。
 - [`kicad-interop.md`](kicad-interop.md)
 - [`kicad-ci-profile.md`](kicad-ci-profile.md)
 - [`golden-tasks.md`](golden-tasks.md)
+- [`phase1-retrospective.md`](phase1-retrospective.md)
 - [`../schemas/phase1-fixture.schema.json`](../schemas/phase1-fixture.schema.json)

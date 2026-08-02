@@ -54,9 +54,8 @@ LED直列抵抗は330Ω、EN/IO0 pull-upは10kΩです。
 `pnpm schema:validate`でSchemaとreference-integrityを検証し、公式KiCad
 symbol/footprint mappingはcontent-hash pinned snapshotから解決します。
 
-このWPではfixture定義とGate 1/2のみを受入対象とします。golden fixtureをsmoke-only
-projection/routerへ渡してはならず、placementはWP3、外部routing toolのDSN/SES
-round-tripと`unrouted=0`はWP4で実装します。
+fixture定義はWP2、placementとprojectionはWP3、外部routing toolのDSN/SES
+round-tripと`unrouted=0`はWP4、Gate 12/13 contractはWP5で実装済みです。
 
 ### `normal-2layer`
 
