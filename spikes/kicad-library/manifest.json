@@ -93,14 +93,14 @@
     },
     {
       "kind": "symbol",
-      "id": "Regulator_Linear:AMS1117-3.3",
-      "path": "symbols/Regulator_Linear_AMS1117-3.3.kicad_sym",
+      "id": "Regulator_Linear:AP1117-15",
+      "path": "symbols/Regulator_Linear_AP1117-15.kicad_sym",
       "source": "/usr/share/kicad/symbols/Regulator_Linear.kicad_sym",
       "sourceUrl": "https://gitlab.com/kicad/libraries/kicad-symbols",
       "version": "10.0.5",
       "containerDigest": "sha256:182c8005cb775a2c448a4c18681d489f1ff472a761885eba3e08b07e3c0564de",
       "license": "CC-BY-SA-4.0-with-exception",
-      "contentHash": "sha256:20ef44ec31ad5d782f39f9386751221117451ec84c718afc7459b1445497f9dc"
+      "contentHash": "sha256:934fee0a6864ea0290b5d6ac57d021fdeeb621ee46e80a047157477bf520dd79"
     },
     {
       "kind": "symbol",

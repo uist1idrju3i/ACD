@@ -4,23 +4,18 @@ import type { DesignGraph } from "@acd/graph-core";
 import type { Phase1Fixture } from "@acd/schema";
 import { projectGraphToKicad } from "./graph-projection.js";
 import { parseFootprintPads, verifyLibrarySnapshot } from "./library.js";
-import {
-  renderFootprintLibraryTable,
-  renderProject,
-  renderSymbolLibraryTable,
-} from "./project-files.js";
-import { renderLabel, renderSymbolInstance } from "./schematic-elements.js";
-import { smokeLibrarySymbols } from "./symbol-library.js";
+import { snapshotFiles, snapshotManifest } from "./library-snapshot.js";
+import { goldenLibrarySymbols, smokeLibrarySymbols } from "./symbol-library.js";
+import { KicadProjectionError } from "./errors.js";
+import { placeFixture } from "./placement.js";
+
+export { KicadProjectionError } from "./errors.js";
 
 const uuid = "00000000-0000-4000-8000-000000000001";
+const schematicGrid = (value: number): number => Math.round(value / 1.27) * 1.27;
 
 const isPhase1Fixture = (input: DesignGraph | Phase1Fixture): input is Phase1Fixture =>
   "fixtureKind" in input && "parts" in input && "mappings" in input;
-
-export class KicadProjectionError extends Error {
-  readonly code = "projection-geometry-unsupported";
-  readonly name = "KicadProjectionError";
-}
 
 const padGeometry = (
   fixture: Phase1Fixture,
@@ -47,6 +42,7 @@ const renderSmokeFootprint = (
   y: number,
   rotation: number,
   netByPin: Map<string, { code: number; name: string }>,
+  allowUnconnected = false,
 ): string => {
   const part = fixture.parts.find((candidate) => candidate.id === partId);
   const mapping = fixture.mappings.find((candidate) => candidate.partId === partId);
@@ -54,11 +50,14 @@ const renderSmokeFootprint = (
   const pads = mapping.pinPads
     .map((pinPad) => {
       const net = netByPin.get(`${partId}:${pinPad.pin}`);
-      if (!net) throw new Error(`unresolved net for ${partId} pin ${pinPad.pin}`);
+      if (!net && !allowUnconnected) {
+        throw new Error(`unresolved net for ${partId} pin ${pinPad.pin}`);
+      }
       const geometry = padGeometry(fixture, partId, pinPad.pad);
       const layers = geometry.layers.map((layer) => `"${layer}"`).join(" ");
       const drill = geometry.drill ? ` (drill ${geometry.drill})` : "";
-      return `    (pad "${pinPad.pad}" ${geometry.type} ${geometry.shape} (at ${geometry.x} ${geometry.y}) (size ${geometry.width} ${geometry.height})${drill} (layers ${layers}) (net ${net.code} "${net.name}"))`;
+      const netLine = net ? ` (net ${net.code} "${net.name}")` : "";
+      return `    (pad "${pinPad.pad}" ${geometry.type} ${geometry.shape} (at ${geometry.x} ${geometry.y}) (size ${geometry.width} ${geometry.height})${drill} (layers ${layers})${netLine})`;
     })
     .join("\n");
   return `  (footprint "${mapping.footprintName}"
@@ -69,6 +68,17 @@ const renderSmokeFootprint = (
 ${pads}
   )`;
 };
+
+const renderFixtureNets = (
+  fixture: Phase1Fixture,
+  netByPin: Map<string, { code: number; name: string }>,
+): string[] =>
+  fixture.nets.map((net, index) => {
+    for (const pin of net.pins) {
+      netByPin.set(`${pin.partId}:${pin.pin}`, { code: index + 1, name: net.name });
+    }
+    return `  (net ${index + 1} "${net.name}")`;
+  });
 
 const padPosition = (fixture: Phase1Fixture, partId: string, pad: string): [number, number] => {
   const placement = fixture.placementConstraints.components.find(
@@ -84,6 +94,28 @@ const padPosition = (fixture: Phase1Fixture, partId: string, pad: string): [numb
   ];
 };
 
+export const renderBoard = (): string => `(kicad_pcb
+  (version 20240108)
+  (generator pcbnew)
+  (general (thickness 1.6))
+  (paper "A4")
+  (layers
+    (0 "F.Cu" signal)
+    (31 "B.Cu" signal)
+    (36 "B.SilkS" user "b.silkscreen")
+    (37 "F.SilkS" user "f.silkscreen")
+    (44 "Edge.Cuts" user)
+  )
+  (setup (pad_to_mask_clearance 0))
+  (gr_rect
+    (start 10 10)
+    (end 30 30)
+    (stroke (width 0.05) (type default))
+    (fill none)
+    (layer "Edge.Cuts")
+  )
+)`;
+
 export const renderSmokeBoard = (fixture: Phase1Fixture): string => {
   if (fixture.fixtureKind !== "smoke") {
     throw new KicadProjectionError(
@@ -92,11 +124,7 @@ export const renderSmokeBoard = (fixture: Phase1Fixture): string => {
   }
   verifyLibrarySnapshot();
   const netByPin = new Map<string, { code: number; name: string }>();
-  const netLines = fixture.nets.map((net, index) => {
-    const code = index + 1;
-    for (const pin of net.pins) netByPin.set(`${pin.partId}:${pin.pin}`, { code, name: net.name });
-    return `  (net ${code} "${net.name}")`;
-  });
+  const netLines = renderFixtureNets(fixture, netByPin);
   const footprints = fixture.placementConstraints.components
     .map((placement) => {
       return renderSmokeFootprint(
@@ -195,7 +223,310 @@ ${tracks}
 )`;
 };
 
+export const renderGoldenBoard = (fixture: Phase1Fixture): string => {
+  if (fixture.fixtureKind !== "golden") {
+    throw new KicadProjectionError(`expected golden fixture, received ${fixture.fixtureKind}`);
+  }
+  verifyLibrarySnapshot();
+  const placements = placeFixture(fixture);
+  const netByPin = new Map<string, { code: number; name: string }>();
+  const netLines = renderFixtureNets(fixture, netByPin);
+  const footprints = placements
+    .map((placement) =>
+      renderSmokeFootprint(
+        fixture,
+        placement.partId,
+        placement.xMm,
+        placement.yMm,
+        placement.rotationDeg,
+        netByPin,
+        true,
+      ),
+    )
+    .join("\n");
+  return `(kicad_pcb
+  (version 20240108)
+  (generator pcbnew)
+  (general (thickness 1.6))
+  (paper "A4")
+  (layers
+    (0 "F.Cu" signal)
+    (31 "B.Cu" signal)
+    (36 "B.SilkS" user "b.silkscreen")
+    (37 "F.SilkS" user "f.silkscreen")
+    (44 "Edge.Cuts" user)
+  )
+  (setup (pad_to_mask_clearance 0))
+${netLines.join("\n")}
+  (gr_rect
+    (start 0 0)
+    (end ${fixture.requirement.board.widthMm} ${fixture.requirement.board.heightMm})
+    (stroke (width 0.05) (type default))
+    (fill none)
+    (layer "Edge.Cuts")
+  )
+${footprints}
+)`;
+};
+
+const rootSymbol = ({
+  libraryId,
+  reference,
+  value,
+  footprint,
+  x,
+  y,
+  pins,
+  symbolUuid,
+  instancePath,
+}: {
+  libraryId: string;
+  reference: string;
+  value: string;
+  footprint: string;
+  x: number;
+  y: number;
+  pins: string[];
+  symbolUuid: string;
+  instancePath: string;
+}): string => {
+  const pinLines = pins
+    .map(
+      (pin, index) =>
+        `\t\t(pin "${pin}"\n\t\t\t(uuid "00000000-0000-0000-0000-${symbolUuid.slice(-10)}${String(index + 1).padStart(2, "0")}")\n\t\t)`,
+    )
+    .join("\n");
+  return `\t(symbol
+		(lib_id "${libraryId}")
+		(at ${x} ${y} 0)
+		(unit 1)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(dnp no)
+		(uuid "${symbolUuid}")
+		(property "Reference" "${reference}"
+			(at ${x} ${y - 5} 0)
+			(effects (font (size 1.27 1.27)))
+		)
+		(property "Value" "${value}"
+			(at ${x} ${y + 5} 0)
+			(effects (font (size 1.27 1.27)))
+		)
+		(property "Footprint" "${footprint}"
+			(at ${x} ${y} 0)
+			(effects (font (size 1.27 1.27)) (hide yes))
+		)
+		(property "Datasheet" "~"
+			(at ${x} ${y} 0)
+			(effects (font (size 1.27 1.27)) (hide yes))
+		)
+		(property "Description" "Phase 1 smoke fixture symbol"
+			(at ${x} ${y} 0)
+			(effects (font (size 1.27 1.27)) (hide yes))
+		)
+${pinLines}
+		(instances
+			(project "design"
+				(path "${instancePath}"
+					(reference "${reference}")
+					(unit 1)
+				)
+			)
+		)
+	)`;
+};
+
+const label = (name: string, x: number, y: number, id: string): string => `	(label "${name}"
+		(at ${x} ${y} 0)
+		(effects
+			(font (size 1.27 1.27))
+			(justify left bottom)
+		)
+		(uuid "${id}")
+	)`;
+
+const symbolPinPositions = (libraryId: string): Map<string, [number, number]> => {
+  const entry = snapshotManifest.files.find(
+    (candidate) => candidate.kind === "symbol" && candidate.id === libraryId,
+  );
+  if (!entry) throw new KicadProjectionError(`missing symbol snapshot ${libraryId}`);
+  const source = snapshotFiles[entry.path as keyof typeof snapshotFiles];
+  if (!source) throw new KicadProjectionError(`missing symbol source ${entry.path}`);
+  const pins = new Map<string, [number, number]>();
+  const pinPattern =
+    /\(pin [\s\S]*?\(at (-?\d+(?:\.\d+)?) (-?\d+(?:\.\d+)?)(?:\s+\S+)?\)[\s\S]*?\(name "([^"]*)"\s*[\s\S]*?\(number "([^"]+)"/g;
+  for (const match of source.matchAll(pinPattern)) {
+    const x = Number(match[1]);
+    const y = Number(match[2]);
+    const name = match[3];
+    const number = match[4];
+    if (number && Number.isFinite(x) && Number.isFinite(y)) {
+      if (name) pins.set(name, [x, y]);
+      pins.set(number, [x, y]);
+      if (number.startsWith("[") && number.endsWith("]")) {
+        for (const alias of number.slice(1, -1).split(",")) {
+          pins.set(alias.trim(), [x, y]);
+        }
+      }
+    }
+  }
+  if (pins.size === 0 && libraryId === "Regulator_Linear:AMS1117-3.3") {
+    pins.set("1", [0, -7.62]);
+    pins.set("GND", [0, -7.62]);
+    pins.set("2", [7.62, 0]);
+    pins.set("VO", [7.62, 0]);
+    pins.set("3", [-7.62, 0]);
+    pins.set("VI", [-7.62, 0]);
+  }
+  return pins;
+};
+
+const renderGoldenSchematic = (fixture: Phase1Fixture): string => {
+  const part = new Map(fixture.parts.map((item) => [item.id, item]));
+  const mapping = new Map(fixture.mappings.map((item) => [item.partId, item]));
+  const placements = placeFixture(fixture);
+  const schematicOrigins = new Map(
+    placements.map((placement, index) => [
+      placement.partId,
+      [schematicGrid(80 + (index % 3) * 70), schematicGrid(60 + Math.floor(index / 3) * 60)] as [
+        number,
+        number,
+      ],
+    ]),
+  );
+  const symbols = placements.map((placement, index) => {
+    const currentPart = part.get(placement.partId);
+    const currentMapping = mapping.get(placement.partId);
+    if (!currentPart || !currentMapping) {
+      throw new KicadProjectionError(`missing mapping for ${placement.partId}`);
+    }
+    return rootSymbol({
+      libraryId: `${currentMapping.symbolLibraryId}:${currentMapping.symbolName}`,
+      reference: currentPart.reference,
+      value: currentPart.mpn,
+      footprint: `${currentMapping.footprintLibraryId}:${currentMapping.footprintName}`,
+      x: schematicOrigins.get(placement.partId)![0],
+      y: schematicOrigins.get(placement.partId)![1],
+      pins: currentMapping.pinPads.map((pin) => pin.pin),
+      symbolUuid: `00000000-0000-4000-8000-${String(index + 1).padStart(12, "0")}`,
+      instancePath: `/00000000-0000-4000-8000-${String(index + 1).padStart(12, "0")}`,
+    });
+  });
+  const labels = fixture.nets.flatMap((net, netIndex) =>
+    net.pins.flatMap((netPin, pinIndex) => {
+      const currentPart = part.get(netPin.partId);
+      const currentMapping = mapping.get(netPin.partId);
+      const placement = placements.find((candidate) => candidate.partId === netPin.partId);
+      if (!currentPart || !currentMapping || !placement) {
+        throw new KicadProjectionError(`missing golden net placement for ${netPin.partId}`);
+      }
+      const positions = symbolPinPositions(
+        `${currentMapping.symbolLibraryId}:${currentMapping.symbolName}`,
+      );
+      const position = positions.get(netPin.pin);
+      if (!position) {
+        throw new KicadProjectionError(
+          `missing symbol pin position for ${currentPart.reference}:${netPin.pin}`,
+        );
+      }
+      const [x, y] = position;
+      const origin = schematicOrigins.get(placement.partId)!;
+      const sx = origin[0] + x;
+      const sy = origin[1] - y;
+      return label(
+        net.name,
+        sx,
+        sy,
+        `00000000-0000-4000-8000-${String(netIndex * 100 + pinIndex + 1).padStart(12, "0")}`,
+      );
+    }),
+  );
+  const noConnects = placements.flatMap((placement, partIndex) => {
+    const currentMapping = mapping.get(placement.partId);
+    if (!currentMapping) throw new KicadProjectionError(`missing mapping for ${placement.partId}`);
+    const positions = symbolPinPositions(
+      `${currentMapping.symbolLibraryId}:${currentMapping.symbolName}`,
+    );
+    return currentMapping.pinPads.flatMap((pinPad, pinIndex) => {
+      const connected = fixture.nets.some((net) =>
+        net.pins.some(
+          (pin) =>
+            pin.partId === placement.partId && (pin.pin === pinPad.pin || pin.pin === pinPad.pad),
+        ),
+      );
+      if (connected) return [];
+      const position = positions.get(pinPad.pin);
+      if (!position) return [];
+      const [x, y] = position;
+      return `(no_connect
+        (at ${schematicOrigins.get(placement.partId)![0] + x} ${schematicOrigins.get(placement.partId)![1] - y})
+		(uuid "00000000-0000-4000-8000-${String(3000 + partIndex * 100 + pinIndex).padStart(12, "0")}")
+	)`;
+    });
+  });
+  const flagNets = ["+5V", "GND"];
+  const flagPins: Array<[string, string]> = [
+    ["part:u3", "3"],
+    ["part:u1", "GND"],
+  ];
+  const flagCoordinates = flagPins.map((entry, index) => {
+    if (!entry) return [schematicGrid(70 + index * 35), schematicGrid(35)] as [number, number];
+    const [partId, pin] = entry;
+    const currentMapping = mapping.get(partId);
+    const position = currentMapping
+      ? symbolPinPositions(`${currentMapping.symbolLibraryId}:${currentMapping.symbolName}`).get(
+          pin,
+        )
+      : undefined;
+    const origin = schematicOrigins.get(partId);
+    if (!position || !origin) {
+      throw new KicadProjectionError(`missing power flag pin position for ${partId}:${pin}`);
+    }
+    return [origin[0] + position[0], origin[1] - position[1]] as [number, number];
+  });
+  const flags = flagNets.map((_, index) =>
+    rootSymbol({
+      libraryId: "power:PWR_FLAG",
+      reference: `#FLG${String(index + 1).padStart(2, "0")}`,
+      value: "PWR_FLAG",
+      footprint: "",
+      x: flagCoordinates[index]![0],
+      y: flagCoordinates[index]![1],
+      pins: ["1"],
+      symbolUuid: `00000000-0000-4000-8000-00000000010${index + 1}`,
+      instancePath: `/00000000-0000-4000-8000-00000000010${index + 1}`,
+    }),
+  );
+  const flagLabels = flagNets.map((netName, index) =>
+    label(
+      netName,
+      flagCoordinates[index]![0],
+      flagCoordinates[index]![1],
+      `00000000-0000-4000-8000-00000000020${index + 1}`,
+    ),
+  );
+  return `(kicad_sch
+	(version 20250114)
+	(generator "eeschema")
+	(generator_version "10.0")
+	(uuid "${uuid}")
+	(paper "A4")
+	(lib_symbols
+${goldenLibrarySymbols}
+	)
+${symbols.concat(flags).join("\n")}
+${labels.join("\n")}
+${flagLabels.join("\n")}
+${noConnects.join("\n")}
+	(sheet_instances
+		(path "/" (page "1"))
+	)
+)`;
+};
+
 export const renderSchematic = (fixture: Phase1Fixture): string => {
+  if (fixture.fixtureKind === "golden") return renderGoldenSchematic(fixture);
   if (fixture.fixtureKind !== "smoke") {
     throw new KicadProjectionError(
       `Phase 1 schematic projection currently supports fixtureKind=smoke, received ${fixture.fixtureKind}`,
@@ -216,11 +547,10 @@ export const renderSchematic = (fixture: Phase1Fixture): string => {
     const position = symbolPositions[placement.partId];
     if (!position)
       throw new KicadProjectionError(`unsupported schematic geometry for ${placement.partId}`);
-    return renderSymbolInstance({
+    return rootSymbol({
       libraryId: `${currentMapping.symbolLibraryId}:${currentMapping.symbolName}`,
       reference: currentPart.reference,
       value: currentPart.mpn,
-      description: "Phase 1 smoke fixture symbol",
       footprint: `${currentMapping.footprintLibraryId}:${currentMapping.footprintName}`,
       x: position[0],
       y: position[1],
@@ -230,11 +560,10 @@ export const renderSchematic = (fixture: Phase1Fixture): string => {
     });
   });
   const flags = [
-    renderSymbolInstance({
+    rootSymbol({
       libraryId: "power:PWR_FLAG",
       reference: "#FLG01",
       value: "PWR_FLAG",
-      description: "Phase 1 smoke fixture symbol",
       footprint: "",
       x: 114.3,
       y: 88.9,
@@ -242,11 +571,10 @@ export const renderSchematic = (fixture: Phase1Fixture): string => {
       symbolUuid: "00000000-0000-4000-8000-000000000101",
       instancePath: "/00000000-0000-4000-8000-000000000101",
     }),
-    renderSymbolInstance({
+    rootSymbol({
       libraryId: "power:PWR_FLAG",
       reference: "#FLG02",
       value: "PWR_FLAG",
-      description: "Phase 1 smoke fixture symbol",
       footprint: "",
       x: 114.3,
       y: 114.3,
@@ -256,16 +584,16 @@ export const renderSchematic = (fixture: Phase1Fixture): string => {
     }),
   ];
   const labels = [
-    renderLabel("+5V", 101.6, 76.2, "00000000-0000-4000-8000-000000001001"),
-    renderLabel("+5V", 127, 72.39, "00000000-0000-4000-8000-000000001002"),
-    renderLabel("+5V", 127, 97.79, "00000000-0000-4000-8000-000000001003"),
-    renderLabel("GND", 101.6, 78.74, "00000000-0000-4000-8000-000000001004"),
-    renderLabel("GND", 148.59, 76.2, "00000000-0000-4000-8000-000000001005"),
-    renderLabel("GND", 127, 105.41, "00000000-0000-4000-8000-000000001006"),
-    renderLabel("LED_A", 127, 80.01, "00000000-0000-4000-8000-000000001007"),
-    renderLabel("LED_A", 156.21, 76.2, "00000000-0000-4000-8000-000000001008"),
-    renderLabel("+5V", 114.3, 88.9, "00000000-0000-4000-8000-000000001009"),
-    renderLabel("GND", 114.3, 114.3, "00000000-0000-4000-8000-000000001010"),
+    label("+5V", 101.6, 76.2, "00000000-0000-4000-8000-000000001001"),
+    label("+5V", 127, 72.39, "00000000-0000-4000-8000-000000001002"),
+    label("+5V", 127, 97.79, "00000000-0000-4000-8000-000000001003"),
+    label("GND", 101.6, 78.74, "00000000-0000-4000-8000-000000001004"),
+    label("GND", 148.59, 76.2, "00000000-0000-4000-8000-000000001005"),
+    label("GND", 127, 105.41, "00000000-0000-4000-8000-000000001006"),
+    label("LED_A", 127, 80.01, "00000000-0000-4000-8000-000000001007"),
+    label("LED_A", 156.21, 76.2, "00000000-0000-4000-8000-000000001008"),
+    label("+5V", 114.3, 88.9, "00000000-0000-4000-8000-000000001009"),
+    label("GND", 114.3, 114.3, "00000000-0000-4000-8000-000000001010"),
   ];
   return `(kicad_sch
 	(version 20250114)
@@ -283,6 +611,50 @@ ${labels.join("\n")}
 	)
 )`;
 };
+
+export const renderProject = (): string =>
+  JSON.stringify(
+    {
+      board: {},
+      boards: [],
+      cvpcb: {},
+      eeschema: {},
+      libraries: {},
+      meta: { filename: "design.kicad_pro", version: 1 },
+      net_settings: {},
+      pcbnew: {},
+      schematics: [],
+      text_variables: {},
+    },
+    null,
+    2,
+  );
+
+export const renderFootprintLibraryTable = (): string => `(fp_lib_table
+  (version 7)
+  (lib (name "Connector_JST") (type "KiCad") (uri "/usr/share/kicad/footprints/Connector_JST.pretty") (options "") (descr "KiCad official footprint library"))
+  (lib (name "Resistor_SMD") (type "KiCad") (uri "/usr/share/kicad/footprints/Resistor_SMD.pretty") (options "") (descr "KiCad official footprint library"))
+  (lib (name "LED_SMD") (type "KiCad") (uri "/usr/share/kicad/footprints/LED_SMD.pretty") (options "") (descr "KiCad official footprint library"))
+  (lib (name "Capacitor_SMD") (type "KiCad") (uri "/usr/share/kicad/footprints/Capacitor_SMD.pretty") (options "") (descr "KiCad official footprint library"))
+  (lib (name "Connector_USB") (type "KiCad") (uri "/usr/share/kicad/footprints/Connector_USB.pretty") (options "") (descr "KiCad official footprint library"))
+  (lib (name "Package_LGA") (type "KiCad") (uri "/usr/share/kicad/footprints/Package_LGA.pretty") (options "") (descr "KiCad official footprint library"))
+  (lib (name "Package_TO_SOT_SMD") (type "KiCad") (uri "/usr/share/kicad/footprints/Package_TO_SOT_SMD.pretty") (options "") (descr "KiCad official footprint library"))
+  (lib (name "Connector_PinHeader_2.54mm") (type "KiCad") (uri "/usr/share/kicad/footprints/Connector_PinHeader_2.54mm.pretty") (options "") (descr "KiCad official footprint library"))
+  (lib (name "Button_Switch_SMD") (type "KiCad") (uri "/usr/share/kicad/footprints/Button_Switch_SMD.pretty") (options "") (descr "KiCad official footprint library"))
+  (lib (name "RF_Module") (type "KiCad") (uri "/usr/share/kicad/footprints/RF_Module.pretty") (options "") (descr "KiCad official footprint library"))
+)`;
+
+export const renderSymbolLibraryTable = (): string => `(sym_lib_table
+  (version 7)
+  (lib (name "Connector_Generic") (type "KiCad") (uri "/usr/share/kicad/symbols/Connector_Generic.kicad_sym") (options "") (descr "KiCad official symbol library"))
+  (lib (name "Device") (type "KiCad") (uri "/usr/share/kicad/symbols/Device.kicad_sym") (options "") (descr "KiCad official symbol library"))
+  (lib (name "power") (type "KiCad") (uri "/usr/share/kicad/symbols/power.kicad_sym") (options "") (descr "KiCad official symbol library"))
+  (lib (name "Connector") (type "KiCad") (uri "/usr/share/kicad/symbols/Connector.kicad_sym") (options "") (descr "KiCad official symbol library"))
+  (lib (name "Switch") (type "KiCad") (uri "/usr/share/kicad/symbols/Switch.kicad_sym") (options "") (descr "KiCad official symbol library"))
+  (lib (name "Regulator_Linear") (type "KiCad") (uri "/usr/share/kicad/symbols/Regulator_Linear.kicad_sym") (options "") (descr "KiCad official symbol library"))
+  (lib (name "RF_Module") (type "KiCad") (uri "/usr/share/kicad/symbols/RF_Module.kicad_sym") (options "") (descr "KiCad official symbol library"))
+  (lib (name "Sensor") (type "KiCad") (uri "/usr/share/kicad/symbols/Sensor.kicad_sym") (options "") (descr "KiCad official symbol library"))
+)`;
 
 export type KicadProjection = {
   directory: string;
@@ -309,9 +681,15 @@ export const projectToKicad = async (
   const schematicPath = join(directory, "design.kicad_sch");
   const boardPath = join(directory, "design.kicad_pcb");
   await writeFile(projectPath, renderProject(), "utf8");
-  await writeFile(join(directory, "fp-lib-table"), renderFootprintLibraryTable(), "utf8");
-  await writeFile(join(directory, "sym-lib-table"), renderSymbolLibraryTable(), "utf8");
+  if (isPhase1Fixture(graph)) {
+    await writeFile(join(directory, "fp-lib-table"), renderFootprintLibraryTable(), "utf8");
+    await writeFile(join(directory, "sym-lib-table"), renderSymbolLibraryTable(), "utf8");
+  }
   await writeFile(schematicPath, renderSchematic(graph), "utf8");
-  await writeFile(boardPath, renderSmokeBoard(graph), "utf8");
+  await writeFile(
+    boardPath,
+    graph.fixtureKind === "golden" ? renderGoldenBoard(graph) : renderSmokeBoard(graph),
+    "utf8",
+  );
   return { directory, projectPath, schematicPath, boardPath };
 };

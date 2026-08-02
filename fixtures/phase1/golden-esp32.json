@@ -327,6 +327,22 @@
         "contentHash": null,
         "pendingReason": "fixture-owned provenance snapshot is pending; source is controlled by this fixture"
       }
+    },
+    {
+      "id": "part:r5",
+      "reference": "R5",
+      "kind": "resistor",
+      "mpn": "RC0603FR-0710KL",
+      "manufacturer": "Yageo",
+      "quantity": 1,
+      "package": "0603",
+      "provenance": {
+        "source": "fixture",
+        "version": "phase1-golden-1",
+        "license": "BSD-3-Clause",
+        "contentHash": null,
+        "pendingReason": "fixture-owned provenance snapshot is pending; source is controlled by this fixture"
+      }
     }
   ],
   "mappings": [
@@ -648,7 +664,7 @@
     {
       "partId": "part:u3",
       "symbolLibraryId": "Regulator_Linear",
-      "symbolName": "AMS1117-3.3",
+      "symbolName": "AP1117-15",
       "footprintLibraryId": "Package_TO_SOT_SMD",
       "footprintName": "SOT-223-3_TabPin2",
       "pinPads": [
@@ -1044,6 +1060,31 @@
         "license": "CC-BY-SA-4.0-with-exception",
         "contentHash": "sha256:62775a51fe74ba7f1b572de327bdbd3fc92582721b2abcaa47787865590d89cb"
       }
+    },
+    {
+      "partId": "part:r5",
+      "symbolLibraryId": "Device",
+      "symbolName": "R",
+      "footprintLibraryId": "Resistor_SMD",
+      "footprintName": "R_0603_1608Metric",
+      "pinPads": [
+        {
+          "pin": "1",
+          "pad": "1",
+          "electricalType": "passive"
+        },
+        {
+          "pin": "2",
+          "pad": "2",
+          "electricalType": "passive"
+        }
+      ],
+      "provenance": {
+        "source": "KiCad official libraries",
+        "version": "10.0.5",
+        "license": "CC-BY-SA-4.0-with-exception",
+        "contentHash": "sha256:7190ac4a00125b807e54129ef0d87d87f2a658eeb74d025a7028203419b09f23"
+      }
     }
   ],
   "nets": [
@@ -1153,10 +1194,6 @@
         {
           "partId": "part:u2",
           "pin": "7"
-        },
-        {
-          "partId": "part:u2",
-          "pin": "5"
         },
         {
           "partId": "part:u3",
@@ -1373,6 +1410,21 @@
           "pin": "1"
         }
       ]
+    },
+    {
+      "id": "net:sdo-sel",
+      "name": "SDO_SEL",
+      "class": "signal",
+      "pins": [
+        {
+          "partId": "part:u2",
+          "pin": "5"
+        },
+        {
+          "partId": "part:r5",
+          "pin": "1"
+        }
+      ]
     }
   ],
   "placementConstraints": {
@@ -1493,8 +1545,8 @@
       {
         "partId": "part:c4",
         "allowedLayers": ["F.Cu"],
-        "xMm": 10,
-        "yMm": 9,
+        "xMm": 8,
+        "yMm": 16,
         "rotationDeg": 0
       },
       {
@@ -1502,6 +1554,13 @@
         "allowedLayers": ["F.Cu"],
         "xMm": 45,
         "yMm": 10,
+        "rotationDeg": 0
+      },
+      {
+        "partId": "part:r5",
+        "allowedLayers": ["F.Cu"],
+        "xMm": 43,
+        "yMm": 16,
         "rotationDeg": 0
       }
     ]
@@ -1825,6 +1884,24 @@
       "lifecycle": "active",
       "provenance": {
         "source": "fixture-provided AVL",
+        "version": "phase1-golden-1",
+        "license": "BSD-3-Clause",
+        "contentHash": null,
+        "pendingReason": "fixture-owned provenance snapshot is pending; source is controlled by this fixture"
+      }
+    },
+    {
+      "partId": "part:r5",
+      "referenceDesignators": ["R5"],
+      "quantity": 1,
+      "mpn": "RC0603FR-0710KL",
+      "manufacturer": "Yageo",
+      "supplier": "Digi-Key",
+      "sku": "13-RC0603FR-0710KLCT-ND",
+      "availability": "in-stock",
+      "lifecycle": "active",
+      "provenance": {
+        "source": "fixture",
         "version": "phase1-golden-1",
         "license": "BSD-3-Clause",
         "contentHash": null,

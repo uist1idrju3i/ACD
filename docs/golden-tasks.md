@@ -1,3 +1,13 @@
+## WP3実装境界
+
+golden fixtureは決定論的placement後、公式symbolとfootprintを用いてschematicおよび
+未配線PCBへ投影する。`pnpm phase1:golden`はGate 1〜8（ERCを含む）を実行し、
+Gate 9〜11は未配線boardに対して実行せず、WP4へ明示的に延期する。
+
+AMS1117-3.3は公式symbolが`extends`で親symbolへ依存するため、固定snapshotの
+schematic pin geometryには`Regulator_Linear:AP1117-15`を代替symbolとして使用する。
+fixtureの実部品MPNはAMS1117-3.3であり、この代替判断はmapping provenanceに記録する。
+
 # Golden task fixture
 
 **ステータス：Draft（Phase 0の6 fixtureは`pnpm golden`でreplay済み）**

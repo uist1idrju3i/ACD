@@ -19,7 +19,8 @@
     "golden:unit": "vitest run fixtures packages",
     "kicad:spike": "bash scripts/kicad-spike.sh",
     "kicad:library:verify": "tsx scripts/verify-kicad-library.mts",
-    "phase1:smoke": "pnpm kicad:library:verify && pnpm --filter @acd/adapter-kicad build && tsx scripts/phase1-smoke.mts"
+    "phase1:smoke": "pnpm kicad:library:verify && pnpm --filter @acd/adapter-kicad build && tsx scripts/phase1-smoke.mts",
+    "phase1:golden": "pnpm kicad:library:verify && pnpm --filter @acd/adapter-kicad build && tsx scripts/phase1-golden.mts"
   },
   "devDependencies": {
     "@eslint/js": "9.30.1",
