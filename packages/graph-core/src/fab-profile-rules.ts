@@ -51,12 +51,7 @@ export const fabProfileRules: FabProfileRules[] = [
         textPatterns: ["solder mask sliver", "mask sliver"],
         classification: "mask-clearance",
         confidence: 0.98,
-        reproductionConditions: [
-          "2-layer",
-          "HASL",
-          "0.1mm minimum mask sliver",
-          "0.30mm minimum mask sliver",
-        ],
+        reproductionConditions: ["2-layer", "HASL", "0.30mm minimum mask sliver"],
         appliesWhen: [
           { field: "fabProfileId", operator: "equals", value: "fab:jlcpcb-class-2layer" },
         ],
