@@ -52,6 +52,12 @@ Phase 0では少なくとも次を扱います。
 - 同一revisionに複数の結果を確定しない。
 - payload hash、snapshot hash、patch IDを相互参照できるようにする。
 
+## 訂正と取り消し
+
+誤って記録したイベントは削除・改変せず、元イベントを参照する訂正イベントを追記します。取り消しは補償イベントとして記録し、影響を受けたrevisionと検証結果をstaleにします。停止、却下、失敗の記録は成功記録と同じ重みで保全し、要約や再構成で失いません。
+
+訂正・補償イベントはPhase 0のイベント種別一覧には含みません。導入するときは、種別一覧、`schemas/event.schema.json`の`type` enum（`additionalProperties: false`）、payload schema、replay規則を同じ変更で更新します。それまでに未知の種別が現れた場合は、上記のとおり`unknown event`として保存し、replayを停止します。この保存とreplay停止は、Schema検証を通過したイベントに対する読み手側の規則です。Schema検証を通らないイベントはその手前で`schema-invalid`として停止します。
+
 ## Replay
 
 初期snapshotを読み、patch.acceptedイベントのpatchを順に適用して、各

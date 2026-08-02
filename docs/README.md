@@ -32,7 +32,8 @@
     Phase 1受入gate、完了計画、KiCad、fixture契約
 12. [`error-taxonomy.md`](error-taxonomy.md) — エラー分類
 13. [`repo-structure.md`](repo-structure.md)、[`tool-contract.md`](tool-contract.md)、
-    [`kicad-interop.md`](kicad-interop.md)、[`testing.md`](testing.md) — 構成、ツール境界、外部連携、評価
+    [`dependency-inventory.md`](dependency-inventory.md)、[`kicad-interop.md`](kicad-interop.md)、
+    [`testing.md`](testing.md) — 構成、ツール境界、依存関係、外部連携、評価
 14. [`adr/README.md`](adr/README.md) — ADR運用と既存の設計判断
 
 ## ステータス凡例
