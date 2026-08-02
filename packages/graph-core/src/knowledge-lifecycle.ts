@@ -37,6 +37,33 @@ export type KnowledgeApproval = {
   expiresAt: string;
 };
 
+export const assertKnowledgeLibraryWideApproval = (
+  subject: string,
+  approval: KnowledgeApproval | undefined,
+  now: string,
+): void => {
+  const nowTime = Date.parse(now);
+  const approvedTime = approval ? Date.parse(approval.approvedAt) : Number.NaN;
+  const expiresTime = approval ? Date.parse(approval.expiresAt) : Number.NaN;
+  if (
+    !approval ||
+    approval.approvalId.length === 0 ||
+    approval.subject !== subject ||
+    approval.scope !== "library-wide" ||
+    !Number.isFinite(nowTime) ||
+    !Number.isFinite(approvedTime) ||
+    !Number.isFinite(expiresTime) ||
+    expiresTime <= approvedTime ||
+    expiresTime <= nowTime
+  ) {
+    throw new GraphCoreError(
+      "verification-failed",
+      `library-wide promotion lacks a valid approval: ${subject}`,
+      "error",
+    );
+  }
+};
+
 export type KnowledgeApplicability = "pass" | "unknown" | "fail";
 export type ApplicabilityContext = Partial<
   Record<ApplicabilityCondition["field"], string | string[]>
