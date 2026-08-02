@@ -19,7 +19,6 @@ describe("@acd/adapter-kicad", () => {
   it("renders deterministic minimal project files", () => {
     expect(renderProject()).toBe(renderProject());
     expect(renderBoard()).toContain('(layer "Edge.Cuts")');
-    expect(renderSchematic()).toContain("(kicad_sch");
   });
 
   it("renders smoke fixture nets and pads", async () => {

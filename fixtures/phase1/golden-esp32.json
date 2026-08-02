@@ -29,7 +29,7 @@
     "acceptanceCriteria": [
       "Gate 1 schema and reference integrity pass for the golden fixture",
       "Official symbol and footprint mappings are hash-pinned",
-      "Golden placement is deterministic and routing is validated by Freerouting in WP4"
+      "Golden placement and routing remain deferred to WP3/WP4"
     ],
     "provenance": {
       "source": "fixture",
@@ -44,7 +44,7 @@
       "id": "part:j1",
       "reference": "J1",
       "kind": "connector",
-      "mpn": "USB4125-GF-A",
+      "mpn": "USB4135-GF-A",
       "manufacturer": "GCT",
       "quantity": 1,
       "package": "USB-C 6-pin receptacle",
@@ -79,7 +79,7 @@
       "mpn": "BME280",
       "manufacturer": "Bosch Sensortec",
       "quantity": 1,
-      "package": "LGA-8 2x2.5mm",
+      "package": "LGA-8 2.5x2.5mm",
       "provenance": {
         "source": "fixture",
         "version": "phase1-golden-1",
@@ -156,7 +156,7 @@
       "id": "part:r3",
       "reference": "R3",
       "kind": "resistor",
-      "mpn": "RC0603FR-0710KL",
+      "mpn": "RC0603FR-07330RL",
       "manufacturer": "Yageo",
       "quantity": 1,
       "package": "0603",
@@ -256,6 +256,70 @@
       "manufacturer": "Panasonic",
       "quantity": 1,
       "package": "SMD tactile switch",
+      "provenance": {
+        "source": "fixture",
+        "version": "phase1-golden-1",
+        "license": "BSD-3-Clause",
+        "contentHash": null,
+        "pendingReason": "fixture-owned provenance snapshot is pending; source is controlled by this fixture"
+      }
+    },
+    {
+      "id": "part:r6",
+      "reference": "R6",
+      "kind": "resistor",
+      "mpn": "RC0603FR-075K1L",
+      "manufacturer": "Yageo",
+      "quantity": 1,
+      "package": "0603",
+      "provenance": {
+        "source": "fixture",
+        "version": "phase1-golden-1",
+        "license": "BSD-3-Clause",
+        "contentHash": null,
+        "pendingReason": "fixture-owned provenance snapshot is pending; source is controlled by this fixture"
+      }
+    },
+    {
+      "id": "part:r7",
+      "reference": "R7",
+      "kind": "resistor",
+      "mpn": "RC0603FR-075K1L",
+      "manufacturer": "Yageo",
+      "quantity": 1,
+      "package": "0603",
+      "provenance": {
+        "source": "fixture",
+        "version": "phase1-golden-1",
+        "license": "BSD-3-Clause",
+        "contentHash": null,
+        "pendingReason": "fixture-owned provenance snapshot is pending; source is controlled by this fixture"
+      }
+    },
+    {
+      "id": "part:c4",
+      "reference": "C4",
+      "kind": "capacitor",
+      "mpn": "CL21A106KOQNNNE",
+      "manufacturer": "Samsung Electro-Mechanics",
+      "quantity": 1,
+      "package": "0805",
+      "provenance": {
+        "source": "fixture",
+        "version": "phase1-golden-1",
+        "license": "BSD-3-Clause",
+        "contentHash": null,
+        "pendingReason": "fixture-owned provenance snapshot is pending; source is controlled by this fixture"
+      }
+    },
+    {
+      "id": "part:c5",
+      "reference": "C5",
+      "kind": "capacitor",
+      "mpn": "CL21A226MQQNNNE",
+      "manufacturer": "Samsung Electro-Mechanics",
+      "quantity": 1,
+      "package": "0805",
       "provenance": {
         "source": "fixture",
         "version": "phase1-golden-1",
@@ -547,7 +611,7 @@
       "symbolLibraryId": "Sensor",
       "symbolName": "BME280",
       "footprintLibraryId": "Package_LGA",
-      "footprintName": "Bosch_LGA-8_2x2.5mm_P0.65mm_ClockwisePinNumbering",
+      "footprintName": "Bosch_LGA-8_2.5x2.5mm_P0.65mm_ClockwisePinNumbering",
       "pinPads": [
         {
           "pin": "1",
@@ -594,7 +658,7 @@
         "source": "KiCad official libraries",
         "version": "10.0.5",
         "license": "CC-BY-SA-4.0-with-exception",
-        "contentHash": "sha256:58d35c40c180b9abd031c277fd04f423bf267bb2eb7490589473398d39efd01d"
+        "contentHash": "sha256:14464b7a437e7efb0fa9947b89a7d3825242f3ed82d649fe2ca45fad5d3dda86"
       }
     },
     {
@@ -621,7 +685,7 @@
         }
       ],
       "provenance": {
-        "source": "KiCad official libraries; AP1117-15 substituted for inherited AMS1117-3.3 symbol geometry",
+        "source": "KiCad official libraries",
         "version": "10.0.5",
         "license": "CC-BY-SA-4.0-with-exception",
         "contentHash": "sha256:8ae5f03e2c16377abed15e51af6864e23a934e1457b97fb7ea930e17fa99f11d"
@@ -898,6 +962,106 @@
       }
     },
     {
+      "partId": "part:r6",
+      "symbolLibraryId": "Device",
+      "symbolName": "R",
+      "footprintLibraryId": "Resistor_SMD",
+      "footprintName": "R_0603_1608Metric",
+      "pinPads": [
+        {
+          "pin": "1",
+          "pad": "1",
+          "electricalType": "passive"
+        },
+        {
+          "pin": "2",
+          "pad": "2",
+          "electricalType": "passive"
+        }
+      ],
+      "provenance": {
+        "source": "KiCad official libraries",
+        "version": "10.0.5",
+        "license": "CC-BY-SA-4.0-with-exception",
+        "contentHash": "sha256:7190ac4a00125b807e54129ef0d87d87f2a658eeb74d025a7028203419b09f23"
+      }
+    },
+    {
+      "partId": "part:r7",
+      "symbolLibraryId": "Device",
+      "symbolName": "R",
+      "footprintLibraryId": "Resistor_SMD",
+      "footprintName": "R_0603_1608Metric",
+      "pinPads": [
+        {
+          "pin": "1",
+          "pad": "1",
+          "electricalType": "passive"
+        },
+        {
+          "pin": "2",
+          "pad": "2",
+          "electricalType": "passive"
+        }
+      ],
+      "provenance": {
+        "source": "KiCad official libraries",
+        "version": "10.0.5",
+        "license": "CC-BY-SA-4.0-with-exception",
+        "contentHash": "sha256:7190ac4a00125b807e54129ef0d87d87f2a658eeb74d025a7028203419b09f23"
+      }
+    },
+    {
+      "partId": "part:c4",
+      "symbolLibraryId": "Device",
+      "symbolName": "C",
+      "footprintLibraryId": "Capacitor_SMD",
+      "footprintName": "C_0805_2012Metric",
+      "pinPads": [
+        {
+          "pin": "1",
+          "pad": "1",
+          "electricalType": "passive"
+        },
+        {
+          "pin": "2",
+          "pad": "2",
+          "electricalType": "passive"
+        }
+      ],
+      "provenance": {
+        "source": "KiCad official libraries",
+        "version": "10.0.5",
+        "license": "CC-BY-SA-4.0-with-exception",
+        "contentHash": "sha256:62775a51fe74ba7f1b572de327bdbd3fc92582721b2abcaa47787865590d89cb"
+      }
+    },
+    {
+      "partId": "part:c5",
+      "symbolLibraryId": "Device",
+      "symbolName": "C",
+      "footprintLibraryId": "Capacitor_SMD",
+      "footprintName": "C_0805_2012Metric",
+      "pinPads": [
+        {
+          "pin": "1",
+          "pad": "1",
+          "electricalType": "passive"
+        },
+        {
+          "pin": "2",
+          "pad": "2",
+          "electricalType": "passive"
+        }
+      ],
+      "provenance": {
+        "source": "KiCad official libraries",
+        "version": "10.0.5",
+        "license": "CC-BY-SA-4.0-with-exception",
+        "contentHash": "sha256:62775a51fe74ba7f1b572de327bdbd3fc92582721b2abcaa47787865590d89cb"
+      }
+    },
+    {
       "partId": "part:r5",
       "symbolLibraryId": "Device",
       "symbolName": "R",
@@ -943,6 +1107,10 @@
         },
         {
           "partId": "part:c3",
+          "pin": "1"
+        },
+        {
+          "partId": "part:c4",
           "pin": "1"
         }
       ]
@@ -990,6 +1158,10 @@
         },
         {
           "partId": "part:j2",
+          "pin": "1"
+        },
+        {
+          "partId": "part:c5",
           "pin": "1"
         }
       ]
@@ -1056,7 +1228,19 @@
           "pin": "2"
         },
         {
-          "partId": "part:r5",
+          "partId": "part:r6",
+          "pin": "2"
+        },
+        {
+          "partId": "part:r7",
+          "pin": "2"
+        },
+        {
+          "partId": "part:c4",
+          "pin": "2"
+        },
+        {
+          "partId": "part:c5",
           "pin": "2"
         }
       ]
@@ -1198,8 +1382,8 @@
       ]
     },
     {
-      "id": "net:usb-cc",
-      "name": "USB_CC",
+      "id": "net:usb-cc1",
+      "name": "USB_CC1",
       "class": "signal",
       "pins": [
         {
@@ -1207,8 +1391,23 @@
           "pin": "A5"
         },
         {
+          "partId": "part:r6",
+          "pin": "1"
+        }
+      ]
+    },
+    {
+      "id": "net:usb-cc2",
+      "name": "USB_CC2",
+      "class": "signal",
+      "pins": [
+        {
           "partId": "part:j1",
           "pin": "B5"
+        },
+        {
+          "partId": "part:r7",
+          "pin": "1"
         }
       ]
     },
@@ -1330,6 +1529,34 @@
         "rotationDeg": 0
       },
       {
+        "partId": "part:r6",
+        "allowedLayers": ["F.Cu"],
+        "xMm": 22,
+        "yMm": 23,
+        "rotationDeg": 0
+      },
+      {
+        "partId": "part:r7",
+        "allowedLayers": ["F.Cu"],
+        "xMm": 26,
+        "yMm": 23,
+        "rotationDeg": 0
+      },
+      {
+        "partId": "part:c4",
+        "allowedLayers": ["F.Cu"],
+        "xMm": 18,
+        "yMm": 18,
+        "rotationDeg": 0
+      },
+      {
+        "partId": "part:c5",
+        "allowedLayers": ["F.Cu"],
+        "xMm": 56,
+        "yMm": 20,
+        "rotationDeg": 0
+      },
+      {
         "partId": "part:r5",
         "allowedLayers": ["F.Cu"],
         "xMm": 52,
@@ -1343,10 +1570,10 @@
       "partId": "part:j1",
       "referenceDesignators": ["J1"],
       "quantity": 1,
-      "mpn": "USB4125-GF-A",
+      "mpn": "USB4135-GF-A",
       "manufacturer": "GCT",
       "supplier": "Digi-Key",
-      "sku": "2073-USB4125-GF-ACT-ND",
+      "sku": "2073-USB4135-GF-ACT-ND",
       "availability": "in-stock",
       "lifecycle": "active",
       "provenance": {
@@ -1483,10 +1710,10 @@
       "partId": "part:r3",
       "referenceDesignators": ["R3"],
       "quantity": 1,
-      "mpn": "RC0603FR-0710KL",
+      "mpn": "RC0603FR-07330RL",
       "manufacturer": "Yageo",
       "supplier": "Digi-Key",
-      "sku": "13-RC0603FR-0710KLCT-ND",
+      "sku": "13-RC0603FR-07330RLCT-ND",
       "availability": "in-stock",
       "lifecycle": "active",
       "provenance": {
@@ -1618,6 +1845,78 @@
       },
       "unitPrice": 0.35,
       "currency": "USD"
+    },
+    {
+      "partId": "part:r6",
+      "referenceDesignators": ["R6"],
+      "quantity": 1,
+      "mpn": "RC0603FR-075K1L",
+      "manufacturer": "Yageo",
+      "supplier": "Digi-Key",
+      "sku": "13-RC0603FR-075K1LCT-ND",
+      "availability": "in-stock",
+      "lifecycle": "active",
+      "provenance": {
+        "source": "fixture-provided AVL",
+        "version": "phase1-golden-1",
+        "license": "BSD-3-Clause",
+        "contentHash": null,
+        "pendingReason": "fixture-owned provenance snapshot is pending; source is controlled by this fixture"
+      }
+    },
+    {
+      "partId": "part:r7",
+      "referenceDesignators": ["R7"],
+      "quantity": 1,
+      "mpn": "RC0603FR-075K1L",
+      "manufacturer": "Yageo",
+      "supplier": "Digi-Key",
+      "sku": "13-RC0603FR-075K1LCT-ND",
+      "availability": "in-stock",
+      "lifecycle": "active",
+      "provenance": {
+        "source": "fixture-provided AVL",
+        "version": "phase1-golden-1",
+        "license": "BSD-3-Clause",
+        "contentHash": null,
+        "pendingReason": "fixture-owned provenance snapshot is pending; source is controlled by this fixture"
+      }
+    },
+    {
+      "partId": "part:c4",
+      "referenceDesignators": ["C4"],
+      "quantity": 1,
+      "mpn": "CL21A106KOQNNNE",
+      "manufacturer": "Samsung Electro-Mechanics",
+      "supplier": "Digi-Key",
+      "sku": "1276-CL21A106KOQNNNE-ND",
+      "availability": "in-stock",
+      "lifecycle": "active",
+      "provenance": {
+        "source": "fixture-provided AVL",
+        "version": "phase1-golden-1",
+        "license": "BSD-3-Clause",
+        "contentHash": null,
+        "pendingReason": "fixture-owned provenance snapshot is pending; source is controlled by this fixture"
+      }
+    },
+    {
+      "partId": "part:c5",
+      "referenceDesignators": ["C5"],
+      "quantity": 1,
+      "mpn": "CL21A226MQQNNNE",
+      "manufacturer": "Samsung Electro-Mechanics",
+      "supplier": "Digi-Key",
+      "sku": "1276-CL21A226MQQNNNE-ND",
+      "availability": "in-stock",
+      "lifecycle": "active",
+      "provenance": {
+        "source": "fixture-provided AVL",
+        "version": "phase1-golden-1",
+        "license": "BSD-3-Clause",
+        "contentHash": null,
+        "pendingReason": "fixture-owned provenance snapshot is pending; source is controlled by this fixture"
+      }
     },
     {
       "partId": "part:r5",

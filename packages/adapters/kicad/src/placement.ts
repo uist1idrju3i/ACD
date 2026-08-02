@@ -117,6 +117,13 @@ export const placeFixture = (fixture: Phase1Fixture): FixturePlacement[] => {
     xMm: snap(placement.xMm),
     yMm: snap(placement.yMm),
   }));
+  for (const placement of placements) {
+    if (placement.allowedLayers.some((layer) => layer !== "F.Cu")) {
+      throw new KicadProjectionError(
+        `unsupported placement layer for ${placement.partId}: ${placement.allowedLayers.join(", ")}`,
+      );
+    }
+  }
   const ordered = [...placements].sort(
     (left, right) =>
       priority(fixture, left.partId) - priority(fixture, right.partId) ||

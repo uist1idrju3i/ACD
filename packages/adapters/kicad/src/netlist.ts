@@ -35,7 +35,7 @@ export const canonicalFixtureNetlist = (fixture: Phase1Fixture): CanonicalPin[] 
           throw new GraphCoreError("reference-integrity", `unknown part ${pin.partId}`);
         }
         const aliases = mappings.get(pin.partId)?.filter((candidate) => candidate.pin === pin.pin);
-        if (pin.pin === "GND" && aliases?.length) {
+        if (aliases && aliases.length > 1) {
           return aliases.map((alias) => ({ net: net.name, reference, pin: alias.pad }));
         }
         return [{ net: net.name, reference, pin: pin.pin }];
@@ -122,22 +122,8 @@ export const compareNetlists = (
 ): NetlistComparison => {
   const expected = canonicalFixtureNetlist(fixture);
   const expectedPcb = canonicalFixturePcbNetlist(fixture);
-  const schematic = parseKicadNetlist(schematicNetlist).filter((candidate) =>
-    expected.some(
-      (item) =>
-        item.net === candidate.net &&
-        item.reference === candidate.reference &&
-        item.pin === candidate.pin,
-    ),
-  );
-  const pcb = parseIpc356(ipc356).filter((candidate) =>
-    expectedPcb.some(
-      (item) =>
-        item.net === candidate.net &&
-        item.reference === candidate.reference &&
-        item.pin === candidate.pin,
-    ),
-  );
+  const schematic = parseKicadNetlist(schematicNetlist);
+  const pcb = parseIpc356(ipc356);
   return {
     expected,
     expectedPcb,

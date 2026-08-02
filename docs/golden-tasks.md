@@ -44,8 +44,10 @@ fixtureはネットワーク、現在時刻、ホストのKiCad、未固定ラ�
 
 ### `phase1-golden-esp32`
 
-ESP32-WROOM-32E、USB-C電源入力、3.3V regulator、BME280 I2C sensor、UART header、
-status LED、decoupling、EN/IO0 strappingを含むPhase 1 golden fixture定義です。
+ESP32-WROOM-32E、USB-C電源入力（CC1/CC2の5.1kΩ Rd終端）、3.3V regulator、
+BME280 I2C sensor、UART header、status LED、入力10µF／出力22µFを含む
+Phase 1 golden fixture定義です。BME280は公式2.5x2.5mm LGA-8 footprintを使用し、
+LED直列抵抗は330Ω、EN/IO0 pull-upは10kΩです。
 `pnpm schema:validate`でSchemaとreference-integrityを検証し、公式KiCad
 symbol/footprint mappingはcontent-hash pinned snapshotから解決します。
 
