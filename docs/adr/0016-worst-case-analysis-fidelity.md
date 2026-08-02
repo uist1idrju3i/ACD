@@ -33,8 +33,9 @@
 ## 判断基準
 
 実行コスト、解析の再現性、入力条件とモデルの適用域、結果のstale伝播を比較する。
-`verification-gates.md`の「コストを理由にした縮小は影響範囲がunknownの場合には認めない」
-規則と整合し、unknown時に検証を広げることをfixtureと実行時間のEvidenceで確認する。
+影響範囲がunknownのときは検証を広げ、省略・縮小しない（[`../verification-gates.md`](../verification-gates.md)
+の差分再検証の規則と[`../../AGENTS.md`](../../AGENTS.md)の不変条件）。unknown時に検証を
+広げることをfixtureと実行時間のEvidenceで確認する。
 高リスク項目、公称値成立、変動を含む結果を同じ入力から再生して決定する。
 
 ## 結果とリスク
