@@ -50,6 +50,9 @@ VibeBBのループは次のとおりです：**語る（要件を伝える）→
 - **デフォルトは回路図レス。** 正規の成果物は、図面ではなく型付き設計グラフ（要件 → 機能ブロック → ネットリスト → レイアウト）です。回路図はそのグラフのひとつの*投影*に過ぎず、必要に応じて再生成できます。
 - **あらゆる場所に根拠と出所を付与する。** すべての部品、フットプリント、ネット、ルールを、データシートのページ、要件、ソルバーの結果、fabルールなどの出典にリンクします。不確実性は明示し、決して黙って補完しません。
 - **設計根拠（Design Rationale）を必ず残す。** すべてのフェーズで「なぜそう設計したのか」を構造化して記録します。判断の理由、比較した代替案、前提条件、既知の懸念（例：「この容量は実機で要チューニング」）が設計グラフに紐づき、後工程のテストやトラブルシューティングから遡って参照できます。
+- **差分開発を影響分析する。** 変更点をパッチとして捉え、設計グラフのリンクを辿る相互影響分析から、影響先、再検証すべきゲート、再実行すべきテスト項目を自動導出します。設計変更だけでなく、fab・材料・製造サービス・部品供給元など工程側の変更も再検証の起点として扱います。マトリクスやレポートはリビジョンから再生成できる投影であり、正規の設計グラフを置き換えません。
+- **監査文書も設計グラフから生成する。** 要件、判断、代替案、証拠、検証結果、承認、免除、変更パッチ、出所が追跡できるため、要求トレーサビリティマトリクス、設計履歴・レビュー記録、ECO相当の変更記録、検証・試験報告、出所付きBOM、リスク／FMEA風ビューに加え、PPAP／PSW相当の量産引き渡し証拠パッケージを、対象リビジョンから一貫して再生成できます。これらは回路図やアートワークと同じく派生投影であり、ISO 9001の設計記録や医療機器DHFの形式に整合する方向性を持ちますが、認証・法規制適合や顧客承認を自動的に主張するものではありません。
+- **QC七つ道具と新QC七つ道具をAIの分析器として使う。** ACDは、数量データ向けのQC七つ道具（Q7）と、要求・障害報告などの言語／計画データ向けの新QC七つ道具（N7）を別体系として、設計グラフとイベントログから生成します。Q7ではDFM指摘のパレート図、実測・回帰メトリクスのヒストグラム／散布図／管理図、原因調査の特性要因図、TestItemのチェックシートを作ります。N7では要求の親和図、要求→機能→部品→試験の系統図、相互影響マトリックス、部品候補のマトリックス・データ解析、タスク計画のPDPCとアローダイアグラムを作ります。これらは正規グラフを置き換えない派生投影であり、ドリフトや異常はjidokaの停止・通知へ、確定した改善は知識と標準へ書き戻します。
 - **自動化ではなく、自働化。** 人偏の付いた「自働化」は、機械に人間の知恵を組み込むという製造業の思想に由来します——異常がわかる、異常で止まる、異常で止める。ACDのパイプラインは自ら走りますが、異常（検証ゲートの不合格、予算超過、進捗の停滞、想定外の測定結果）を自ら検知したらその場で止まり、何が・どこで・なぜ起きたかを可視化して人に知らせます。不良な設計を下流の工程（製造・実装）へ流さないことと、異常の根本原因を知識として残すことを、無人で走り続けることより優先します。
 - **必要なものを、必要な時に、必要なだけ。** 成果物は下流の工程が必要とするものだけを、必要になった時点で生成します（プル型）。検証されないまま滞留する設計候補の作り置きや、工程間で情報が滞留することをムダとして排除し、リードタイム（要件を語ってから実機で確かめるまでの時間）の短縮を一貫して追求します。これはVibeBBの「小さく作ってすぐ回す」サイクルを支える原則です。
 - **人間のレビューはオプション。デフォルトはAIが走り切る。** 基本はVibe Codingと同様に、要件から製造データまでAIが自動で進みます。各段階の移行にはチェックポイントと可視化された差分が用意され、望めば承認ゲートを有効にして介入できます。Vibe Codingでユーザーが見るのがコードではなく「動くアプリ」であるように、VibeBBでユーザーが確かめるのは回路図やアートワークではなく、**届いた基板が実際に動くかどうか**です。
@@ -79,6 +82,9 @@ flowchart TB
 
         S2 -.->|要件の矛盾・実現不能| S1
         S3 -.->|配線不能・配置都合の部品変更| S2
+        MCAD["MCAD<br/>筐体・外形・干渉・高さ"]
+        MCAD -.->|干渉・外形／高さ違反| S3
+        MCAD -.->|筐体要件の実現不能| S1
         S4 -.->|出力検証NG| S3
     end
 
@@ -234,13 +240,14 @@ ACDは、設計グラフから生成した**実機テスト項目と観点**に�
 | [tscircuit](https://github.com/tscircuit/tscircuit)（[DeepWiki](https://deepwiki.com/tscircuit/tscircuit)） | 「回路のためのReact」— TSXコンポーネント → Circuit JSON → ブラウザレンダリング、Gerberエクスポート | ブラウザレンダリング + オープンなJSON契約は機能する。コンポーネント単位のパッチでAIによる段階的な編集が可能 |
 | [atopile](https://github.com/atopile/atopile)（[DeepWiki](https://deepwiki.com/atopile/atopile)） | 単位、許容差、アサーションを備えた`.ato`言語。コンパイラが部品を選び、KiCadを出力 | 要件を実行可能なアサーションとして表現する。パラメトリックな部品選定。コンパイラを検証ポイントにする |
 | [JITX](https://www.jitx.com/) | 商用のコード駆動設計（Stanza）、シミュレーション・イン・ザ・ループ | 高速設計には物理ツールをループに組み込む必要がある。AIは型付きプログラムを編集し、その後コンパイルと検証を行う |
-| [Flux.ai](https://www.flux.ai/p) | AIコパイロット／エージェントを備えたプロプライエタリなブラウザECAD | 最も近いUXの先行事例。キャンバス横のチャットボットより、計画／差分を可視化するタスク指向エージェントが優れる |
+| [Flux.ai](https://www.flux.ai/p)（[2026 steerable agent](https://www.flux.ai/p/blog/new-steerable-hardware-agent)） | AIコパイロット／エージェントを備えたプロプライエタリなブラウザECAD。2026年には、実行中に方向修正できるsteerable hardware agentを発表 | 最も近いUXの先行事例。途中で要件を取り込み、ERC/DRCを実行しながら進むタスク指向エージェントが、単発の生成より重要 |
 | [Quilter](https://www.quilter.ai/) | AIによる物理駆動の自動レイアウト | レイアウトAIには、多目的スコアカードとハードルールの保証が必要。「見栄えのよい」答えをひとつ出すだけでは不十分 |
 | DeepPCB / RL配線（[例](https://arxiv.org/abs/2003.07897)） | 強化学習による自動配線研究 | MLは提案／優先順位付けを行う。決定論的なルーター + DRCをゲートとして維持する |
 | [CELUS](https://www.celus.io/) | AIによる要件→回路と部品選定 | 機能ブロックを起点とする捕捉で白紙問題を減らす。意図／実装／物理の層を分離する |
 | [SnapMagic/SnapEDA](https://www.snapmagic.com/)、[Ultra Librarian](https://www.ultralibrarian.com/) | シンボル／フットプリントライブラリ | ライブラリデータは主要な故障源。出所を保存し、データシートと照合し、フットプリントをバージョン管理する |
 | [EasyEDA](https://easyeda.com/) | JLCPCB/LCSCと連携したブラウザEDA | Webからfabまでの摩擦をほぼゼロにできる。ベンダーロックインは避ける |
 | [KiCanvas](https://github.com/theacodes/kicanvas)（[DeepWiki](https://deepwiki.com/theacodes/kicanvas)）、[KiCad](https://www.kicad.org/)（[DeepWiki](https://deepwiki.com/KiCad/kicad-source-mirror)） | オープンフォーマット、ヘッドレス`kicad-cli`、ブラウザレンダリング | KiCadを相互運用と退避先として使う。実際のEDAデータのブラウザレンダリングは実証済み |
+| [FreeCAD](https://github.com/FreeCAD/FreeCAD)（[DeepWiki](https://deepwiki.com/FreeCAD/FreeCAD)）／[KiCad StepUp](https://github.com/easyw/kicadStepUpMod)（[DeepWiki](https://deepwiki.com/easyw/kicadStepUpMod)） | オープンなMCAD、Python/headless、KiCad基板・部品のSTEP/IGES交換、干渉確認 | PCBの外形・取付穴・高さ・筐体制約を設計グラフに取り込み、MCADを隣接系として検証する |
 | [freerouting](https://github.com/freerouting/freerouting)（[DeepWiki](https://deepwiki.com/freerouting/freerouting)） + DSN/SES | 明確な交換境界を持つオープン自動配線 | 安定した契約の背後で配線を交換可能なサービスにする |
 | fab DFM（[JLCPCB](https://jlcpcb.com/capabilities/pcb-capabilities)、[PCBWay](https://www.pcbway.com/capabilities.html)） | 自動の製造性チェックと人間からのフィードバック | fabの所見を永続的なルールに正規化する — 今日、この学習ループを閉じている公開ツールはない |
 | ソーシングAPI（[Octopart/Nexar](https://www.nexar.com/)、[Digi-Key](https://developer.digikey.com/)、[Mouser](https://www.mouser.com/api-hub/)） | 部品／在庫／価格のリアルタイムデータ | ソーシングは根拠のある情報検索。検索時刻、出典、代替ポリシーを記録し、在庫やピン配置を決して幻覚しない |
@@ -249,9 +256,11 @@ ACDは、設計グラフから生成した**実機テスト項目と観点**に�
 
 KiCad周辺では、LLMエージェントからKiCadを操作するMCPサーバーが急速に増えています。代表例：[mixelpixx/KiCAD-MCP-Server](https://github.com/mixelpixx/KiCAD-MCP-Server)（[DeepWiki](https://deepwiki.com/mixelpixx/KiCAD-MCP-Server)・146超のツール、IPC API + kicad-cli + パーサのハイブリッド、部品ソーシングまで包含）、[lamaalrajih/kicad-mcp](https://github.com/lamaalrajih/kicad-mcp)（[DeepWiki](https://deepwiki.com/lamaalrajih/kicad-mcp)・リソース/ツール/プロンプトを分離した参照実装）、[Seeed-Studio/kicad-mcp-server](https://github.com/Seeed-Studio/kicad-mcp-server)（[DeepWiki](https://deepwiki.com/Seeed-Studio/kicad-mcp-server)・ネット解析からデバイスツリー／テストコード生成）、[eda-agent](https://github.com/salitronic/eda-agent)（[DeepWiki](https://deepwiki.com/salitronic/eda-agent)・Altium/KiCad両対応のレビューエージェント）、[KiPilot](https://github.com/belaszalontai/kipilot-mcp)（[DeepWiki](https://deepwiki.com/belaszalontai/kipilot-mcp)・ガード付き変更に絞ったIPCファースト設計）、[Circuitron](https://github.com/Shaurya-Sethi/circuitron)（[DeepWiki](https://deepwiki.com/Shaurya-Sethi/circuitron)・SKiDL RAGによる要件→回路生成パイプライン）など。
 
-土台としては、KiCad 9以降の公式**IPC API**（Protocol Buffers + NNG。従来のSWIG `pcbnew`バインディングはKiCad 9で非推奨、KiCad 11で削除予定）と、ヘッドレスな`kicad-cli`（ERC/DRC/各種エクスポート）、Sエクスプレッション操作ライブラリ（[kiutils](https://github.com/mvnmgrx/kiutils)（[DeepWiki](https://deepwiki.com/mvnmgrx/kiutils)）、[kicad-skip](https://github.com/psychogenic/kicad-skip)（[DeepWiki](https://deepwiki.com/psychogenic/kicad-skip)））が使われています。
+KiCadは[2026年3月に10.0](https://github.com/KiCad/kicad-source-mirror/releases/tag/10.0.0)がリリースされ、9.xは積極的メンテナンス対象外となりました。公式ソースでは[2026年3月にSWIG、wxPython、旧Python統合が削除](https://github.com/KiCad/kicad-source-mirror/commit/65a442b1d2bf153be7979de8926ab71fd095f4bd)され、IPC APIが今後の経路と明記されています。`kicad-python`の[公式ドキュメント](https://docs.kicad.org/kicad-python-main/kicad.html)では`get_schematic()`がKiCad 11追加として記載されており、回路図IPCはKiCadのバージョン別能力として扱う必要があります。土台としては、Protocol Buffers + NNGの公式**IPC API**、ヘッドレスな`kicad-cli`（ERC/DRC/各種エクスポート）、Sエクスプレッション操作ライブラリ（[kiutils](https://github.com/mvnmgrx/kiutils)（[DeepWiki](https://deepwiki.com/mvnmgrx/kiutils)）、[kicad-skip](https://github.com/psychogenic/kicad-skip)（[DeepWiki](https://deepwiki.com/psychogenic/kicad-skip)））が使われています。最低対応KiCadバージョンは未決定（ADR-0007で決定）です。
 
-ACDへの教訓：(1) 実証済みの境界は「`kicad-cli`による決定論的な検証・エクスポート」と「IPC APIによる稼働中PCBエディタの検査・ガード付き変更」。(2) **回路図の書き込みは依然として弱く**（IPC APIはPCB中心、回路図はSエクスプレッション直編集で壊れやすい）、これは回路図を投影と位置づけるACDの方針を裏付ける。(3) ツール数の多さは成熟度を意味せず、フィクスチャ基板と再オープン検証が必須。(4) ACDは特定のコミュニティMCPサーバーに依存せず、自前の設計グラフを正とし、KiCadを相互運用・レビューターゲットとして扱い、ACD自身の操作をMCPで公開する。
+ACDへの教訓：(1) 実証済みの境界は「`kicad-cli`による決定論的なバッチ検証・エクスポート」と「IPC APIによる稼働中エディタの検査・ガード付き変更」。(2) 回路図IPCは進展しているがKiCad 11を含むバージョン差があり、回路図を投影と位置づけるACDの方針は維持する。(3) ツール数の多さは成熟度を意味せず、フィクスチャ基板と再オープン検証が必須。(4) ACDは特定のコミュニティMCPサーバーに依存せず、自前の設計グラフを正とし、KiCadを相互運用・レビューターゲットとして扱い、ACD自身の操作をMCPで公開する。
+
+2026年の新しい代表例として、[Konnect](https://github.com/mixelpixx/Konnect)（[DeepWiki](https://deepwiki.com/mixelpixx/Konnect)・KiCad 10向けRustネイティブIPCプラグイン、回路図／PCB編集、ERC/DRC、製造出力、Beta）、[KiCad MCP Pro](https://github.com/oaslananka/kicad-mcp)（[DeepWiki](https://deepwiki.com/oaslananka/kicad-mcp)・read-only既定プロファイル、progressive disclosure、ガード付きwrite/releaseモード）、[mcp-server-kicad](https://github.com/ProductOfAmerica/mcp-server-kicad)（[DeepWiki](https://deepwiki.com/ProductOfAmerica/mcp-server-kicad)・回路図／PCB／シンボル／フットプリント別の操作）、[KiCad AI Assistant](https://github.com/paul356/KiCad-AI-Assistant)（[DeepWiki](https://deepwiki.com/paul356/KiCad-AI-Assistant)・KiCad 10向けLLMチャット＋MCP）があります。いずれも新しく、製造サインオフの権威ではありません。
 
 ### 追補2：商用EDAのAI・研究・シミュレーション・コラボレーション
 
@@ -264,9 +273,13 @@ ACDへの教訓：(1) 実証済みの境界は「`kicad-cli`による決定論�
 | シミュレーション／検証スタック | [ngspice](https://ngspice.sourceforge.io/)（WASM化可能）、[PySpice](https://github.com/PySpice-org/PySpice)（[DeepWiki](https://deepwiki.com/PySpice-org/PySpice)）、[IBIS](https://ibis.org/)、オープンソースFEM（[Elmer](https://www.elmerfem.org/)等） | 多段階の忠実度（トポロジーチェック→軽量ブラウザシミュレーション→詳細SPICE→実測）を使い分け、モデルの忠実度と不確実性を常に明示する。構造化された測定値とpass/failをエージェントに返す |
 | 回路図レスの系譜 | [SKiDL](https://github.com/devbisme/skidl)（[DeepWiki](https://deepwiki.com/devbisme/skidl)）、PHDL等のテキスト記述言語 | テキスト／ソースファーストは実績があるが、人間可読な回路図ビューの必要性は消えない。ACDはさらに進めて「グラフファースト」（要件・意図・証拠を持つ設計グラフを正とし、回路図もネットリストも投影）を取る |
 | コラボレーション／バージョン管理 | [AllSpice](https://www.allspice.io/)（ハードウェア版Git）、[CADLAB.io](https://cadlab.io/) | ハードウェアの差分はテキスト差分では不十分。トポロジー変更、部品置換、ルール／スタックアップ変更、DRC/DFM結果の差分として見せる。Git的な実験とPLM的な承認の両方が要る |
-| 2025〜26年のOSSエージェント | [boardsmith](https://github.com/ForestHubAI/boardsmith)（[DeepWiki](https://deepwiki.com/ForestHubAI/boardsmith)）、[EEschematic](https://github.com/eelab-dev/EEschematic)（[DeepWiki](https://deepwiki.com/eelab-dev/EEschematic)）、[schem](https://github.com/Raf3-Tech/schem)（[DeepWiki](https://deepwiki.com/Raf3-Tech/schem)）、[KiCadAI](https://github.com/dshills/KiCadAI)（[DeepWiki](https://deepwiki.com/dshills/KiCadAI)）、[ReviewAI](https://github.com/Gyrych/ReviewAI)（[DeepWiki](https://deepwiki.com/Gyrych/ReviewAI)）など多数 | プロンプト→KiCadの小規模プロトタイプが急増中。方向性は「LLM可読なソース/IR＋決定論的コンパイラ＋検証ループ」に収束しつつあるが、プロンプトから製造・実測までを通したベンチマークはまだ存在しない — ACDが取りに行くべき空白 |
+| 2025〜26年のOSSエージェント | [boardsmith](https://github.com/ForestHubAI/boardsmith)（[DeepWiki](https://deepwiki.com/ForestHubAI/boardsmith)）、[EEschematic](https://github.com/eelab-dev/EEschematic)（[DeepWiki](https://deepwiki.com/eelab-dev/EEschematic)）、[schem](https://github.com/Raf3-Tech/schem)（[DeepWiki](https://deepwiki.com/Raf3-Tech/schem)）、[KiCadAI](https://github.com/dshills/KiCadAI)（[DeepWiki](https://deepwiki.com/dshills/KiCadAI)）、[ReviewAI](https://github.com/Gyrych/ReviewAI)（[DeepWiki](https://deepwiki.com/Gyrych/ReviewAI)）など多数 | プロンプト→KiCadの小規模プロトタイプが急増中。方向性は「LLM可読なソース/IR＋決定論的コンパイラ＋検証ループ」に収束しつつある |
+| 機械CAD AI／MCP | [FreeCAD MCP](https://github.com/neka-nat/freecad-mcp)（[DeepWiki](https://deepwiki.com/neka-nat/freecad-mcp)）、[Fusion MCP](https://github.com/AutodeskFusion360/FusionMCPSample)（[DeepWiki](https://deepwiki.com/AutodeskFusion360/FusionMCPSample)）、[Zoo/KittyCAD](https://zoo.dev/docs/developer-tools/tutorials/text-to-cad)、[CADAM](https://github.com/Adam-CAD/CADAM)（[DeepWiki](https://deepwiki.com/Adam-CAD/CADAM)）、[PartCAD](https://github.com/partcad/partcad)（[DeepWiki](https://deepwiki.com/partcad/partcad)） | MCADにもAI操作境界が出現している。ACDはFreeCAD/Fusion等を任意の型付きMCPピアとして扱い、STEP/glTF/DXF/IDFを設計グラフから投影する。生成形状はカーネルの妥当性・干渉・寸法ゲートを通す |
+| prompt→PCBベンチマーク | [HWE-Bench](https://doi.org/10.48550/arxiv.2603.18102)、[pcbGPT](https://arxiv.org/html/2606.01188v1)、[PCB-Bench](https://github.com/digailab/PCB-Bench)（[DeepWiki](https://deepwiki.com/digailab/PCB-Bench)） | 回路図生成、部品データシート接地、配置／配線推論を定量評価する流れが始まった。HWE-Benchの最高総合pass rateは8.15%、pcbGPTは20タスクでpass@1 0.90だが、製造・実測まで端から端まで通した評価はなお未成熟 |
 
-ACDを定義するギャップは次のとおりです。意図と根拠を持つ正規のグラフ、決定論的なゲートを備えたエージェントオーケストレーション、とくにfabフィードバックにおける出所付きの知識蓄積、信頼できる部品／フットプリントデータ、説明可能な回路図レスワークフロー、ロックインのないブラウザネイティブなコラボレーションです。
+ACDを定義するギャップは次のとおりです。意図と根拠を持つ正規のグラフ、決定論的なゲートを備えたエージェントオーケストレーション、とくにfabフィードバックにおける出所付きの知識蓄積、信頼できる部品／フットプリントデータ、説明可能な回路図レスワークフロー、ロックインのないブラウザネイティブなコラボレーションです。プロンプトから回路図・配置までを評価する研究は始まっていますが、製造・実測まで端から端まで通したベンチマークはなお未成熟です（HWE-Benchでは最高総合pass rateが8.15%）。
+
+機械CADも隣接する設計系として扱います。ステップ1〜3では筐体、基板外形、取付穴、コネクタ位置、最大部品高さ、keepoutを制約として取り込み、ステップ3〜4ではMCADレビュー用のSTEP/glTF等を投影します。MCAD側の干渉・収まらない外形・高さ違反は、設計グラフの根拠付きフィードバックとしてレイアウトまたは要件へ戻します。
 
 ---
 
@@ -287,9 +300,9 @@ ACDを定義するギャップは次のとおりです。意図と根拠を持�
 | **3 知識ループ** | fab DFM指摘の構造化取り込みと永続ルール化、フットプリント修正の出所付きライブラリ反映、次の設計への自動適用。電子部品ライブラリの本格整備 | 組織間の知識共有 | 1枚目で受けたDFM指摘・フットプリント修正が、2枚目の設計で自動的に回避される |
 | **4 実行基盤とブラウザUX** | §9のハーネス本格化：タスク台帳、チェックポイント／再開、イベント履歴、予算・ウォッチドッグ。ブラウザUIの拡充（2D／3Dビューア、差分レビュー、タブレット対応）、高速チェックのWASM化 | 全エンジンのWASM化 | 設計ランを途中でブラウザ強制終了しても、最後のチェックポイントから完走できる |
 | **5 FW連携と仮想実機** | ファームウェアパッケージ（ピン割り当て／ペリフェラル設定／HALスタブ）生成、Wokwi等の仮想実機でのFW事前検証、回路図の逆生成 | 独自シミュレータ開発 | 実基板の到着前に、生成FWパッケージ＋仮想実機でファームウェアのスモークテストが通る |
-| **6 自働発注** | 予算上限内でのfabへの自働発注。全検証ゲート合格・予算・納期・部品在庫の発注前最終チェックを通過した場合のみ実行し、異常があれば止まって人に知らせる | 大規模基板対応 | 要件から発注まで人間の操作ゼロ（予算上限内）で完走し、届いた基板が動く |
+| **6 自働発注** | 基板fab・部品・実装・送料・税・筐体／機械部品を含む**総発注額**が予算上限内での発注。全検証ゲート合格・総発注額・納期・部品在庫の発注前最終チェックを通過した場合のみ、承認IDなしで実行し、異常があれば止まって人に知らせる | 大規模基板対応 | 要件から発注まで人間の操作ゼロ（総発注額が予算上限内）で完走し、届いた基板が動く |
 | **7 スケールと常設運用** | cron型の在庫・ライフサイクル監視、ゴールデンタスク回帰評価の常設、大規模基板・自前配線エンジンの検討 | — | 複数プロジェクトの並行運用下で、モデル・ツール更新後も回帰評価が合格し続ける |
-| **8 ローカル製造対応** | 卓上製造機（切削／導電性インク印刷）向けプリンタプロファイルDRCとハイブリッド製造判断（[§8](#8-将来展望--家庭で基板を印刷する時代へ)） | — | 同一の設計グラフからローカル試作版とFR-4版の両方が生成・製造できる |
+| **8 ローカル製造対応** | 卓上製造機（切削／導電性インク印刷／導電性フィラメント）向けプリンタ・材料プロファイルDRCとハイブリッド製造判断（[§8](#8-将来展望--家庭で基板を印刷する時代へ)）。非平面の構造エレクトロニクスは将来方向として扱う | — | 同一の設計グラフからローカル試作版とFR-4版の両方が生成・製造できる |
 
 フェーズ1が最重要のマイルストーンです。ここで「AIだけで設計した基板が実際に動く」ことを一度示せれば、以降はすべて、動いているループの改善になります。逆にフェーズ1を貫通できない場合、原因（要件変換か、部品選定か、配線か、検証か）がループ上の位置として特定でき、コンセプトの修正も早期に行えます。
 
@@ -299,6 +312,8 @@ ACDを定義するギャップは次のとおりです。意図と根拠を持�
 
 VibeBBの前提である「製造の安さと速さ」は、さらに先へ進む可能性があります。プリンテッドエレクトロニクス技術が成熟すれば、家庭用3Dプリンタのように、各家庭・各デスクで基板がその場で製造される未来が考えられます。ループの「作って試す」が数日から数十分に短縮され、VibeBBは真にブレッドボードの速度に到達します。
 
+この前提は基板だけでなく、筐体・ブラケット・機械部品にも広がります。[DMM.make 3Dプリント](https://make.dmm.com/print/)、[JLC3DP](https://jlc3dp.com/)、[PCBWay 3Dプリント／CNC](https://www.pcbway.com/rapid-prototyping/cnc-faq.html)、[Xometry](https://www.xometry.com/machine-learning-for-manufacturing/)、[Craftcloud](https://craftcloud3d.com/)、[Protolabs Network](https://www.hubs.com/)などの見積・DFM・発注サービスは、STEP/STL/3MF等から基板fabに並ぶ機械部品の調達経路になります。ACDは基板と筐体を協調設計し、合算した総発注額、納期、製造能力を同じ発注前ゲートで扱います。家庭の3Dプリンタや卓上CNCは、Phase 8のローカル製造経路としてこれらのサービスに対応します。
+
 現状の技術動向（2026年時点の調査）：
 
 | カテゴリ | 代表例 | 現状 |
@@ -307,15 +322,24 @@ VibeBBの前提である「製造の安さと速さ」は、さらに先へ進�
 | 導電性インク印刷（アディティブ） | [Voltera V-One](https://www.voltera.io/products/v-one)（配線印刷+ドリル+ペースト塗布+リフロー一体、US$3,499.99〜）、BotFactory SV2（公式サイトは2026年の調査時点でアクセス不能） | 1時間以内で動作基板を作れる例も。2層はリベット接続。銀インクは銅箔より高抵抗で、大電流用途には制約 |
 | 研究・産業用 | [Voltera NOVA](https://www.voltera.io/products/nova)（フレキシブル/ストレッチャブル材料研究）、[Nano Dimension DragonFly IV](https://www.nano-di.com/dragonfly-iv)（完全アディティブ多層）、[Optomec Aerosol Jet](https://www.optomec.com/printed-electronics/) | 多層・立体面・柔軟基材への印刷が進展。価格は産業機レベル |
 | 材料技術 | 銀ナノ粒子インク、銅焼結（フォトニック/レーザー）、粒子フリーMODインク、スクリーン印刷、インモールドエレクトロニクス | 導電率・はんだ付け性・信頼性のギャップが継続的に縮小中 |
+| 導電性フィラメント／FDM | [Multi3D Electrifi](https://www.multi3dllc.com/product/electrifi/)、[Protopasta Conductive PLA](https://proto-pasta.com/products/conductive-pla) | 筐体と配線を一体印刷できる可能性がある。Electrifiでも銅より大幅に低導電率で、電流容量、層間抵抗、接触抵抗、曲げ・摩耗・環境耐久を個別検証する必要がある |
+| 導電性ペースト／直接実装 | [日油 CP-602AA](https://www.nof.co.jp/contents/electronicsdevicematerial/conductivepaste/cp-602aa.html)、[Henkel conductive adhesives](https://next.henkel-adhesives.com/pk/en/applications/electronic-component-bonding-solutions/electrically-conductive-adhesives.html)、[NovaCentrix](https://novacentrix.com/conductive-inks-faq/) | 低温硬化による樹脂・フレキ基板への配線、はんだを使わない部品接続が可能。ただし接触抵抗、硬化条件、熱サイクル、吸湿、再加工性を検証する |
+| 3D-MID／LDS／IME | [LPKF LDS](https://www.lpkf.com/en/industries-technologies/electronics-manufacturing/3d-mids-with-laser-direct-structuring-lds)、[Fraunhofer MID Lab](https://www.iem.fraunhofer.de/en/about-us/labs-and-testing-facilities/mid-lab.html)、[TactoTek IMSE](https://www.tactotek.com/technology) | 回路を成形品や筐体表面へ置く構造エレクトロニクス。平面PCBと筐体の境界を曖昧にするが、量産工程・専用材料・検査が必要 |
+| 導電性材料・ハイブリッドAM | [J.A.M.E.S](https://j-ames.com/designs/james-coin-nfc-flat-panel)、[DragonFly IV](https://www.nano-di.com/dragonfly-iv)、[Aerosol Jet](https://optomec.com/printed-electronics/aerosol-jet-printers/aerosol-jet-5x-system/) | 導電体・誘電体・構造材を組み合わせた多層／立体回路。将来の非平面設計候補だが、Phase 1の要件には含めない |
 
 冷静な見立てとしては、単純な1〜2層基板の宅内製造はすでに現実であり、数年内には「印刷＋穴あけ＋ペースト＋リフロー＋検査」を統合したアプライアンス的な卓上ハイブリッド機が有望です。一方、高密度多層・メッキスルーホール・大電流・認証が必要な量産は当面プロのfabが優位です（詳細な調査ノートは別途）。
 
 ACDはこの未来を最初から設計に織り込みます：
 
-- **プリンタプロファイル対応DRC：** 最小配線幅／間隔、工具径、インクのシート抵抗、ビア方式（リベット/手動/印刷）、基材、硬化温度など、手元の製造機ごとのルールで検証します。fab向けDRCと同じ枠組みの別プロファイルです。
+- **プリンタ・材料プロファイル対応DRC：** 最小配線幅／間隔、工具径、インクまたはフィラメントの抵抗率・異方性・電流容量、最小層厚、ビア方式（リベット/手動/印刷）、基材、密着性、硬化／焼結温度、熱サイクル耐久など、手元の製造機と材料ごとのルールで検証します。fab向けDRCと同じ枠組みの別プロファイルです。
 - **材料を考慮した電気解析：** 銅箔前提ではなく、実測の材料データから配線抵抗・電圧降下・温度上昇を見積もります。
 - **ハイブリッド製造の自動判断：** ローカルで作れる部分は即座に印刷し、密度や電流が要求を超える基板は従来のfabへ自動的に振り分けます。同じ設計グラフから、ローカル試作版とFR-4量産版の両方を生成できます。
 - **クローズドループ検査と知識蓄積：** カメラによる位置合わせ、導通・抵抗チェックの結果を設計グラフへ戻し、インクロットや機体ごとの癖も知識として蓄積します。
+- **構造エレクトロニクスへの余地：** Phase 8では、筐体表面・成形品・埋め込み配線を含む非平面回路を将来方向として検討します。現時点では`Layout`を平面PCBに固定せず、材料・工程・測定証拠を制約と根拠として保持できる設計グラフを優先します。
+
+その先には、個人に合わせたウェアラブルがあります。手首、耳、頭部などを3Dスキャンし、個人形状を設計グラフの機械制約として取り込み、非平面・伸縮回路を生成し、その場で印刷する流れです。補聴器のカスタムシェルは、耳のスキャンから個別形状を作り3D製造する実用化済みの先例です。[OptomecのAerosol Jet](https://optomec.com/printed-electronics/aerosol-jet-technology/)や皮膚に追従するepidermal electronics研究（[Rogers group](https://doi.org/10.1126/science.1206157)）は、曲面・身体表面への回路形成の技術的基盤を示しています。VibeBBは「その人の要件」から「その人が装着して動くデバイス」までの最短経路を目指しますが、これはvision-levelの将来方向であり、Phase 1の約束ではありません。設計グラフは平面の硬い基板を前提に固定せず、構造エレクトロニクスの将来拡張を妨げないものとします。
+
+個人適合ウェアラブルを志向すると、個人ごとに形状が変わるため、従来の回路図やアートワーク図を正とする設計では限界があります。個別の図面を正とすれば、形状ごとに作り直す図面が設計の根拠になってしまいます。ACDでは、[設計原則](#設計原則)どおり要件・制約・設計根拠を含む型付き設計グラフを正とし、個人形状ごとにガーバーなどの製造データまで一気通貫で再生成します。何をテストすべきかも根拠から導出でき、万一NGになっても結果を根拠へ遡ってその場で修正し、次のリビジョンを再印刷できます。
 
 家庭での基板製造が普及するほど、「対話 → 設計 → その場で印刷 → 実機テスト → 知識蓄積」というVibeBBのループは短く強力になります。ACDはそのときの標準ツールとなることを目指します。
 
@@ -335,8 +359,8 @@ ACDはこの未来を最初から設計に織り込みます：
 | サブエージェントとコンテキスト分離 | 部品調査・回路・レイアウト・シミュレーション・DFM・FWを専門レーンに分割し、各レーンには型付きのタスクとグラフのスナップショットだけを渡す。親は検証済み成果物だけをマージ | Hermesの分離サブエージェント、Letta |
 | コンテキスト圧縮＋権威ある参照 | 古い会話は要約してよいが、ピン割り当てやDRCレポートは要約で置換せず必ずIDで原本を参照する | MemGPT/Lettaのメモリ階層、Hermesのコンテキスト圧縮 |
 | スキル／知識の書き戻し | 成功した手順（fab別プロファイル、電源設計パターン、立ち上げチェックリスト）をレビュー可能なスキル候補として蓄積。§3のナレッジベースと直結 | OpenClaw/HermesのMarkdownスキル、Voyager |
-| 人間への割り込み（インタラプト） | 曖昧な要件やルールの適用除外などでのみ一時停止する。発注・購入など費用が発生する操作は、事前設定した予算上限内なら自動実行し、超過時のみ一時停止する。停止時は「判明していること／不確実なこと／選択肢／推奨案」を提示。回答は耐久イベントとして記録し、正確にその地点から再開 | LangGraph interrupts、OpenClawの承認モデル |
-| 冪等で型付きのツール | 全ツールに型付き入出力と冪等性キー。リトライしても二重発注・二重書き込みが起きない。副作用は「読み取り／可逆／不可逆」に分類し、不可逆は承認ID必須 | Temporalのactivityモデル |
+| 人間への割り込み（インタラプト） | 曖昧な要件やルールの適用除外などでのみ一時停止する。基板fab・部品・実装・送料・税・筐体／機械部品を含む総発注額が事前設定した予算上限内で、発注前最終ゲートに合格した発注は承認IDなしで自動実行し、超過時や免除時のみ一時停止する。停止時は「判明していること／不確実なこと／選択肢／推奨案」を提示。回答は耐久イベントとして記録し、正確にその地点から再開 | LangGraph interrupts、OpenClawの承認モデル |
+| 冪等で型付きのツール | 全ツールに型付き入出力と冪等性キー。リトライしても二重発注・二重書き込みが起きない。副作用は「読み取り／可逆／不可逆」に分類し、予算上限内かつ発注前最終ゲート合格の発注を除く不可逆操作は承認ID必須 | Temporalのactivityモデル |
 | 予算・ウォッチドッグ・無進捗検知 | 各実行に時間／トークン／ツール呼び出し／金額の上限とリトライ予算。同一アクションの反復や振動する修正を検知したら停止・エスカレーションする。自働化の原則どおり、異常のまま走り続けることを最大の失敗とみなす | AutoGPT/BabyAGIの失敗パターンの裏返し |
 | イベントソースの実行履歴 | プラン・ツール呼び出し・観測・承認・グラフパッチを追記専用イベントとして保存。リプレイ・デバッグ・評価・知識マイニングの基盤になる | OpenHands/SWE-agentのイベントストリーム |
 | ゴールデンタスクによる回帰評価 | 既知の基板設計タスク一式を保持し、モデル・ツール・スキルを更新するたびに全工程をリプレイして電気的妥当性・製造性・コスト・人間介入回数を採点 | SWE-bench、τ-bench、Inspect AI |
