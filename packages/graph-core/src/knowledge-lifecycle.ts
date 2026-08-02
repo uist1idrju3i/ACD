@@ -340,8 +340,7 @@ export const propagateKnowledgeDeprecation = (
     traversalBasis.push(`${entity.id}:${references.basis}`);
   }
   const seed = graph.entities.find((entity) => entity.id === knowledgeItemId);
-  const affectedKnowledgeId =
-    seed?.type === "KnowledgeItem" ? seed.knowledgeId : undefined;
+  const affectedKnowledgeId = seed?.type === "KnowledgeItem" ? seed.knowledgeId : undefined;
   const affected = new Set<string>([knowledgeItemId]);
   if (affectedKnowledgeId) {
     for (const entity of graph.entities) {
