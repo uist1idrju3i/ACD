@@ -221,7 +221,11 @@ export const transitionKnowledgeItem = (
       );
     }
   }
-  if (targetScope === "library-wide" && input.status !== "adopted") {
+  if (
+    item.scope !== "library-wide" &&
+    targetScope === "library-wide" &&
+    input.status !== "adopted"
+  ) {
     throw new GraphCoreError("schema-invalid", "library-wide knowledge must be adopted");
   }
   if (
@@ -257,16 +261,37 @@ export const reviseKnowledgeItem = (
       `knowledge revision does not change content: ${item.id}`,
     );
   }
-  return nextRevision(item, changes);
+  const revised = nextRevision(item, {
+    ...changes,
+    status: "candidate",
+    scope: "project-local",
+  });
+  delete revised.approvalId;
+  return revised;
 };
 
-const declaredReferenceFields: Partial<Record<Entity["type"], string[]>> = {
+const declaredReferenceFields: Record<Entity["type"], string[]> = {
+  Project: ["requirements", "revisionIds", "links"],
+  Requirement: ["links"],
+  Constraint: ["links"],
+  FunctionalBlock: ["links"],
+  Component: ["links"],
+  Part: ["links"],
+  Footprint: ["links"],
+  Net: ["links"],
+  Pin: ["links"],
+  Layout: ["links"],
+  BoardStackup: ["links"],
+  ManufacturingPackage: ["links"],
+  FirmwarePackage: ["links"],
+  TestItem: ["links"],
   KnowledgeItem: ["sourceEventIds", "changedDecisionIds", "previousRevisionId", "links"],
   Rationale: ["evidenceLinks", "generatedTestItemIds", "links"],
   VerificationResult: ["findingIds", "evidenceIds", "links"],
   Approval: ["subject"],
   Waiver: ["approvalId"],
-  Project: ["requirements", "revisionIds", "links"],
+  Evidence: ["links"],
+  TaskLedgerEntry: ["links"],
 };
 
 const explicitReferences = (entity: Entity): { ids: string[]; basis: string } => {
