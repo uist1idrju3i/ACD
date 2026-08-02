@@ -384,7 +384,8 @@ export const reviseLibraryPatch = (
   }
   const revision = patch.revision + 1;
   const id = `${patch.patchId}:r${revision}`;
-  const base = { ...patch };
+  const base = { ...patch, scope: "project-local" as const, status: "candidate" as const };
+  delete base.approvalId;
   delete base.verification;
   delete base.failureReason;
   return {
@@ -396,7 +397,6 @@ export const reviseLibraryPatch = (
     materializedContentHash: hashText(content),
     libraryRevision: `library:overlay:${hash({ patchId: patch.patchId, revision, contentHash: hashText(content) }).slice("sha256:".length)}`,
     previousRevisionId: patch.id,
-    status: "candidate",
   };
 };
 
