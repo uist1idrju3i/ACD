@@ -56,8 +56,10 @@ codeは小文字kebab-caseの`<class>-<condition>`形式とします。例：
 }
 ```
 
-`message`は人間向け説明であり、`code`、`severity`、`retryable`、
-`recoverable`、contextのschemaを機械契約とします。
+`message`は人間向け説明であり、`code`、`severity`、`retryable`、`recoverable`、
+contextのschemaを機械契約とします。このEnvelope自体のJSON Schemaは未定義であり、
+`schemas/error-taxonomy.schema.json`はtaxonomy dataのみを検証します。Schema化するまでは
+`context`の形状は文書上の契約として扱います。
 
 ## 再試行と停止
 

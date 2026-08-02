@@ -62,7 +62,7 @@
 
 `uncertainty`には、少なくとも状態（`unknown`、`assumed`、`inferred`、`verified`、`rejected`）、説明、解消方法（`resolution`）、影響範囲（`impactScope`）、期限（`dueAt`）を記録します。期限の到達で自動的に解消扱いにせず、期限切れの未解消事項は停止条件として扱います。解消は測定、ツール出力、出所付き資料などの`Evidence`で示します。黙った補完は禁止です。
 
-機械制約は既存の`Constraint`で表します。たとえば、`source.kind = "mechanical"`、`source.locator = "enclosure://case-a/rev-3"`、`attributes = { "constraint": "maxComponentHeight", "value": 8, "unit": "mm" }`のように、筐体・取付穴・外形・keepout・コネクタ位置・最大高さを記録します。`Layout.attributes`にはboard outline、mounting holes、keepoutsを、`BoardStackup.attributes`には基板厚・部品高さ包絡・機械クリアランスを保持できます。専用`MechanicalInterface` Entityは、IDXや複数部品の所有権同期が必要になるまで将来候補とします。
+機械制約は既存の`Constraint`で表します。たとえば、`source.kind = "mechanical"`、`source.locator = "enclosure://case-a/rev-3"`、`attributes = { "constraint": "maxComponentHeight", "value": 8, "unit": "mm" }`のように、筐体・取付穴・外形・keepout・コネクタ位置・最大高さを記録します。`Layout.attributes`にはboard outline、mounting holes、keepoutsを、`BoardStackup.attributes`には基板厚・部品高さ包絡・機械クリアランスを保持できます。専用`MechanicalInterface` Entityは、IDXや複数部品の所有権同期が必要になるまで将来候補とします。`source.*`は`Constraint`側の外部出所属性であり、Schemaの`Provenance.kind` enumとは別物です。
 
 ## 将来のエンティティ候補
 

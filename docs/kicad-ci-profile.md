@@ -91,8 +91,9 @@ provenanceで2回以上生成した`STABLE-SHA256SUMS`が一致することで�
 
 Phase 0の実行ラッパーは`pnpm kicad:spike`（`scripts/kicad-spike.sh`）、Phase 1
 smokeの受入runnerは`pnpm phase1:smoke`（`scripts/phase1-smoke.mts`）です。
-Dockerがない、
-またはimageが取得できない環境では、ラッパーは`SKIP`を返して終了します。
+Dockerがない、または固定imageが取得できない環境での`SKIP`は合格ではありません。
+ゲート未実行として`blocked`相当に扱い、Phase 0/1の受入証拠にしません。Dockerと固定imageが
+利用可能になることを再開条件として記録します。
 
 ## 期待artifact
 

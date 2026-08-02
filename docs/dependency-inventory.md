@@ -2,6 +2,8 @@
 
 **ステータス：Draft**
 
+## 目的と権威範囲
+
 Phase 0で追加した直接依存のライセンスと用途を記録します。pnpm lockfileの
 transitive dependencyもレビュー対象とし、CIでSBOM／ライセンス検査を追加する
 までは、依存追加時にlockfileとこの一覧を同時に確認します。CIの
@@ -25,3 +27,8 @@ MIT、Apache-2.0、BSD-2-Clause、BSD-3-Clause、ISC、0BSD、Python-2.0です�
 KiCad `10.0.5`は`kicad/kicad:10.0`のDocker外部プロセスとしてのみ実行し、
 ACDへリンク・vendor・再配布しません。KiCad本体のライセンスとcontainerの
 provenanceは[`kicad-ci-profile.md`](kicad-ci-profile.md)を参照してください。
+
+## 関連文書
+
+- [`../AGENTS.md`](../AGENTS.md)：依存、ライセンス、固定と更新の作業契約
+- [`kicad-ci-profile.md`](kicad-ci-profile.md)：KiCad containerの実行境界とprovenance

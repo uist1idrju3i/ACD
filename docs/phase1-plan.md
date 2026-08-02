@@ -111,9 +111,10 @@ Phase 1は、事前変換済みの`Requirement` fixtureから、ESP32級golden t
 
 **受入基準**
 
-- order-relevant unknownがゼロ、または明示された期限付きwaiverのみになる。
+- order-relevant unknownがゼロである。
 - checkout、支払い、発注確定は実行されない。
-- golden実機の全TestItemに条件付きpass Evidenceがある。
+- golden実機の全TestItemに、[`phase1-gates.md`](phase1-gates.md)の実機完了Evidence契約（条件、測定器、期待範囲、観測値、判定、revision/artifact参照）を満たす条件付きpass Evidenceがある。
+- 各受入基準は決定論的runner／ゲート、または実機Evidenceの記録者が判定し、完了判定を`VerificationResult`またはイベントとして残す。
 
 **リスク**
 
