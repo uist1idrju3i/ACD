@@ -59,7 +59,8 @@ describe("knowledge application", () => {
     expect(
       evaluateKnowledgeApplications([item({ status: "reviewed" })], context).decisions[0],
     ).toMatchObject({
-      status: "pass",
+      status: "not-applicable",
+      applicability: "pass",
       applied: false,
       lifecycleStatus: "reviewed",
     });
@@ -82,7 +83,36 @@ describe("knowledge application", () => {
 
   it("records explicit no-applicable-knowledge", () => {
     const result = evaluateKnowledgeApplications([item({ status: "deprecated" })], context);
-    expect(result.decisions.at(-1)?.status).toBe("no-applicable-knowledge");
+    expect(result.noApplicableKnowledge).toEqual({
+      kind: "no-applicable-knowledge",
+      evaluatedItemCount: 1,
+    });
+    expect(result.decisions).toHaveLength(1);
+  });
+
+  it("fails for another fab profile and has no match without the affected footprint", () => {
+    expect(
+      evaluateKnowledgeApplications([item()], { ...context, fabProfileId: "fab:other" })
+        .decisions[0]?.status,
+    ).toBe("fail");
+    const withoutFootprint = { ...context };
+    delete (withoutFootprint as Record<string, unknown>).footprintId;
+    const result = evaluateKnowledgeApplications([item()], {
+      ...withoutFootprint,
+      footprintIds: [],
+    });
+    expect(result.decisions[0]?.status).toBe("unknown");
+    expect(result.applicableKnowledgeIds).toEqual(["knowledge:test"]);
+    const otherFootprint = evaluateKnowledgeApplications([item()], {
+      ...context,
+      footprintIds: ["C_0603_1608Metric"],
+      footprintId: ["C_0603_1608Metric"],
+    });
+    expect(otherFootprint.decisions[0]?.status).toBe("fail");
+    expect(otherFootprint.noApplicableKnowledge).toEqual({
+      kind: "no-applicable-knowledge",
+      evaluatedItemCount: 1,
+    });
   });
 
   it("stops when applicable adopted knowledge was not applied", () => {

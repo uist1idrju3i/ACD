@@ -2,6 +2,16 @@
   "schemaVersion": "1.0.0-draft",
   "fixtureId": "fixture:phase1-golden-esp32",
   "fixtureKind": "golden",
+  "manufacturingProfile": {
+    "fabProfileId": "fab:jlcpcb-class-2layer",
+    "processConditions": [
+      "0.1mm minimum mask sliver",
+      "0.127mm copper clearance profile",
+      "2-layer",
+      "HASL",
+      "board-edge silkscreen exclusion"
+    ]
+  },
   "requirement": {
     "id": "requirement:phase1-golden-esp32",
     "name": "ESP32 sensor and UART development board",

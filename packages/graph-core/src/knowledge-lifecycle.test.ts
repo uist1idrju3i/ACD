@@ -147,6 +147,16 @@ describe("knowledge lifecycle", () => {
       operator: "equals",
       value: "footprint:r0603",
     });
+    expect(adopted.appliesWhen).not.toContainEqual({
+      field: "ruleId",
+      operator: "equals",
+      value: "mask-sliver-min",
+    });
+    expect(adopted.appliesWhen).not.toContainEqual({
+      field: "classification",
+      operator: "equals",
+      value: "mask-clearance",
+    });
     expect(
       evaluateKnowledgeApplicability(adopted, {
         fabProfileId: "fab:jlcpcb-class-2layer",

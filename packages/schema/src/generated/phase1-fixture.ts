@@ -43,6 +43,10 @@ export interface ACDPhase1Fixture {
    * @minItems 1
    */
   bom: [BomLine, ...BomLine[]];
+  manufacturingProfile?: {
+    fabProfileId: string;
+    processConditions: string[];
+  };
   orderConstraints?: OrderConstraints;
   rationales?: Rationale[];
 }

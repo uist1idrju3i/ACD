@@ -90,9 +90,6 @@ let currentGate = 0;
 let currentName = "golden";
 let adoptedKnowledgeForLibraryPatch: KnowledgeItem | undefined;
 let adoptedLibraryPatch: ReturnType<typeof createLibraryPatchCandidate> | undefined;
-let targetDesignRuleIds: string[] = [];
-let targetDesignClassifications: string[] = [];
-let targetDesignReproductionConditions: string[] = [];
 const hash = (content: string): string =>
   `sha256:${createHash("sha256").update(content).digest("hex")}`;
 const run = (command: string, args: string[]): string =>
@@ -634,19 +631,6 @@ try {
   const passingFindings = fabFeedback.findings
     .filter((finding) => finding.verdict === "pass")
     .sort((left, right) => left.findingId.localeCompare(right.findingId));
-  targetDesignRuleIds = [
-    ...new Set(
-      passingFindings.flatMap((finding) =>
-        finding.references.ruleId ? [finding.references.ruleId] : [],
-      ),
-    ),
-  ].sort();
-  targetDesignClassifications = [
-    ...new Set(passingFindings.map((finding) => finding.classification)),
-  ].sort();
-  targetDesignReproductionConditions = [
-    ...new Set(passingFindings.flatMap((finding) => finding.reproductionConditions)),
-  ].sort();
   if (passingFindings.length === 0) {
     throw new Error("verification-failed: fab feedback produced no passing findings");
   }
@@ -1233,10 +1217,13 @@ try {
       "verification-failed: adopted library patch is unavailable for knowledge application",
     );
   }
+  if (!fixture.manufacturingProfile) {
+    throw new Error("verification-failed: target design lacks a declared manufacturing profile");
+  }
   const adoptedKnowledgeItems = knowledgeStates.map((state) => state.adopted);
   const targetKnowledgeContext = createTargetDesignKnowledgeContext({
     designRevision: "prototype-2",
-    fabProfileId: fabFeedbackReport.fabProfileId,
+    fabProfileId: fixture.manufacturingProfile.fabProfileId,
     footprintIds: [
       ...new Set(
         [
@@ -1246,9 +1233,9 @@ try {
         ].map((match) => match[1]),
       ),
     ].sort(),
-    ruleIds: targetDesignRuleIds,
-    classifications: targetDesignClassifications,
-    reproductionConditions: targetDesignReproductionConditions,
+    ruleIds: [],
+    classifications: [],
+    reproductionConditions: fixture.manufacturingProfile.processConditions,
   });
   const applicationResult = evaluateKnowledgeApplications(
     adoptedKnowledgeItems,

@@ -160,11 +160,7 @@ const conditionsForFinding = (
     ...(finding.references.footprintId
       ? [condition("footprintId", "equals", finding.references.footprintId)]
       : []),
-    ...(finding.references.ruleId
-      ? [condition("ruleId", "equals", finding.references.ruleId)]
-      : []),
-    condition("classification", "equals", finding.classification),
-    ...finding.reproductionConditions.map((value) =>
+    ...rule.reproductionConditions.map((value) =>
       condition("reproductionCondition", "equals", value),
     ),
     ...rule.appliesWhen,
@@ -215,6 +211,7 @@ export const createKnowledgeCandidate = (input: {
         contentHash: input.report.rawReport.contentHash,
         designRevision: input.designRevision,
         fabProfileId: input.report.fabProfileId,
+        ...(input.finding.references.ruleId ? { ruleId: input.finding.references.ruleId } : {}),
         derivationInputHash: input.derivationInputHash,
         derivationOutputHash: input.derivationOutputHash,
       },

@@ -104,3 +104,10 @@ export const fabProfileRules: FabProfileRules[] = [
 
 export const rulesForFabProfile = (profileId: string): FabProfileRules | undefined =>
   fabProfileRules.find((profile) => profile.profileId === profileId);
+
+export const reproductionConditionsForFabProfile = (profileId: string): string[] => {
+  const profile = rulesForFabProfile(profileId);
+  return profile
+    ? [...new Set(profile.rules.flatMap((rule) => rule.reproductionConditions))].sort()
+    : [];
+};

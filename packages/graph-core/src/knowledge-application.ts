@@ -2,15 +2,12 @@ import type { ApplicabilityCondition } from "./fab-profile-rules.js";
 import {
   evaluateKnowledgeApplicability,
   type ApplicabilityContext,
+  type KnowledgeApplicability,
   type KnowledgeItem,
 } from "./knowledge-lifecycle.js";
 import { GraphCoreError } from "./errors.js";
 
-export type KnowledgeApplicationDecisionStatus =
-  | "pass"
-  | "fail"
-  | "unknown"
-  | "no-applicable-knowledge";
+export type KnowledgeApplicationDecisionStatus = "pass" | "fail" | "unknown" | "not-applicable";
 
 export type KnowledgeApplicationDecision = {
   knowledgeItemId: string;
@@ -18,6 +15,7 @@ export type KnowledgeApplicationDecision = {
   lifecycleStatus: KnowledgeItem["status"];
   status: KnowledgeApplicationDecisionStatus;
   applied: boolean;
+  applicability?: KnowledgeApplicability;
   libraryRevision?: string;
   explanation?: {
     text: string;
@@ -38,6 +36,10 @@ export type KnowledgeApplicationResult = {
   decisions: KnowledgeApplicationDecision[];
   applicableKnowledgeIds: string[];
   libraryRevisions: string[];
+  noApplicableKnowledge?: {
+    kind: "no-applicable-knowledge";
+    evaluatedItemCount: number;
+  };
 };
 
 const conditionFields: ApplicabilityCondition["field"][] = [
@@ -63,21 +65,13 @@ const decisionForItem = (
   context: ApplicabilityContext,
 ): KnowledgeApplicationDecision => {
   const applicability = evaluateKnowledgeApplicability(item, context);
-  if (item.status !== "adopted") {
-    return {
-      knowledgeItemId: item.id,
-      knowledgeId: item.knowledgeId,
-      lifecycleStatus: item.status,
-      status: applicability,
-      applied: false,
-    };
-  }
   return {
     knowledgeItemId: item.id,
     knowledgeId: item.knowledgeId,
     lifecycleStatus: item.status,
-    status: applicability,
+    status: item.status === "adopted" ? applicability : "not-applicable",
     applied: false,
+    applicability,
   };
 };
 
@@ -94,19 +88,18 @@ export const evaluateKnowledgeApplications = (
       decision.lifecycleStatus === "adopted" &&
       (decision.status === "pass" || decision.status === "unknown"),
   );
-  if (applicable.length === 0) {
-    decisions.push({
-      knowledgeItemId: "knowledge:none",
-      knowledgeId: "knowledge:none",
-      lifecycleStatus: "rejected",
-      status: "no-applicable-knowledge",
-      applied: false,
-    });
-  }
   return {
     decisions,
     applicableKnowledgeIds: applicable.map((decision) => decision.knowledgeId),
     libraryRevisions: [],
+    ...(applicable.length === 0
+      ? {
+          noApplicableKnowledge: {
+            kind: "no-applicable-knowledge" as const,
+            evaluatedItemCount: items.length,
+          },
+        }
+      : {}),
   };
 };
 
@@ -158,10 +151,7 @@ export const assertKnowledgeApplicationsComplete = (
         .join(", ")}`,
     );
   }
-  if (
-    !result.decisions.some((decision) => decision.status === "no-applicable-knowledge") &&
-    result.decisions.length === 0
-  ) {
+  if (result.decisions.length === 0 && !result.noApplicableKnowledge) {
     throw new GraphCoreError("verification-failed", "knowledge application decisions are missing");
   }
 };
