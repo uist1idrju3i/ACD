@@ -4,8 +4,11 @@ import { mkdir, readFile, readdir, rm, writeFile } from "node:fs/promises";
 import { join, resolve } from "node:path";
 import {
   compareNetlists,
+  adoptVerifiedLibraryPatch,
+  createLibraryPatchCandidate,
   placeFixture,
   projectToKicad,
+  verifyLibraryPatchGeometry,
 } from "../packages/adapters/kicad/src/index.js";
 import {
   buildSpiceAnalyses,
@@ -34,6 +37,7 @@ import {
   unresolvedFindings,
   unresolvedRationaleFindings,
   unresolvedTestPlanFindings,
+  type KnowledgeItem,
   type FixturePatchOperation,
   type RecordedProposal,
 } from "../packages/graph-core/src/index.js";
@@ -77,6 +81,7 @@ const gateIds = gateMatrix.gates.map((gate) => gate.id);
 const results: Result[] = [];
 let currentGate = 0;
 let currentName = "golden";
+let adoptedKnowledgeForLibraryPatch: KnowledgeItem | undefined;
 const hash = (content: string): string =>
   `sha256:${createHash("sha256").update(content).digest("hex")}`;
 const run = (command: string, args: string[]): string =>
@@ -641,6 +646,9 @@ try {
       now: "2026-01-01T00:00:00.000Z",
     });
     knowledgeStates.push({ candidate, reviewed, adopted });
+    if (finding.references.ruleId === "mask-sliver-min") {
+      adoptedKnowledgeForLibraryPatch = adopted;
+    }
     await fabFeedbackEventLog.append(
       createKnowledgeCandidateCreatedEvent({
         eventId: `event:knowledge:candidate:prototype-1:${finding.findingId}`,
@@ -939,6 +947,53 @@ try {
   pass(12, {
     ...preOrderResult,
     verdict: "ready-for-order, approval required",
+  });
+
+  enter(21);
+  if (!adoptedKnowledgeForLibraryPatch) {
+    throw new Error("verification-failed: no adopted mask-sliver knowledge for library patch");
+  }
+  const libraryPatch = createLibraryPatchCandidate(adoptedKnowledgeForLibraryPatch);
+  const geometryVerification = verifyLibraryPatchGeometry(libraryPatch);
+  if (geometryVerification.geometry !== "passed") {
+    throw new Error(
+      `verification-failed: library patch geometry failed: ${geometryVerification.failureEvidence}`,
+    );
+  }
+  const reopenPassed = results.some((result) => result.gate === 6 && result.status === "passed");
+  const drcPassed = results.some((result) => result.gate === 10 && result.status === "passed");
+  const verification = {
+    ...geometryVerification,
+    reopen: reopenPassed ? ("passed" as const) : ("blocked" as const),
+    drc: drcPassed ? ("passed" as const) : ("blocked" as const),
+  };
+  const adoptedLibraryPatch = adoptVerifiedLibraryPatch(libraryPatch, verification);
+  if (adoptedLibraryPatch.status !== "adopted") {
+    throw new Error("verification-failed: library patch was not adopted");
+  }
+  await writeFile(
+    join(artifactRoot, "library-patch.json"),
+    `${JSON.stringify(
+      {
+        patch: adoptedLibraryPatch,
+        libraryRevision: adoptedLibraryPatch.libraryRevision,
+        snapshotManifestHash: adoptedLibraryPatch.snapshotManifestHash,
+        evidence: {
+          geometry: verification.geometry,
+          reopen: verification.reopen,
+          drc: verification.drc,
+          resolvedRevision: adoptedLibraryPatch.libraryRevision,
+        },
+      },
+      null,
+      2,
+    )}\n`,
+  );
+  pass(21, {
+    patchId: adoptedLibraryPatch.id,
+    libraryRevision: adoptedLibraryPatch.libraryRevision,
+    snapshotManifestHash: adoptedLibraryPatch.snapshotManifestHash,
+    artifact: "library-patch.json",
   });
 
   const missing = missingExecutedGates(

@@ -77,6 +77,20 @@ PWR_FLAG、PCB pad／track投影と、KiCad netlist／IPC-D-356のreadback比較
 
 生成したプロジェクトを別プロセスで再オープンし、KiCadが読めること、部品・ネット・層・座標・ルールが期待と一致することを確認します。再オープン後にERC/DRCを再実行し、出力を再生成してハッシュ差分を確認します。
 
+## 公式snapshotとoverlay library revision（Phase 3 WP3）
+
+`packages/adapters/kicad/library-snapshot/`の公式snapshotは、manifestのcontent hash、
+KiCad container digest、license、NOTICEを含めて不変です。fab指摘からの修正は
+`LibraryOverlayPatch`として別ファイルに保存し、対象snapshotのmanifest hash、対象
+footprint、元のKnowledgeItem・fab event、宣言済みruleから導出した操作、検証結果を
+持つ固有のlibrary revisionを発行します。公式snapshotを上書きしたり、ruleを弱めて
+指摘を消すpatchは受理しません。
+
+投影は`latest`を暗黙に参照せず、採用済みの`libraryRevision`を明示的に解決します。
+解決したrevisionとsnapshot hashはEvidenceと生成artifactへ記録し、未解決または
+曖昧なrevisionはjidoka停止します。geometry、再オープン、DRCのいずれかが未確認の
+patchは失敗Evidence付きで保持しますが、下流projectionへ渡しません。
+
 ## 関連文書
 
 - [`design-graph.md`](design-graph.md)：KiCadへ投影する正規モデル

@@ -10,6 +10,7 @@ import {
   fabFeedbackSchemaPath,
   gateMatrixDataPath,
   gateMatrixSchemaPath,
+  libraryPatchSchemaPath,
   gatesDocPath,
   patchSchemaPath,
   phase1FixtureSchemaPath,
@@ -50,6 +51,7 @@ const samplePaths = [
   phase1FixtureSchemaPath,
   physicalEvidenceSchemaPath,
   gateMatrixSchemaPath,
+  libraryPatchSchemaPath,
 ];
 for (const schemaPath of samplePaths) {
   await loadValidator(schemaPath);
