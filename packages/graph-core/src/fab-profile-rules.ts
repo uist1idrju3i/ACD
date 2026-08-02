@@ -58,7 +58,7 @@ export const fabProfileRules: FabProfileRules[] = [
         excludesWhen: [
           { field: "fabProfileId", operator: "notEquals", value: "fab:jlcpcb-class-2layer" },
         ],
-        correction: { target: "pad-mask-clearance", requiredValueMm: 0.1, padNumber: "1" },
+        correction: { target: "pad-mask-clearance", requiredValueMm: -0.02 },
       },
       {
         ruleId: "copper-clearance-min",
