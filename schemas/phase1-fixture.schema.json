@@ -1,0 +1,262 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://acd.example.invalid/schemas/phase1-fixture.schema.json",
+  "title": "ACD Phase 1 Fixture",
+  "description": "Typed Phase 1 input fixture. It complements the Phase 0 design graph schema without changing it.",
+  "type": "object",
+  "required": [
+    "schemaVersion",
+    "fixtureId",
+    "fixtureKind",
+    "requirement",
+    "parts",
+    "mappings",
+    "nets",
+    "placementConstraints",
+    "bom"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "schemaVersion": { "const": "1.0.0-draft" },
+    "fixtureId": { "$ref": "#/$defs/id" },
+    "fixtureKind": { "enum": ["smoke", "golden"] },
+    "requirement": { "$ref": "#/$defs/requirement" },
+    "parts": { "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/part" } },
+    "mappings": { "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/mapping" } },
+    "nets": { "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/net" } },
+    "placementConstraints": { "$ref": "#/$defs/placementConstraints" },
+    "bom": { "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/bomLine" } }
+  },
+  "$defs": {
+    "id": { "type": "string", "pattern": "^[A-Za-z][A-Za-z0-9._:-]*$" },
+    "provenance": {
+      "type": "object",
+      "required": ["source", "version", "license", "contentHash"],
+      "additionalProperties": false,
+      "properties": {
+        "source": { "type": "string", "minLength": 1 },
+        "version": { "type": "string", "minLength": 1 },
+        "license": { "type": "string", "minLength": 1 },
+        "contentHash": { "type": "string", "pattern": "^sha256:[0-9a-f]{64}$" },
+        "capturedAt": { "type": "string", "format": "date-time" }
+      }
+    },
+    "requirement": {
+      "type": "object",
+      "required": [
+        "id",
+        "name",
+        "functionalBlocks",
+        "board",
+        "electrical",
+        "acceptanceCriteria",
+        "provenance"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "id": { "$ref": "#/$defs/id" },
+        "name": { "type": "string", "minLength": 1 },
+        "functionalBlocks": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "type": "string", "minLength": 1 }
+        },
+        "board": { "$ref": "#/$defs/board" },
+        "electrical": { "$ref": "#/$defs/electrical" },
+        "acceptanceCriteria": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "type": "string", "minLength": 1 }
+        },
+        "provenance": { "$ref": "#/$defs/provenance" }
+      }
+    },
+    "board": {
+      "type": "object",
+      "required": ["layers", "widthMm", "heightMm", "thicknessMm"],
+      "additionalProperties": false,
+      "properties": {
+        "layers": { "const": 2 },
+        "widthMm": { "type": "number", "exclusiveMinimum": 0 },
+        "heightMm": { "type": "number", "exclusiveMinimum": 0 },
+        "thicknessMm": { "type": "number", "exclusiveMinimum": 0 },
+        "outline": { "type": "string", "minLength": 1 },
+        "mountingHoles": { "type": "array", "items": { "$ref": "#/$defs/point" } }
+      }
+    },
+    "electrical": {
+      "type": "object",
+      "required": ["supplyVoltageV", "maxCurrentMa", "interfaces"],
+      "additionalProperties": false,
+      "properties": {
+        "supplyVoltageV": { "type": "number", "exclusiveMinimum": 0 },
+        "maxCurrentMa": { "type": "number", "exclusiveMinimum": 0 },
+        "interfaces": { "type": "array", "items": { "type": "string", "minLength": 1 } }
+      }
+    },
+    "part": {
+      "type": "object",
+      "required": [
+        "id",
+        "reference",
+        "kind",
+        "mpn",
+        "manufacturer",
+        "quantity",
+        "package",
+        "provenance"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "id": { "$ref": "#/$defs/id" },
+        "reference": { "type": "string", "pattern": "^[A-Z]+[0-9]+$" },
+        "kind": {
+          "enum": [
+            "ic",
+            "resistor",
+            "capacitor",
+            "led",
+            "connector",
+            "sensor",
+            "regulator",
+            "module",
+            "other"
+          ]
+        },
+        "mpn": { "type": "string", "minLength": 1 },
+        "manufacturer": { "type": "string", "minLength": 1 },
+        "quantity": { "type": "integer", "minimum": 1 },
+        "package": { "type": "string", "minLength": 1 },
+        "provenance": { "$ref": "#/$defs/provenance" }
+      }
+    },
+    "mapping": {
+      "type": "object",
+      "required": [
+        "partId",
+        "symbolLibraryId",
+        "symbolName",
+        "footprintLibraryId",
+        "footprintName",
+        "pinPads",
+        "provenance"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "partId": { "$ref": "#/$defs/id" },
+        "symbolLibraryId": { "type": "string", "minLength": 1 },
+        "symbolName": { "type": "string", "minLength": 1 },
+        "footprintLibraryId": { "type": "string", "minLength": 1 },
+        "footprintName": { "type": "string", "minLength": 1 },
+        "pinPads": { "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/pinPad" } },
+        "provenance": { "$ref": "#/$defs/provenance" }
+      }
+    },
+    "pinPad": {
+      "type": "object",
+      "required": ["pin", "pad", "electricalType"],
+      "additionalProperties": false,
+      "properties": {
+        "pin": { "type": "string", "minLength": 1 },
+        "pad": { "type": "string", "minLength": 1 },
+        "electricalType": {
+          "enum": [
+            "input",
+            "output",
+            "bidirectional",
+            "power-input",
+            "power-output",
+            "passive",
+            "open-collector",
+            "open-emitter",
+            "no-connect"
+          ]
+        }
+      }
+    },
+    "net": {
+      "type": "object",
+      "required": ["id", "name", "pins", "class"],
+      "additionalProperties": false,
+      "properties": {
+        "id": { "$ref": "#/$defs/id" },
+        "name": { "type": "string", "minLength": 1 },
+        "class": { "enum": ["power", "ground", "signal", "clock", "differential", "other"] },
+        "pins": { "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/netPin" } },
+        "widthMm": { "type": "number", "exclusiveMinimum": 0 },
+        "clearanceMm": { "type": "number", "minimum": 0 }
+      }
+    },
+    "netPin": {
+      "type": "object",
+      "required": ["partId", "pin"],
+      "additionalProperties": false,
+      "properties": {
+        "partId": { "$ref": "#/$defs/id" },
+        "pin": { "type": "string", "minLength": 1 }
+      }
+    },
+    "placementConstraints": {
+      "type": "object",
+      "required": ["seed", "components"],
+      "additionalProperties": false,
+      "properties": {
+        "seed": { "type": "integer", "minimum": 0 },
+        "components": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "$ref": "#/$defs/componentPlacement" }
+        }
+      }
+    },
+    "componentPlacement": {
+      "type": "object",
+      "required": ["partId", "allowedLayers", "xMm", "yMm", "rotationDeg"],
+      "additionalProperties": false,
+      "properties": {
+        "partId": { "$ref": "#/$defs/id" },
+        "allowedLayers": { "type": "array", "minItems": 1, "items": { "enum": ["F.Cu", "B.Cu"] } },
+        "xMm": { "type": "number", "minimum": 0 },
+        "yMm": { "type": "number", "minimum": 0 },
+        "rotationDeg": { "type": "number" },
+        "keepout": { "type": "boolean" }
+      }
+    },
+    "point": {
+      "type": "object",
+      "required": ["xMm", "yMm"],
+      "additionalProperties": false,
+      "properties": { "xMm": { "type": "number" }, "yMm": { "type": "number" } }
+    },
+    "bomLine": {
+      "type": "object",
+      "required": [
+        "partId",
+        "referenceDesignators",
+        "quantity",
+        "mpn",
+        "manufacturer",
+        "supplier",
+        "availability",
+        "provenance"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "partId": { "$ref": "#/$defs/id" },
+        "referenceDesignators": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "type": "string", "minLength": 1 }
+        },
+        "quantity": { "type": "integer", "minimum": 1 },
+        "mpn": { "type": "string", "minLength": 1 },
+        "manufacturer": { "type": "string", "minLength": 1 },
+        "supplier": { "type": "string", "minLength": 1 },
+        "sku": { "type": "string" },
+        "availability": { "enum": ["in-stock", "limited", "preorder", "unknown"] },
+        "lifecycle": { "enum": ["active", "nrnd", "eol", "unknown"] },
+        "provenance": { "$ref": "#/$defs/provenance" }
+      }
+    }
+  }
+}

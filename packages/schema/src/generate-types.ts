@@ -1,6 +1,11 @@
 import { readFile, writeFile } from "node:fs/promises";
 import { compile } from "json-schema-to-typescript";
-import { designGraphSchemaPath, eventSchemaPath, patchSchemaPath } from "./paths.js";
+import {
+  designGraphSchemaPath,
+  eventSchemaPath,
+  patchSchemaPath,
+  phase1FixtureSchemaPath,
+} from "./paths.js";
 
 const generatedDirectory = new URL("./generated/", import.meta.url);
 
@@ -8,6 +13,7 @@ const definitions = [
   ["design-graph.schema.json", designGraphSchemaPath],
   ["patch.schema.json", patchSchemaPath],
   ["event.schema.json", eventSchemaPath],
+  ["phase1-fixture.schema.json", phase1FixtureSchemaPath],
 ] as const;
 
 for (const [filename, schemaPath] of definitions) {

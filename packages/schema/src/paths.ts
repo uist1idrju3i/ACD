@@ -10,3 +10,8 @@ export const errorTaxonomySchemaPath = resolve(
   "schemas/error-taxonomy.schema.json",
 );
 export const errorTaxonomyDataPath = resolve(repositoryRoot, "schemas/error-taxonomy.json");
+export const phase1FixtureSchemaPath = resolve(
+  repositoryRoot,
+  "schemas/phase1-fixture.schema.json",
+);
+export const phase1SmokeFixturePath = resolve(repositoryRoot, "fixtures/phase1/smoke.json");
