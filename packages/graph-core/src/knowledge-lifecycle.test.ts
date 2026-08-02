@@ -307,15 +307,23 @@ describe("knowledge lifecycle", () => {
   });
 
   it("propagates deprecation through recorded graph references", () => {
+    const adoptedRevision = { ...item(), id: "knowledge:test:r2", revision: 2 };
+    const deprecatedRevision = {
+      ...adoptedRevision,
+      id: "knowledge:test:r3",
+      revision: 3,
+      status: "deprecated" as const,
+    };
     const result = propagateKnowledgeDeprecation(
       {
         entities: [
-          item(),
+          adoptedRevision,
+          deprecatedRevision,
           {
             id: "rationale:test",
             type: "Rationale",
             revision: 0,
-            links: [item().id],
+            links: [adoptedRevision.id],
           },
           {
             id: "verification:test",
@@ -335,7 +343,7 @@ describe("knowledge lifecycle", () => {
           } as unknown as Entity,
         ],
       },
-      item().id,
+      deprecatedRevision.id,
       "knowledge item deprecated",
     );
     expect(result.staleEntityIds).toEqual(["rationale:test", "verification:test"]);
@@ -345,8 +353,8 @@ describe("knowledge lifecycle", () => {
     expect(result.traversalBasis).toContain(
       "custom:test:CustomEntity:no-declared-reference-fields:widened",
     );
-    expect(result.graph.entities[1]?.status).toBe("stale");
     expect(result.graph.entities[2]?.status).toBe("stale");
+    expect(result.graph.entities[3]?.status).toBe("stale");
   });
 
   it("creates typed hashed lifecycle events", () => {

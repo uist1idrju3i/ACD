@@ -1,7 +1,11 @@
 import type { Entity } from "@acd/schema";
 import { GraphCoreError } from "./errors.js";
 import { createEvent, type EventEnvelope } from "./event-log.js";
-import type { FabFeedbackFinding, FabFeedbackReport } from "./fab-feedback.js";
+import {
+  resolveFabProfileRule,
+  type FabFeedbackFinding,
+  type FabFeedbackReport,
+} from "./fab-feedback.js";
 import { rulesForFabProfile, type ApplicabilityCondition } from "./fab-profile-rules.js";
 
 export type KnowledgeStatus = "candidate" | "reviewed" | "adopted" | "rejected" | "deprecated";
@@ -114,7 +118,7 @@ const conditionsForFinding = (
   report: FabFeedbackReport,
 ): { appliesWhen: ApplicabilityCondition[]; excludesWhen: ApplicabilityCondition[] } => {
   const profile = rulesForFabProfile(report.fabProfileId);
-  const rule = profile?.rules.find((candidate) => candidate.ruleId === finding.references.ruleId);
+  const rule = profile && resolveFabProfileRule(finding, profile);
   if (!rule || rule.appliesWhen.length === 0 || rule.excludesWhen.length === 0) {
     throw new GraphCoreError(
       "schema-invalid",
@@ -288,8 +292,8 @@ const declaredReferenceFields: Record<Entity["type"], string[]> = {
   KnowledgeItem: ["sourceEventIds", "changedDecisionIds", "previousRevisionId", "links"],
   Rationale: ["evidenceLinks", "generatedTestItemIds", "links"],
   VerificationResult: ["findingIds", "evidenceIds", "links"],
-  Approval: ["subject"],
-  Waiver: ["approvalId"],
+  Approval: ["subject", "links"],
+  Waiver: ["approvalId", "links"],
   Evidence: ["links"],
   TaskLedgerEntry: ["links"],
 };
@@ -335,7 +339,17 @@ export const propagateKnowledgeDeprecation = (
     dependents.set(entity.id, references);
     traversalBasis.push(`${entity.id}:${references.basis}`);
   }
+  const seed = graph.entities.find((entity) => entity.id === knowledgeItemId);
+  const affectedKnowledgeId =
+    seed?.type === "KnowledgeItem" ? seed.knowledgeId : undefined;
   const affected = new Set<string>([knowledgeItemId]);
+  if (affectedKnowledgeId) {
+    for (const entity of graph.entities) {
+      if (entity.type === "KnowledgeItem" && entity.knowledgeId === affectedKnowledgeId) {
+        affected.add(entity.id);
+      }
+    }
+  }
   for (const [entityId, references] of dependents) {
     if (references.basis.endsWith(":widened")) affected.add(entityId);
   }
