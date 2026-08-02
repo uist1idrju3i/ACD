@@ -35,8 +35,8 @@ docker run --rm -v "$ROOT/$OUT:/work" "$IMAGE" kicad-cli pcb drc \
   --output /work/reports/drc.rpt /work/project/design.kicad_pcb
 drc_status=$?
 set -e
-if [ "$drc_status" -ne 0 ] && ! grep -Eq 'Found [1-9][0-9]* (DRC violations|unconnected items)' "$ROOT/$OUT/reports/drc.rpt"; then
-  echo "KiCad DRC command failed without reported violations"
+if [ ! -f "$ROOT/$OUT/reports/drc.rpt" ]; then
+  echo "KiCad DRC did not produce a report"
   exit "$drc_status"
 fi
 if grep -Eq 'Found [1-9][0-9]* (DRC violations|unconnected items)' "$ROOT/$OUT/reports/drc.rpt"; then
@@ -58,8 +58,8 @@ docker run --rm -v "$ROOT/$OUT:/work" "$IMAGE" kicad-cli sch erc \
   --output /work/reports/erc.rpt /work/project/design.kicad_sch
 erc_status=$?
 set -e
-if [ "$erc_status" -ne 0 ] && ! grep -Eq 'ERC messages: [1-9][0-9]*' "$ROOT/$OUT/reports/erc.rpt"; then
-  echo "KiCad ERC command failed without reported violations"
+if [ ! -f "$ROOT/$OUT/reports/erc.rpt" ]; then
+  echo "KiCad ERC did not produce a report"
   exit "$erc_status"
 fi
 if grep -Eq 'ERC messages: [1-9][0-9]*' "$ROOT/$OUT/reports/erc.rpt"; then

@@ -40,14 +40,4 @@ jobs:
           docker pull kicad/kicad:10.0
           test "$(docker image inspect kicad/kicad:10.0 --format '{{index .RepoDigests 0}}')" = \
             "kicad/kicad@sha256:182c8005cb775a2c448a4c18681d489f1ff472a761885eba3e08b07e3c0564de"
-      - name: Run KiCad spike
-        run: |
-          set +e
-          bash -x scripts/kicad-spike.sh
-          status=$?
-          echo "KiCad spike exit status: $status"
-          find artifacts/kicad -maxdepth 3 -type f -print 2>/dev/null | sort || true
-          for report in artifacts/kicad/reports/*; do
-            [ -f "$report" ] && { echo "=== $report ==="; head -20 "$report"; }
-          done
-          exit "$status"
+      - run: pnpm kicad:spike
