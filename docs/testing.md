@@ -4,7 +4,7 @@
 
 ## 目的と権威範囲
 
-READMEのロードマップにあるゴールデンタスク、決定論的CIゲート、Step-6の実機テストを定義します。mainではsmoke Gate 1〜11、golden Gate 1〜12が合格しています。Gate 13のcontractは実装済みですが、実機Evidenceによる完了はhardware測定待ちです。
+READMEのロードマップにあるゴールデンタスク、決定論的CIゲート、Step-6の実機テストを定義します。mainではsmoke Gate 1〜11、golden Gate 1〜12および Phase 2のGate 14〜18が合格しています。Gate 13のcontractは実装済みですが、実機Evidenceによる完了はhardware測定待ちです。
 
 ## ゴールデンタスク
 

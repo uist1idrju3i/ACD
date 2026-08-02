@@ -1,6 +1,6 @@
 # Phase 2実装計画
 
-**ステータス：Draft（WP1〜WP7実装済み）**
+**ステータス：Draft（WP1〜WP7実装済み。振り返りは[`phase2-retrospective.md`](phase2-retrospective.md)）**
 
 ## 目的と権威範囲
 
@@ -214,13 +214,13 @@ net label中心の投影を、electrical semantics、netlist、ERC結果を変�
 
 ## リスク登録簿
 
-| リスク                      | 影響                           | 現在の対策                                  | 次の判断                        |
-| --------------------------- | ------------------------------ | ------------------------------------------- | ------------------------------- |
-| 自動修復の暴走              | 誤った修復が下流へ流れる       | patch化、再検証必須、試行上限               | WP5でADR化                      |
-| lintルールの過剰・過少検出  | 停止過多、または後段発見の再発 | 三値評価、rule IDごとの故障注入fixture      | WP2受入時に評価                 |
-| SPICEモデルの出所           | ライセンス制限、再配布不可     | 外部tool境界、モデルはEvidence metadataのみ | WP6のADRで境界を確定            |
-| gate matrixとrunnerの再乖離 | 契約と実行の不一致             | 生成物化と実行漏れ検出                      | WP1で解消、以降は回帰testで維持 |
-| 高忠実度解析への範囲拡大    | Phase 2境界の逸脱              | READMEの「やらないこと」を受入基準に反映    | 逸脱時は停止しエスカレート      |
+| リスク                      | 影響                           | 現在の対策                                                  | 次の判断                                          |
+| --------------------------- | ------------------------------ | ----------------------------------------------------------- | ------------------------------------------------- |
+| 自動修復の暴走              | 誤った修復が下流へ流れる       | patch化、再検証必須、試行上限、保護対象部分木の書き換え却下 | ADR-0019で確定。未知故障への一般化はPhase 3で評価 |
+| lintルールの過剰・過少検出  | 停止過多、または後段発見の再発 | 三値評価、rule IDごとの故障注入fixture                      | WP2で評価済み。判定不能なtopologyは`unknown`      |
+| SPICEモデルの出所           | ライセンス制限、再配布不可     | 外部tool境界、モデルはEvidence metadataのみ                 | ADR-0020で確定。vendorモデルは`unknown`境界のまま |
+| gate matrixとrunnerの再乖離 | 契約と実行の不一致             | 生成物化と実行漏れ検出                                      | WP1で解消、以降は回帰testで維持                   |
+| 高忠実度解析への範囲拡大    | Phase 2境界の逸脱              | READMEの「やらないこと」を受入基準に反映                    | 逸脱時は停止しエスカレート                        |
 
 ## 関連文書
 
@@ -229,5 +229,6 @@ net label中心の投影を、electrical semantics、netlist、ERC結果を変�
 - [`phase1-gates.md`](phase1-gates.md)
 - [`phase1-plan.md`](phase1-plan.md)
 - [`phase1-retrospective.md`](phase1-retrospective.md)
+- [`phase2-retrospective.md`](phase2-retrospective.md)
 - [`golden-tasks.md`](golden-tasks.md)
 - [`../schemas/gate-matrix.schema.json`](../schemas/gate-matrix.schema.json)

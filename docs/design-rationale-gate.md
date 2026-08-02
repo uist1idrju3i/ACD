@@ -50,12 +50,12 @@ coverage対象は次の集合です。いずれも設計判断の結果であり
 
 ## ルール
 
-| rule ID                           | 判定                                                                                                          |
-| --------------------------------- | ------------------------------------------------------------------------------------------------------------- |
-| `rationale-coverage`              | 各subjectに1件以上のrationaleが対応するか。無ければ`fail`                                                     |
-| `rationale-reference-integrity`   | `appliesTo`が既知subjectを指すか。未解決参照は`fail`                                                          |
-| `rationale-assumption-verifiable` | `confirmed`はEvidence引用が必要。`unconfirmed`はTestItemか`tuningNeeded`が必要。どちらも欠ける場合は`unknown` |
-| `rationale-not-evidence`          | `evidenceLinks`および仮定のEvidence参照がrationale idを指していないか。指していれば`fail`                     |
+| rule ID                           | 判定                                                                                                              |
+| --------------------------------- | ----------------------------------------------------------------------------------------------------------------- |
+| `rationale-coverage`              | 各subjectに1件以上のrationaleが対応するか。無ければ`fail`                                                         |
+| `rationale-reference-integrity`   | `appliesTo`が既知subjectを指すか。未解決参照は`fail`                                                              |
+| `rationale-assumption-verifiable` | `confirmed`はEvidence引用が必要。`unconfirmed`はTestItemか`tuningNeeded`が必要。どちらも欠ける場合は`unknown`     |
+| `rationale-not-evidence`          | `evidenceLinks`および仮定のEvidence参照が`rationale:`名前空間を指していないか。参照先が解決するかに関わらず`fail` |
 
 ## verdict
 

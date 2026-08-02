@@ -33,9 +33,11 @@
 12. [`phase2-plan.md`](phase2-plan.md)、[`gates.md`](gates.md)、[`electrical-lint.md`](electrical-lint.md)、
     [`design-rationale-gate.md`](design-rationale-gate.md)、
     [`test-plan-generation.md`](test-plan-generation.md)、[`repair-loop.md`](repair-loop.md)、[`spice-gate.md`](spice-gate.md)、[`schematic-readability.md`](schematic-readability.md)、
+    [`phase2-retrospective.md`](phase2-retrospective.md)、
     [`../schemas/gate-matrix.json`](../schemas/gate-matrix.json) —
     Phase 2実装計画、全Phaseのgate matrix、topology-level electrical lint、設計根拠gate、
-    テスト項目の自動生成、故障注入と修復ループ、nominal SPICE解析、schematic readability、machine-readableなgate契約
+    テスト項目の自動生成、故障注入と修復ループ、nominal SPICE解析、schematic readability、
+    Phase 2の振り返り、machine-readableなgate契約
 13. [`error-taxonomy.md`](error-taxonomy.md) — エラー分類
 14. [`repo-structure.md`](repo-structure.md)、[`tool-contract.md`](tool-contract.md)、
     [`dependency-inventory.md`](dependency-inventory.md)、[`kicad-interop.md`](kicad-interop.md)、
