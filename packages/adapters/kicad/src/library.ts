@@ -54,13 +54,7 @@ export const verifyLibrarySnapshot = (): void => {
   }
 };
 
-export const parseFootprintPads = (footprintName: string): FootprintPad[] => {
-  const entry = snapshotManifest.files.find(
-    (candidate) => candidate.kind === "footprint" && candidate.id === footprintName,
-  );
-  if (!entry) throw new KicadLibraryError(`missing footprint manifest entry ${footprintName}`);
-  const source = snapshotFiles[entry.path as keyof typeof snapshotFiles];
-  if (!source) throw new KicadLibraryError(`missing footprint snapshot ${entry.path}`);
+export const parseFootprintSource = (footprintName: string, source: string): FootprintPad[] => {
   const pads: FootprintPad[] = [];
   let cursor = 0;
   while (true) {
@@ -70,7 +64,8 @@ export const parseFootprintPads = (footprintName: string): FootprintPad[] => {
     const header = block.match(/^\(pad "([^"]+)" ([^\s]+) ([^\s]+)/);
     const at = block.match(/\(at\s+(-?\d+(?:\.\d+)?)\s+(-?\d+(?:\.\d+)?)(?:\s+-?\d+(?:\.\d+)?)?\)/);
     const size = block.match(/\(size\s+(-?\d+(?:\.\d+)?)\s+(-?\d+(?:\.\d+)?)/);
-    const drill = block.match(/\(drill\s+(-?\d+(?:\.\d+)?)/);
+    const hasDrill = /\(drill(?:\s|\))/.test(block);
+    const drill = block.match(/\(drill\s+(-?\d+(?:\.\d+)?)\s*\)/);
     const layersBlock = block.match(/\(layers\s+([^)]*)\)/);
     if (!header || !at || !size || !layersBlock) {
       throw new KicadLibraryError(`unsupported pad construct in ${footprintName}`);
@@ -82,6 +77,12 @@ export const parseFootprintPads = (footprintName: string): FootprintPad[] => {
     }
     if (type !== "smd" && type !== "thru_hole") {
       throw new KicadLibraryError(`unsupported pad type ${type} in ${footprintName}`);
+    }
+    if (hasDrill && !drill) {
+      throw new KicadLibraryError(`unsupported drill construct in ${footprintName}`);
+    }
+    if (type === "thru_hole" && !drill) {
+      throw new KicadLibraryError(`through-hole pad has no supported drill in ${footprintName}`);
     }
     pads.push({
       number,
@@ -98,4 +99,14 @@ export const parseFootprintPads = (footprintName: string): FootprintPad[] => {
   }
   if (pads.length === 0) throw new KicadLibraryError(`footprint ${footprintName} has no pads`);
   return pads;
+};
+
+export const parseFootprintPads = (footprintName: string): FootprintPad[] => {
+  const entry = snapshotManifest.files.find(
+    (candidate) => candidate.kind === "footprint" && candidate.id === footprintName,
+  );
+  if (!entry) throw new KicadLibraryError(`missing footprint manifest entry ${footprintName}`);
+  const source = snapshotFiles[entry.path as keyof typeof snapshotFiles];
+  if (!source) throw new KicadLibraryError(`missing footprint snapshot ${entry.path}`);
+  return parseFootprintSource(footprintName, source);
 };

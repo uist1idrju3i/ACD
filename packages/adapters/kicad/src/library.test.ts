@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { parseFootprintPads, verifyLibrarySnapshot } from "./library.js";
+import { parseFootprintPads, parseFootprintSource, verifyLibrarySnapshot } from "./library.js";
 
 describe("KiCad library snapshot", () => {
   it("verifies pinned hashes and parses official pad geometry", () => {
@@ -30,5 +30,18 @@ describe("KiCad library snapshot", () => {
     expect(() => parseFootprintPads("Unknown_Footprint")).toThrow(
       /missing footprint manifest entry/,
     );
+  });
+
+  it("stops on unsupported oval drill constructs", () => {
+    const footprint = `(footprint "invalid"
+      (layer "F.Cu")
+      (pad "1" thru_hole oval
+        (at 0 0)
+        (size 1.2 1.7)
+        (drill oval 0.8 1.1)
+        (layers "*.Cu" "*.Mask")
+      )
+    )`;
+    expect(() => parseFootprintSource("invalid", footprint)).toThrow(/unsupported drill construct/);
   });
 });

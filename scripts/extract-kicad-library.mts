@@ -102,7 +102,8 @@ const parsePads = (source: string, footprintName: string): Pad[] => {
     const header = block.match(/^\(pad "([^"]+)" ([^\s]+) ([^\s]+)/);
     const at = block.match(/\(at\s+(-?\d+(?:\.\d+)?)\s+(-?\d+(?:\.\d+)?)(?:\s+-?\d+(?:\.\d+)?)?\)/);
     const size = block.match(/\(size\s+(-?\d+(?:\.\d+)?)\s+(-?\d+(?:\.\d+)?)/);
-    const drill = block.match(/\(drill\s+(-?\d+(?:\.\d+)?)/);
+    const hasDrill = /\(drill(?:\s|\))/.test(block);
+    const drill = block.match(/\(drill\s+(-?\d+(?:\.\d+)?)\s*\)/);
     const layersBlock = block.match(/\(layers\s+([^)]*)\)/);
     if (!header || !at || !size || !layersBlock) {
       throw new Error(`unsupported pad construct in ${footprintName}`);
@@ -110,6 +111,12 @@ const parsePads = (source: string, footprintName: string): Pad[] => {
     const [, number, type, shape] = header;
     if (type !== "smd" && type !== "thru_hole") {
       throw new Error(`unsupported pad type ${type} in ${footprintName}`);
+    }
+    if (hasDrill && !drill) {
+      throw new Error(`unsupported drill construct in ${footprintName}`);
+    }
+    if (type === "thru_hole" && !drill) {
+      throw new Error(`through-hole pad has no supported drill in ${footprintName}`);
     }
     pads.push({
       number,
@@ -130,7 +137,7 @@ const parsePads = (source: string, footprintName: string): Pad[] => {
 
 const main = async (): Promise<void> => {
   const fixture = JSON.parse(await readFile(fixturePath, "utf8")) as Fixture;
-  const uniqueMappings = [
+  const uniqueSymbols = [
     ...new Map(
       fixture.mappings.map((mapping) => [
         `${mapping.symbolLibraryId}:${mapping.symbolName}`,
@@ -138,8 +145,16 @@ const main = async (): Promise<void> => {
       ]),
     ).values(),
   ];
+  const uniqueFootprints = [
+    ...new Map(
+      fixture.mappings.map((mapping) => [
+        `${mapping.footprintLibraryId}:${mapping.footprintName}`,
+        mapping,
+      ]),
+    ).values(),
+  ];
   const symbolRequests = [
-    ...uniqueMappings.map((mapping) => ({
+    ...uniqueSymbols.map((mapping) => ({
       symbolLibraryId: mapping.symbolLibraryId,
       symbolName: mapping.symbolName,
     })),
@@ -169,13 +184,15 @@ const main = async (): Promise<void> => {
     });
   }
 
-  for (const mapping of uniqueMappings) {
+  const footprintHashes = new Map<string, string>();
+  for (const mapping of uniqueFootprints) {
     const sourcePath = `/usr/share/kicad/footprints/${mapping.footprintLibraryId}.pretty/${mapping.footprintName}.kicad_mod`;
     const footprintSource = dockerRead(sourcePath);
     parsePads(footprintSource, mapping.footprintName);
     const footprintRelative = `footprints/${mapping.footprintName}.kicad_mod`;
     files[footprintRelative] = footprintSource;
     const contentHash = sha256(footprintSource);
+    footprintHashes.set(`${mapping.footprintLibraryId}:${mapping.footprintName}`, contentHash);
     manifestEntries.push({
       kind: "footprint",
       id: mapping.footprintName,
@@ -187,6 +204,15 @@ const main = async (): Promise<void> => {
       license,
       contentHash,
     });
+  }
+
+  for (const mapping of fixture.mappings) {
+    const contentHash = footprintHashes.get(
+      `${mapping.footprintLibraryId}:${mapping.footprintName}`,
+    );
+    if (!contentHash) {
+      throw new Error(`missing extracted footprint hash for ${mapping.footprintName}`);
+    }
     mapping.provenance = {
       source: "KiCad official libraries",
       version: "10.0.5",
