@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 set -euo pipefail
+trap 'status=$?; echo "::error file=scripts/kicad-spike.sh,line=${BASH_LINENO[0]}::KiCad spike command failed with exit status ${status}"; exit "$status"' ERR
 
 IMAGE="${KICAD_IMAGE:-kicad/kicad:10.0}"
 OUT="${KICAD_OUT:-artifacts/kicad}"
