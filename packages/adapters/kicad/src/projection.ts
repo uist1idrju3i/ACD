@@ -536,7 +536,8 @@ const renderGoldenSchematic = (fixture: Phase1Fixture): string => {
       annotation.text,
       annotation.xMm,
       annotation.yMm,
-      `00000000-0000-4000-8000-${String(4000 + index).padStart(12, "0")}`,
+      // Disjoint band: symbols use 1-999, flags 101+, no-connects 3000+, labels 100*net.
+      `00000000-0000-4000-8000-${String(800000 + index).padStart(12, "0")}`,
     ),
   );
   assertNoPinOverlap(

@@ -64,6 +64,31 @@ describe("schematic layout", () => {
     expect(layout.origins.size).toBe(orphan.parts.length);
   });
 
+  it("stacks symbols clear of the reference and value text bands", () => {
+    const flatExtent = (): SymbolExtent => ({
+      minXMm: -5.08,
+      maxXMm: 5.08,
+      minYMm: 0,
+      maxYMm: 0,
+    });
+    const layout = schematicLayout(golden, flatExtent);
+    const block = layout.blocks[0]!;
+    const [first, second] = block.partIds;
+    const pitch = layout.origins.get(second!)![1] - layout.origins.get(first!)![1];
+    // The renderer draws the value 5 mm below one origin and the reference 5 mm above the next.
+    expect(pitch).toBeGreaterThan(10);
+  });
+
+  it("refuses a layout that runs off the sheet", () => {
+    const oversized = (): SymbolExtent => ({
+      minXMm: -5.08,
+      maxXMm: 5.08,
+      minYMm: -101.6,
+      maxYMm: 101.6,
+    });
+    expect(() => schematicLayout(golden, oversized)).toThrowError(KicadProjectionError);
+  });
+
   it("refuses a layout that overlaps pins of two symbols", () => {
     expect(() =>
       assertNoPinOverlap([

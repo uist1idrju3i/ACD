@@ -16,9 +16,12 @@ semantics、netlist、ERC結果を変えず、幾何配置と非電気的な注�
 1. **機能ブロック単位の配置**：従来は基板placement順の3列grid（`80 + (i % 3) * 70`）でした。
    現在はWP3の設計根拠（`rationale.appliesTo`の`block:<name>`と`part:<id>`）から
    part→functional blockの割当を導き、`requirement.functionalBlocks`の宣言順に
-   ブロック単位で列へ流し込みます。ブロックは列をまたいで分割しません。
+   ブロック単位で列へ流し込みます。ブロックは1列に収まる限り分割せず、収まらない場合だけ次の列へ続けます。
 2. **実寸に基づく間隔**：symbol snapshotのpin座標から各symbolの外形を求め、縦方向に
-   積み上げます。ESP32のような大きなsymbolと0603の受動部品が重なりません。
+   積み上げます。ESP32のような大きなsymbolと0603の受動部品が重なりません。投影は
+   referenceを原点の5mm上、valueを5mm下へ描くため、pin外形をこのtext帯（±6.35mm）まで
+   広げてから積みます。pinが水平一列だけのsymbol（SW_Push等）は、pin外形の高さが0で、
+   広げないと隣のsymbolのreferenceとvalueが重なります。
 3. **ブロック見出し**：各ブロックの先頭に非電気的な`(text ...)`を配置します。
 4. **title block**：要求名、schema version、fixture IDを`(title_block ...)`へ記録します。
    「グラフが正本で回路図は投影である」ことをsheet上にも残します。
@@ -37,6 +40,12 @@ eeschemaは**同一座標のpinを接続**します。読みやすさのため�
 作らないよう、`assertNoPinOverlap`が異なるsymbol同士のpin重なりを検出して
 `KicadProjectionError`で停止します。同一symbol内で座標が一致するpin（library由来の
 stacked pin）は対象外です。
+
+## sheet外への逸脱
+
+PDF／SVG出力は用紙外を黙って切り落とします。列の高さを超えるブロックは次の列へ送り、
+それでも収まらない配置は`KicadProjectionError`で停止します（A4横、右端279.4mm、
+下端190.5mm）。
 
 ## 決定論
 
