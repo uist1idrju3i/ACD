@@ -6,6 +6,7 @@ import {
   type KnowledgeItem,
 } from "./knowledge-lifecycle.js";
 import { GraphCoreError } from "./errors.js";
+import { compareIds } from "./hash.js";
 
 export type KnowledgeApplicationDecisionStatus = "pass" | "fail" | "unknown" | "not-applicable";
 
@@ -97,7 +98,7 @@ export const evaluateKnowledgeApplications = (
 ): KnowledgeApplicationResult => {
   const normalizedContext = normalizeContext(context);
   const decisions = [...items]
-    .sort((left, right) => left.knowledgeId.localeCompare(right.knowledgeId))
+    .sort((left, right) => compareIds(left.knowledgeId, right.knowledgeId))
     .map((item) => decisionForItem(item, normalizedContext));
   const applicable = decisions.filter(
     (decision) =>
@@ -131,7 +132,8 @@ export const recordKnowledgeApplications = (
     if (
       application &&
       (decision.lifecycleStatus !== "adopted" ||
-        (decision.status !== "pass" && decision.status !== "unknown"))
+        (decision.status !== "pass" && decision.status !== "unknown") ||
+        decision.applicationExemption)
     ) {
       throw new GraphCoreError(
         "verification-failed",
