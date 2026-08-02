@@ -41,6 +41,7 @@
 13. [`phase3-plan.md`](phase3-plan.md)、[`knowledge-base.md`](knowledge-base.md)、
     [`../schemas/gate-matrix.json`](../schemas/gate-matrix.json) —
     Phase 3実装計画、知識ループ、fabフィードバック取り込みとgate契約
+    - [Phase 3振り返り](phase3-retrospective.md)：完了条件の実測結果、設計判断、Phase 4への課題
 14. [`error-taxonomy.md`](error-taxonomy.md) — エラー分類
 15. [`repo-structure.md`](repo-structure.md)、[`tool-contract.md`](tool-contract.md)、
     [`dependency-inventory.md`](dependency-inventory.md)、[`kicad-interop.md`](kicad-interop.md)、

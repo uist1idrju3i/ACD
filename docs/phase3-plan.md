@@ -1,6 +1,6 @@
 # Phase 3実装計画
 
-**ステータス：Draft（未着手）**
+**ステータス：Draft（WP1〜WP7実装済み。振り返りは[`phase3-retrospective.md`](phase3-retrospective.md)）**
 
 ## 目的と権威範囲
 
