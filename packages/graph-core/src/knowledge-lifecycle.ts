@@ -123,9 +123,6 @@ const conditionsForFinding = (
   }
   const appliesWhen = [
     condition("fabProfileId", "equals", report.fabProfileId),
-    ...(finding.references.partId
-      ? [condition("partId", "equals", finding.references.partId)]
-      : []),
     ...(finding.references.footprintId
       ? [condition("footprintId", "equals", finding.references.footprintId)]
       : []),

@@ -110,6 +110,11 @@ describe("knowledge lifecycle", () => {
       operator: "equals",
       value: "phase1-golden-2",
     });
+    expect(adopted.appliesWhen).not.toContainEqual({
+      field: "partId",
+      operator: "equals",
+      value: "part:prototype-1",
+    });
     expect(adopted.appliesWhen).toContainEqual({
       field: "fabProfileId",
       operator: "equals",
@@ -123,7 +128,7 @@ describe("knowledge lifecycle", () => {
     expect(
       evaluateKnowledgeApplicability(adopted, {
         fabProfileId: "fab:jlcpcb-class-2layer",
-        partId: "part:r1",
+        partId: "part:prototype-2",
         footprintId: "footprint:r0603",
         ruleId: "mask-sliver-min",
         classification: "mask-clearance",
