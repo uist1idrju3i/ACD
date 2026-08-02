@@ -41,6 +41,9 @@ export type FabProfileRules = {
   rules: FabProfileRule[];
 };
 
+export const maskSliverReproductionCondition = (minimumSliverMm: number): string =>
+  `${minimumSliverMm.toFixed(2)}mm minimum mask sliver`;
+
 export const fabProfileRules: FabProfileRules[] = [
   {
     profileId: "fab:jlcpcb-class-2layer",
@@ -53,7 +56,7 @@ export const fabProfileRules: FabProfileRules[] = [
         classification: "mask-clearance",
         confidence: 0.98,
         minimumSliverMm: 0.3,
-        reproductionConditions: ["2-layer", "HASL", "0.30mm minimum mask sliver"],
+        reproductionConditions: ["2-layer", "HASL", maskSliverReproductionCondition(0.3)],
         appliesWhen: [
           { field: "fabProfileId", operator: "equals", value: "fab:jlcpcb-class-2layer" },
         ],
