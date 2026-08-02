@@ -40,3 +40,12 @@ export const loadSchemaValidator = async (name: SchemaName): Promise<ValidateFun
   const schema = JSON.parse(await readFile(paths[name], "utf8")) as object;
   return ajv.compile(schema);
 };
+
+export const loadKnowledgeItemValidator = async (): Promise<ValidateFunction> => {
+  const ajv = createSchemaValidator();
+  const schema = JSON.parse(await readFile(designGraphSchemaPath, "utf8")) as object & {
+    $id?: string;
+  };
+  ajv.addSchema(schema);
+  return ajv.compile({ $ref: `${schema.$id}#/$defs/knowledgeItem` });
+};

@@ -9,6 +9,7 @@ export type { ACDFabFeedbackReport as FabFeedbackReport } from "./generated/fab-
 export type { RawFinding, Reference } from "./generated/fab-feedback.js";
 export { validatePhase1FixtureReferences } from "./phase1-semantic.js";
 export { loadSchemaValidator } from "./validator.js";
+export { loadKnowledgeItemValidator } from "./validator.js";
 export { evaluatePhysicalEvidence } from "./physical-evidence.js";
 export type { PhysicalEvidenceVerdict } from "./physical-evidence.js";
 export {
