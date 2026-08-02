@@ -99,6 +99,8 @@ const unificationKey = (
 
 const severityRank = (severity: RawFinding["severityReported"]): number =>
   ({ unknown: 0, info: 1, low: 2, medium: 3, high: 4, critical: 5 })[severity];
+const compareCodeUnits = (left: string, right: string): number =>
+  left < right ? -1 : left > right ? 1 : 0;
 
 const assertSourceProvenance = (report: FabFeedbackReport): void => {
   if (
@@ -214,8 +216,8 @@ export const intakeFabFeedback = (
   for (const finding of report.rawFindings) {
     assertReferences(finding, index);
     const derived = deriveFinding(finding, profile);
-    const hasEntityReference = Object.entries(finding.references).some(
-      ([kind, value]) => kind !== "coordinate" && value !== undefined,
+    const hasEntityReference = ["partId", "netId", "footprintId"].some(
+      (kind) => finding.references[kind as keyof typeof finding.references] !== undefined,
     );
     const isUnknown =
       !hasEntityReference ||
@@ -253,7 +255,7 @@ export const intakeFabFeedback = (
       if (result.verdict === "unknown") existing.verdict = "unknown";
       existing.originalText = [existing.originalText, result.originalText]
         .filter((text, index, texts) => texts.indexOf(text) === index)
-        .sort((left, right) => left.localeCompare(right))
+        .sort(compareCodeUnits)
         .join(" / ");
     } else {
       findingsByKey.set(key, result);
@@ -261,7 +263,7 @@ export const intakeFabFeedback = (
   }
 
   const findings = [...findingsByKey.values()].sort((left, right) =>
-    left.findingId.localeCompare(right.findingId),
+    compareCodeUnits(left.findingId, right.findingId),
   );
   const unknownFindingIds = findings
     .filter((finding) => finding.verdict === "unknown")

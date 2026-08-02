@@ -6,7 +6,7 @@
   "source": {
     "kind": "fixture",
     "locator": "fixtures/phase3/fab-report-unification.json",
-    "contentHash": "sha256:143da7b540328837ed360af227318013f666e09e0c68642eae5b5120cfccb135",
+    "contentHash": "sha256:f64f0e071ba5cb6adcae14b2bece221145746ff9a8205dbcd635af1f73ca199a",
     "fixtureDerived": true,
     "fixtureId": "fixture:fab-report-unification"
   },
@@ -16,27 +16,27 @@
   },
   "rawReport": {
     "contentType": "text/plain",
-    "content": "JLCPCB DFM REPORT - DUPLICATE FINDING REPRODUCTION\n[UNIFY-1] Solder mask sliver below minimum near R1 pad 1.\n[UNIFY-2] R1 pad 1 mask web is too narrow for the selected profile.\nBoth findings refer to the same rule and target; this is fixture data only.",
-    "contentHash": "sha256:a33958f181bf41706fe4b3b15a49125923c636461a9dbfed6a2fde7d78579fc4"
+    "content": "JLCPCB DFM REPORT - DUPLICATE FINDING REPRODUCTION\n[UNIFY-1] Solder mask sliver below minimum near J1 pad A1.\n[UNIFY-2] J1 pad A1 mask web is too narrow for the selected profile.\nBoth findings refer to the same rule and target; this is fixture data only.",
+    "contentHash": "sha256:6f0b81e3921208215fcfc5b6ff2130cd0b2deacc668fabd7870ab194e0ea0ccb"
   },
   "rawFindings": [
     {
       "findingId": "UNIFY-1",
-      "originalText": "Solder mask sliver below minimum near R1 pad 1.",
+      "originalText": "Solder mask sliver below minimum near J1 pad A1.",
       "severityReported": "high",
       "references": {
-        "partId": "part:r1",
-        "footprintId": "footprint:Resistor_SMD:R_0603_1608Metric",
+        "partId": "part:j1",
+        "footprintId": "footprint:Connector_USB:USB_C_Receptacle_GCT_USB4135-GF-A_6P_TopMnt_Horizontal",
         "ruleId": "mask-sliver-min"
       }
     },
     {
       "findingId": "UNIFY-2",
-      "originalText": "R1 pad 1 mask web is too narrow for the selected profile.",
+      "originalText": "J1 pad A1 mask web is too narrow for the selected profile.",
       "severityReported": "medium",
       "references": {
-        "partId": "part:r1",
-        "footprintId": "footprint:Resistor_SMD:R_0603_1608Metric",
+        "partId": "part:j1",
+        "footprintId": "footprint:Connector_USB:USB_C_Receptacle_GCT_USB4135-GF-A_6P_TopMnt_Horizontal",
         "ruleId": "mask-sliver-min"
       }
     }

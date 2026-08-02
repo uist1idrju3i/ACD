@@ -176,6 +176,38 @@ describe("fab feedback intake", () => {
     expect(result.findings[0]?.verdict).toBe("unknown");
   });
 
+  it("does not treat a rule-only reference as an entity reference", () => {
+    const result = intakeFabFeedback(
+      report({
+        rawFindings: [
+          {
+            ...report().rawFindings[0]!,
+            references: { ruleId: "mask-sliver-min" },
+          },
+        ],
+      }),
+      index,
+    );
+    expect(result.findings[0]?.verdict).toBe("unknown");
+  });
+
+  it("sorts finding IDs by code units independent of locale", () => {
+    const result = intakeFabFeedback(
+      report({
+        rawFindings: [
+          {
+            ...report().rawFindings[0]!,
+            findingId: "\u00e9",
+            references: { ...report().rawFindings[0]!.references, coordinate: { xMm: 1, yMm: 2 } },
+          },
+          { ...report().rawFindings[0]!, findingId: "z" },
+        ],
+      }),
+      index,
+    );
+    expect(result.findings.map((finding) => finding.findingId)).toEqual(["z", "\u00e9"]);
+  });
+
   it("does not unify distinct unknown findings", () => {
     const result = intakeFabFeedback(
       report({
