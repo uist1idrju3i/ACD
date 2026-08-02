@@ -9,6 +9,7 @@
 export interface ACDLibraryOverlayPatch {
   id: string;
   type: "LibraryOverlayPatch";
+  patchId: string;
   revision: number;
   libraryRevision: string;
   snapshotManifestHash: string;
@@ -35,10 +36,12 @@ export interface ACDLibraryOverlayPatch {
   ];
   content: string;
   contentHash: string;
+  materializedContentHash?: string;
   status: "candidate" | "reviewed" | "adopted" | "rejected";
   scope: "project-local" | "library-wide";
   failureReason?: string;
   approvalId?: string;
+  previousRevisionId?: string;
   verification?: {
     geometry: "passed" | "failed";
     reopen: "passed" | "failed" | "blocked";

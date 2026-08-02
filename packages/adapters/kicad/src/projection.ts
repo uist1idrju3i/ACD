@@ -5,6 +5,12 @@ import type { Phase1Fixture } from "@acd/schema";
 import { projectGraphToKicad } from "./graph-projection.js";
 import { parseFootprintPads, verifyLibrarySnapshot } from "./library.js";
 import { snapshotFiles, snapshotManifest } from "./library-snapshot.js";
+import {
+  officialLibraryRevision,
+  resolveLibraryRevision,
+  snapshotManifestHash,
+  type LibraryOverlayPatch,
+} from "./library-patch.js";
 import { goldenLibrarySymbols, smokeLibrarySymbols } from "./symbol-library.js";
 import { KicadProjectionError } from "./errors.js";
 import { placeFixture } from "./placement.js";
@@ -730,12 +736,45 @@ export type KicadProjection = {
   boardPath: string;
 };
 
+export type KicadProjectionOptions = {
+  libraryRevision?: string;
+  patches?: LibraryOverlayPatch[];
+  allowUnadoptedForVerification?: boolean;
+};
+
 export const projectToKicad = async (
   graph: DesignGraph | Phase1Fixture,
   directory: string,
+  options: KicadProjectionOptions = {},
 ): Promise<KicadProjection> => {
+  const libraryRevision = options.libraryRevision ?? officialLibraryRevision();
+  const patch = resolveLibraryRevision(
+    libraryRevision,
+    options.patches ?? [],
+    options.allowUnadoptedForVerification ?? false,
+  );
   if (!isPhase1Fixture(graph)) {
     const projection = await projectGraphToKicad(graph, directory);
+    await writeFile(
+      join(directory, "library-revision.json"),
+      `${JSON.stringify(
+        {
+          libraryRevision,
+          snapshotManifestHash: patch?.snapshotManifestHash ?? snapshotManifestHash(),
+          overlayPatchId: patch?.id ?? null,
+        },
+        null,
+        2,
+      )}\n`,
+    );
+    if (patch) {
+      await mkdir(join(directory, "library-overlays"), { recursive: true });
+      await writeFile(
+        join(directory, "library-overlays", `${patch.footprintId}.kicad_mod`),
+        patch.content,
+        "utf8",
+      );
+    }
     return {
       directory,
       projectPath: projection.projectPath,
@@ -744,6 +783,26 @@ export const projectToKicad = async (
     };
   }
   await mkdir(directory, { recursive: true });
+  await writeFile(
+    join(directory, "library-revision.json"),
+    `${JSON.stringify(
+      {
+        libraryRevision,
+        snapshotManifestHash: patch?.snapshotManifestHash ?? snapshotManifestHash(),
+        overlayPatchId: patch?.id ?? null,
+      },
+      null,
+      2,
+    )}\n`,
+  );
+  if (patch) {
+    await mkdir(join(directory, "library-overlays"), { recursive: true });
+    await writeFile(
+      join(directory, "library-overlays", `${patch.footprintId}.kicad_mod`),
+      patch.content,
+      "utf8",
+    );
+  }
   const projectPath = join(directory, "design.kicad_pro");
   const schematicPath = join(directory, "design.kicad_sch");
   const boardPath = join(directory, "design.kicad_pcb");
