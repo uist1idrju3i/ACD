@@ -97,6 +97,9 @@ const unificationKey = (
   classification: FabFeedbackFinding["classification"],
 ): string => [classification, ...referenceValues(finding.references)].join("|");
 
+const severityRank = (severity: RawFinding["severityReported"]): number =>
+  ({ unknown: 0, info: 1, low: 2, medium: 3, high: 4, critical: 5 })[severity];
+
 const assertSourceProvenance = (report: FabFeedbackReport): void => {
   if (
     report.source.kind === "fixture" &&
@@ -167,11 +170,14 @@ export const resolveFabProfileRule = (
   profile: FabProfileRules,
 ): FabProfileRules["rules"][number] | undefined => {
   const normalizedText = finding.originalText.toLowerCase();
-  return finding.references.ruleId
-    ? profile.rules.find((candidate) => candidate.ruleId === finding.references.ruleId)
-    : profile.rules.find((candidate) =>
-        candidate.textPatterns.some((pattern) => normalizedText.includes(pattern)),
-      );
+  if (finding.references.ruleId) {
+    return profile.rules.find((candidate) => candidate.ruleId === finding.references.ruleId);
+  }
+  const matches = profile.rules.filter((candidate) =>
+    candidate.textPatterns.some((pattern) => normalizedText.includes(pattern)),
+  );
+  const classifications = new Set(matches.map((candidate) => candidate.classification));
+  return classifications.size === 1 ? matches[0] : undefined;
 };
 
 const deriveFinding = (
@@ -208,8 +214,13 @@ export const intakeFabFeedback = (
   for (const finding of report.rawFindings) {
     assertReferences(finding, index);
     const derived = deriveFinding(finding, profile);
+    const hasEntityReference = Object.entries(finding.references).some(
+      ([kind, value]) => kind !== "coordinate" && value !== undefined,
+    );
     const isUnknown =
-      derived.classification === "unknown" || derived.confidence < profile.confidenceFloor;
+      !hasEntityReference ||
+      derived.classification === "unknown" ||
+      derived.confidence < profile.confidenceFloor;
     const result: FabFeedbackFinding = {
       findingId: finding.findingId,
       originalText: finding.originalText,
@@ -227,7 +238,23 @@ export const intakeFabFeedback = (
         : unificationKey(finding, derived.classification);
     const existing = findingsByKey.get(key);
     if (existing) {
-      existing.duplicateFindingIds.push(result.findingId);
+      const allFindingIds = [
+        existing.findingId,
+        ...existing.duplicateFindingIds,
+        result.findingId,
+      ].sort();
+      const primaryFindingId = allFindingIds[0]!;
+      existing.findingId = primaryFindingId;
+      existing.duplicateFindingIds = allFindingIds.slice(1);
+      existing.severityReported =
+        severityRank(result.severityReported) >= severityRank(existing.severityReported)
+          ? result.severityReported
+          : existing.severityReported;
+      if (result.verdict === "unknown") existing.verdict = "unknown";
+      existing.originalText = [existing.originalText, result.originalText]
+        .filter((text, index, texts) => texts.indexOf(text) === index)
+        .sort((left, right) => left.localeCompare(right))
+        .join(" / ");
     } else {
       findingsByKey.set(key, result);
     }

@@ -122,6 +122,60 @@ describe("fab feedback intake", () => {
     expect(result.findings[0]?.classification).toBe("spacing");
   });
 
+  it("widens verification when text matches rules with different classifications", () => {
+    const result = intakeFabFeedback(
+      report({
+        rawFindings: [
+          {
+            ...report().rawFindings[0]!,
+            originalText: "mask sliver and copper clearance below minimum",
+            references: { partId: "part:r1" },
+          },
+        ],
+      }),
+      index,
+    );
+    expect(result.verdict).toBe("unknown");
+    expect(result.findings[0]?.classification).toBe("unknown");
+  });
+
+  it("merges duplicate severity and unknown status deterministically", () => {
+    const duplicate = report({
+      rawFindings: [
+        {
+          ...report().rawFindings[0]!,
+          findingId: "F-2",
+          severityReported: "low",
+        },
+        {
+          ...report().rawFindings[0]!,
+          findingId: "F-1",
+          severityReported: "high",
+        },
+      ],
+    });
+    const result = intakeFabFeedback(duplicate, index);
+    expect(result.findings[0]?.severityReported).toBe("high");
+    expect(result.findings[0]?.duplicateFindingIds).toEqual(["F-2"]);
+    expect(result.findings[0]?.originalText).toContain("Solder mask sliver");
+  });
+
+  it("does not pass findings without an entity reference", () => {
+    const result = intakeFabFeedback(
+      report({
+        rawFindings: [
+          {
+            ...report().rawFindings[0]!,
+            references: { coordinate: { xMm: 1, yMm: 2 } },
+          },
+        ],
+      }),
+      index,
+    );
+    expect(result.verdict).toBe("unknown");
+    expect(result.findings[0]?.verdict).toBe("unknown");
+  });
+
   it("does not unify distinct unknown findings", () => {
     const result = intakeFabFeedback(
       report({
