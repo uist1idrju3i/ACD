@@ -8,12 +8,20 @@ import {
   projectToKicad,
 } from "../packages/adapters/kicad/src/index.js";
 import {
+  applyFixturePatch,
   buildTestPlan,
   evaluateDesignRationale,
+  evaluateFixtureGates,
   failedFindings,
   lintElectricalTopology,
+  recordedProposer,
+  repairLoopEvidence,
+  runRepairLoop,
+  unresolvedFindings,
   unresolvedRationaleFindings,
   unresolvedTestPlanFindings,
+  type FixturePatchOperation,
+  type RecordedProposal,
 } from "../packages/graph-core/src/index.js";
 import {
   gateByOrder,
@@ -182,6 +190,46 @@ try {
     measurementItems: testPlan.items.filter((item) => item.method === "measurement").length,
     testPlanHash: hash(JSON.stringify(testPlan.items)),
     artifact: "test-plan.json",
+  });
+
+  const repairCases = JSON.parse(
+    await readFile(join(root, "fixtures/phase2/repair-cases.json"), "utf8"),
+  ) as {
+    cases: { caseId: string; injection: FixturePatchOperation[]; expectedRuleIds: string[] }[];
+  };
+  const recordings = JSON.parse(
+    await readFile(join(root, "fixtures/phase2/repair-recordings.json"), "utf8"),
+  ) as { proposals: RecordedProposal[] };
+  const proposer = recordedProposer(recordings.proposals);
+  const repairs = repairCases.cases.map((entry) => {
+    const injected = applyFixturePatch(fixture, entry.injection);
+    const detected = unresolvedFindings(evaluateFixtureGates(injected));
+    const missed = entry.expectedRuleIds.filter(
+      (ruleId) => !detected.some((finding) => finding.ruleId === ruleId),
+    );
+    if (missed.length > 0) {
+      throw new Error(
+        `verification-failed: ${entry.caseId} was not detected by ${missed.join(", ")}`,
+      );
+    }
+    const result = runRepairLoop({ fixture: injected, proposer });
+    if (result.status !== "repaired") {
+      throw new Error(
+        `verification-failed: ${entry.caseId} ${result.status}: ${result.stopReason ?? ""}`,
+      );
+    }
+    if (unresolvedFindings(evaluateFixtureGates(result.fixture)).length > 0) {
+      throw new Error(`verification-failed: ${entry.caseId} still has unresolved findings`);
+    }
+    return { caseId: entry.caseId, detected: detected.length, ...repairLoopEvidence(result) };
+  });
+  await writeFile(join(artifactRoot, "repair-loop.json"), `${JSON.stringify(repairs, null, 2)}\n`);
+  pass(17, {
+    cases: repairs.length,
+    repaired: repairs.filter((entry) => entry.status === "repaired").length,
+    rejectedProposals: repairs.reduce((total, entry) => total + Number(entry.rejected ?? 0), 0),
+    recordingsHash: hash(JSON.stringify(recordings.proposals)),
+    artifact: "repair-loop.json",
   });
 
   await projectToKicad(fixture, projectRoot);

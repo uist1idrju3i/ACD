@@ -195,6 +195,19 @@
       "passCondition": "全acceptance criteriaに検証方法が割り当たり、rationaleが宣言したTestItemが生成され、各TestItemの方法・条件・合格基準が解決している",
       "onFailure": "`verification-failed`で停止し、未検証の要求・未生成のTestItem・未解決の合格基準を記録",
       "errorCodes": ["verification-failed"]
+    },
+    {
+      "order": 17,
+      "id": "gate:repair-loop",
+      "name": "Fault injection and repair loop",
+      "phase": 2,
+      "runsAfter": "gate:test-plan",
+      "status": "implemented",
+      "appliesTo": ["golden"],
+      "inputs": "注入した設計欠陥のcase、記録済み修復提案（hash固定）、Gate 14〜16のrule",
+      "passCondition": "各caseで欠陥が期待rule IDで検出され、決定論的gateが受理したpatchだけで全findingが解消し、反復上限内で収束する",
+      "onFailure": "`verification-failed`で停止し、収束しないcase・未解消のfinding・却下理由を記録",
+      "errorCodes": ["verification-failed", "convergence-failure", "stale-result"]
     }
   ]
 }

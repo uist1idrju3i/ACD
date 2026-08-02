@@ -8,6 +8,7 @@ export * from "./event-log.js";
 export * from "./hash.js";
 export * from "./patch.js";
 export * from "./repository.js";
+export * from "./repair-loop.js";
 export * from "./semantic.js";
 export * from "./test-items.js";
 export * from "./verification.js";

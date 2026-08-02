@@ -1,6 +1,6 @@
 # Phase 2実装計画
 
-**ステータス：Draft（WP1〜WP4実装済み、WP5以降は未着手）**
+**ステータス：Draft（WP1〜WP5実装済み、WP6以降は未着手）**
 
 ## 目的と権威範囲
 
@@ -127,7 +127,8 @@ footprint／MPN不整合が後段で発見されました。KiCad ERCはこれ�
 
 ### WP5：故障注入と自動検出・自動修復ループ
 
-**状態：未着手。READMEの完了条件そのもの。**
+**状態：実装済み。** 契約は[`repair-loop.md`](repair-loop.md)、
+実行はgate 17（`gate:repair-loop`、`runsAfter: gate:test-plan`）。
 
 **作業**
 
@@ -142,10 +143,19 @@ footprint／MPN不整合が後段で発見されました。KiCad ERCはこれ�
 - 修復できない場合はjidoka停止し、停止理由と再開条件を記録する。
 - 修復ループが無限ループにならず、試行上限と収束条件を持つ。
 
-**未決定**
+**決定済み**
 
-- 修復候補の生成方式（決定論的ルールベースか、LLM提案＋決定論的検証か）はADRで決める。
-  いずれの場合も合否判定は決定論的gateが行い、LLM出力を合格証拠にしない。
+- 修復候補の生成方式はB案（LLM提案＋決定論的gate判定）。
+  [ADR-0019](adr/0019-repair-loop-llm-proposal-with-deterministic-validation.md)。
+  CIはoffline再現可能な記録済み提案（hash固定）で回し、live LLM呼び出しはopt-in。
+
+**実装で判明した事項**
+
+- gateの合否だけでは修復を受理できません。LED過電流に対して「LEDの順電圧を高く主張する」
+  候補は電流計算を合格範囲へ入れてしまいます。基板は何も直っていないため、datasheet由来parameter、
+  part provenance、order-relevantなBOM状態の書き換えを受理前に却下します。
+- proposerのルックアップキーは未解決findingのhashです。case名やfixture名で引くと、修復側に
+  正解を先に渡すことになります。
 
 ### WP6：SPICEゲート（忠実度ラダー レベル2〜3）
 

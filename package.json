@@ -23,6 +23,7 @@
     "kicad:library:verify": "tsx scripts/verify-kicad-library.mts",
     "phase1:smoke": "pnpm kicad:library:verify && pnpm --filter @acd/adapter-kicad build && tsx scripts/phase1-smoke.mts",
     "phase1:golden": "pnpm kicad:library:verify && pnpm --filter @acd/adapter-kicad build && tsx scripts/phase1-golden.mts",
+    "phase2:record-repairs": "tsx scripts/phase2-record-repairs.mts",
     "phase1:gate13": "tsx scripts/phase1-gate13.mts"
   },
   "devDependencies": {
