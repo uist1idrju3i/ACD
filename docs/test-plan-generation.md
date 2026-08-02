@@ -29,27 +29,31 @@ testは[`../packages/graph-core/src/test-items.test.ts`](../packages/graph-core/
 
 ## 生成元
 
-| 生成元                          | 生成されるitem                                           |
-| ------------------------------- | -------------------------------------------------------- |
-| 要求のacceptance criteria       | `inspection` item（`gate:pre-order-readiness`が判定）    |
-| 要求の`electrical.maxCurrentMa` | 総供給電流のmeasurement item                             |
-| `nets[].nominalVoltageV`        | rail電圧のmeasurement item（±5 %）                       |
-| LEDと直列抵抗のtopology         | 順電流のmeasurement item（±20 %かつ定格内）              |
-| regulatorの`outputVoltageV`     | 負荷時出力電圧のmeasurement item（±3 %）                 |
-| Gate 14の各lint rule            | `analysis` item（`gate:electrical-lint`が判定）          |
-| rationaleの`unconfirmed`な仮定  | measurement item。`tuningNeeded`なら調整を許す条件で生成 |
+| 生成元                          | 生成されるitem                                                  |
+| ------------------------------- | --------------------------------------------------------------- |
+| 要求のacceptance criteria       | `acceptanceVerifiedBy`がgateを宣言した項目のみ`inspection` item |
+| 要求の`electrical.maxCurrentMa` | 総供給電流のmeasurement item                                    |
+| `nets[].nominalVoltageV`        | rail電圧のmeasurement item（±5 %）                              |
+| LEDと直列抵抗のtopology         | 順電流のmeasurement item（±20 %かつ定格内）                     |
+| regulatorの`outputVoltageV`     | 負荷時出力電圧のmeasurement item（±3 %）                        |
+| Gate 14の各lint rule            | `analysis` item（`gate:electrical-lint`が判定）                 |
+| rationaleの`unconfirmed`な仮定  | measurement item。`tuningNeeded`なら調整を許す条件で生成        |
 
 LED電流はGate 14と同じtopology trace（`ledBranchCurrents`）から導出します。lintの判定と
 テスト項目の期待値が別実装で乖離しないようにするためです。
 
+acceptance criterionの検証方法は要求側が`acceptanceVerifiedBy`（criterionとindex整合）で
+宣言します。生成器が自分で作ったitemをcoverageの証拠にすると、計画が自身の網羅性を
+証明してしまうためです。未宣言のcriterionは`unknown`として検証を広げます。
+
 ## ルールとverdict
 
-| rule ID                          | 判定                                                                     |
-| -------------------------------- | ------------------------------------------------------------------------ |
-| `test-item-requirement-coverage` | 各acceptance criterionに検証方法が割り当たるか。無ければ`fail`（未検証） |
-| `test-item-assumption-coverage`  | rationaleが宣言した`testItemId`が生成されたか。無ければ`fail`            |
-| `test-item-completeness`         | 合格基準が解決したか。導出不能なら`unknown`                              |
-| `test-item-unique-id`            | idが一意か。重複は`fail`                                                 |
+| rule ID                          | 判定                                                                                                                                  |
+| -------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------- |
+| `test-item-requirement-coverage` | acceptance criterionが`acceptanceVerifiedBy`でgateまたはtest itemを宣言しているか。未宣言は`unknown`、解決できない宣言は`fail`        |
+| `test-item-assumption-coverage`  | `unconfirmed`な仮定が生成済みtest itemを名指ししているか、`confirmed`な仮定がrationale以外のevidenceを持つか。満たさなければ`unknown` |
+| `test-item-completeness`         | 合格基準が解決したか。導出不能なら`unknown`                                                                                           |
+| `test-item-unique-id`            | idが一意か。重複は`fail`                                                                                                              |
 
 集約はGate 14／15と同じで、`fail`があれば`fail`、無くても`unknown`があれば`blocked`です。
 いずれも`verification-failed`で停止します。

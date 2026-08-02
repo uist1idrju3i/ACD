@@ -17,6 +17,11 @@ import type { Phase1Fixture } from "../packages/schema/src/generated/phase1-fixt
  */
 
 const root = resolve(import.meta.dirname, "..");
+const gateIds = (
+  JSON.parse(await readFile(join(root, "schemas/gate-matrix.json"), "utf8")) as {
+    gates: { id: string }[];
+  }
+).gates.map((gate) => gate.id);
 const golden = JSON.parse(
   await readFile(join(root, "fixtures/phase1/golden-esp32.json"), "utf8"),
 ) as Phase1Fixture;
@@ -121,7 +126,7 @@ const cases: Case[] = [
 
 const promptHashOf = (fixture: Phase1Fixture): string =>
   sha256(
-    unresolvedFindings(evaluateFixtureGates(fixture)).map((finding) => [
+    unresolvedFindings(evaluateFixtureGates(fixture, gateIds)).map((finding) => [
       finding.ruleId,
       finding.entity,
       finding.status,
@@ -133,7 +138,7 @@ const summary: Record<string, unknown>[] = [];
 
 for (const entry of cases) {
   let fixture = applyFixturePatch(golden, entry.injection);
-  const detected = unresolvedFindings(evaluateFixtureGates(fixture));
+  const detected = unresolvedFindings(evaluateFixtureGates(fixture, gateIds));
   if (detected.length === 0) throw new Error(`${entry.caseId} injected no detectable defect`);
   const missing = entry.expectedRuleIds.filter(
     (ruleId) => !detected.some((finding) => finding.ruleId === ruleId),
@@ -144,11 +149,11 @@ for (const entry of cases) {
   const recorded: string[] = [];
   while (remaining.length > 0) {
     const promptHash = promptHashOf(fixture);
-    const before = unresolvedFindings(evaluateFixtureGates(fixture)).length;
+    const before = unresolvedFindings(evaluateFixtureGates(fixture, gateIds)).length;
     let applied: Candidate | undefined;
     for (const candidate of remaining) {
       const after = unresolvedFindings(
-        evaluateFixtureGates(applyFixturePatch(fixture, candidate.operations)),
+        evaluateFixtureGates(applyFixturePatch(fixture, candidate.operations), gateIds),
       ).length;
       recordings.push({
         proposalId: candidate.proposalId,
@@ -174,7 +179,7 @@ for (const entry of cases) {
     recorded.push(applied.proposalId);
     remaining.splice(remaining.indexOf(applied), 1);
   }
-  const left = unresolvedFindings(evaluateFixtureGates(fixture));
+  const left = unresolvedFindings(evaluateFixtureGates(fixture, gateIds));
   if (left.length > 0) {
     throw new Error(`${entry.caseId} is not repairable by its candidates: ${left.length} left`);
   }

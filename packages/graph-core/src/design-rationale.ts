@@ -113,7 +113,6 @@ const assumptionsVerifiable = (fixture: Fixture): RuleFinding[] =>
  * Quoting a rationale id as evidence is rejected regardless of who authored it.
  */
 const notEvidence = (fixture: Fixture): RuleFinding[] => {
-  const rationaleIds = new Set(rationales(fixture).map((rationale) => rationale.id));
   const cited = (rationale: Rationale): string[] => [
     ...(rationale.evidenceLinks ?? []),
     ...rationale.assumptions.flatMap((assumption) =>
@@ -121,7 +120,9 @@ const notEvidence = (fixture: Fixture): RuleFinding[] => {
     ),
   ];
   return rationales(fixture).map((rationale) => {
-    const offending = cited(rationale).filter((link) => rationaleIds.has(link));
+    // The namespace decides, not resolvability: an unresolvable `rationale:` link is still
+    // a rationale quoted as evidence.
+    const offending = cited(rationale).filter((link) => link.startsWith("rationale:"));
     return {
       ruleId: "rationale-not-evidence",
       status: offending.length === 0 ? ("pass" as const) : ("fail" as const),

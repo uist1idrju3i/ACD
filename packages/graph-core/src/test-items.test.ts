@@ -16,11 +16,16 @@ const goldenPath = fileURLToPath(
 );
 const golden = JSON.parse(await readFile(goldenPath, "utf8")) as Phase1Fixture;
 
+const gateMatrixPath = fileURLToPath(new URL("../../../schemas/gate-matrix.json", import.meta.url));
+const gateIds = (
+  JSON.parse(await readFile(gateMatrixPath, "utf8")) as { gates: { id: string }[] }
+).gates.map((gate) => gate.id);
+
 const clone = (fixture: Phase1Fixture): Phase1Fixture =>
   JSON.parse(JSON.stringify(fixture)) as Phase1Fixture;
 
 const plan = (fixture: Phase1Fixture): ReturnType<typeof buildTestPlan> =>
-  buildTestPlan(fixture, electricalLintRuleIds);
+  buildTestPlan(fixture, electricalLintRuleIds, gateIds);
 
 const item = (items: TestItem[], id: string): TestItem => {
   const found = items.find((candidate) => candidate.id === id);
@@ -74,24 +79,33 @@ describe("test item generation", () => {
     expect(item(items, "test:status-led-visibility").conditions).toContain("tuning permitted");
   });
 
-  it("reports an acceptance criterion with no verification method as unverified", () => {
-    const stripped = clone(golden);
-    stripped.requirement.acceptanceCriteria = [
-      golden.requirement.acceptanceCriteria[0],
-    ] as Phase1Fixture["requirement"]["acceptanceCriteria"];
-    const report = plan(stripped);
-    expect(report.verdict).toBe("pass");
-
-    const items = generateTestItems(stripped, electricalLintRuleIds).filter(
-      (generated) => !generated.id.startsWith("test:acceptance-"),
-    );
-    const findings = report.findings.filter(
-      (finding) => finding.ruleId === "test-item-requirement-coverage",
-    );
-    expect(findings).toHaveLength(1);
+  it("blocks instead of certifying an acceptance criterion with no declared verification", () => {
+    const undeclared = clone(golden);
+    delete undeclared.requirement.acceptanceVerifiedBy;
+    const report = plan(undeclared);
+    expect(report.verdict).toBe("blocked");
     expect(
-      items.every((generated) => !generated.sources.includes("requirement:acceptanceCriteria[0]")),
-    ).toBe(true);
+      report.findings.filter(
+        (finding) =>
+          finding.ruleId === "test-item-requirement-coverage" && finding.status === "unknown",
+      ),
+    ).toHaveLength(golden.requirement.acceptanceCriteria.length);
+    expect(
+      generateTestItems(undeclared, electricalLintRuleIds).some((generated) =>
+        generated.id.startsWith("test:acceptance-"),
+      ),
+    ).toBe(false);
+  });
+
+  it("fails when the declared verification is neither a gate nor a generated item", () => {
+    const dangling = clone(golden);
+    dangling.requirement.acceptanceVerifiedBy = [
+      "test:never-generated",
+      "gate:component-selection",
+      "gate:routing",
+    ];
+    const failing = plan(dangling).findings.filter((finding) => finding.status === "fail");
+    expect(failing.map((finding) => finding.ruleId)).toEqual(["test-item-requirement-coverage"]);
   });
 
   it("blocks when a generated item has no resolvable acceptance band", () => {
@@ -108,21 +122,57 @@ describe("test item generation", () => {
     ).toHaveLength(1);
   });
 
-  it("fails when a rationale names a test item the generator does not produce", () => {
-    const dangling = clone(golden);
-    const rationale = dangling.rationales?.find(
+  it("blocks when a confirmed assumption records no evidence", () => {
+    const unsupported = clone(golden);
+    const rationale = unsupported.rationales?.find(
+      (candidate) => candidate.id === "rationale:board-and-supply",
+    );
+    if (!rationale) throw new Error("fixture has no rationale:board-and-supply");
+    rationale.assumptions = [{ statement: "load fits the supply", status: "confirmed" }];
+    const report = plan(unsupported);
+    expect(report.verdict).toBe("blocked");
+    expect(
+      report.findings.filter(
+        (finding) =>
+          finding.ruleId === "test-item-assumption-coverage" && finding.status === "unknown",
+      ),
+    ).toHaveLength(1);
+  });
+
+  it("blocks when an open assumption names no test item", () => {
+    const unnamed = clone(golden);
+    const rationale = unnamed.rationales?.find(
+      (candidate) => candidate.id === "rationale:i2c-sensor",
+    );
+    if (!rationale) throw new Error("fixture has no rationale:i2c-sensor");
+    rationale.assumptions = [{ statement: "rise time", status: "unconfirmed" }];
+    const report = plan(unnamed);
+    expect(report.verdict).toBe("blocked");
+    expect(
+      report.findings.filter(
+        (finding) =>
+          finding.ruleId === "test-item-assumption-coverage" && finding.status === "unknown",
+      ),
+    ).toHaveLength(1);
+  });
+
+  it("keeps a fallback test item id stable when an earlier assumption is confirmed", () => {
+    const withFallbacks = clone(golden);
+    const rationale = withFallbacks.rationales?.find(
       (candidate) => candidate.id === "rationale:i2c-sensor",
     );
     if (!rationale) throw new Error("fixture has no rationale:i2c-sensor");
     rationale.assumptions = [
-      {
-        statement: "confirmed elsewhere",
-        status: "confirmed",
-        evidenceLink: "gate:electrical-lint",
-      },
-      { statement: "rise time", status: "confirmed", testItemId: "test:never-generated" },
+      { statement: "first", status: "unconfirmed" },
+      { statement: "second", status: "unconfirmed" },
     ];
-    const failing = plan(dangling).findings.filter((finding) => finding.status === "fail");
-    expect(failing.map((finding) => finding.ruleId)).toEqual(["test-item-assumption-coverage"]);
+    const before = generateTestItems(withFallbacks, electricalLintRuleIds).map((entry) => entry.id);
+    rationale.assumptions = [
+      { statement: "first", status: "confirmed", evidenceLink: "gate:electrical-lint" },
+      { statement: "second", status: "unconfirmed" },
+    ];
+    const after = generateTestItems(withFallbacks, electricalLintRuleIds).map((entry) => entry.id);
+    expect(before).toContain("test:i2c-sensor-2");
+    expect(after).toContain("test:i2c-sensor-2");
   });
 });
