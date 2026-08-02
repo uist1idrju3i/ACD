@@ -4,7 +4,7 @@
 
 ## 目的と権威範囲
 
-READMEのロードマップにあるゴールデンタスク、決定論的CIゲート、Step-6の実機テストを定義します。実装が存在しない現在は契約を先に固定し、実機で調整します。
+READMEのロードマップにあるゴールデンタスク、決定論的CIゲート、Step-6の実機テストを定義します。smoke vertical sliceは実装済みですが、ESP32級goldenと実機Evidenceは未完了のため、契約を先に固定して段階的に検証します。
 
 ## ゴールデンタスク
 
@@ -48,6 +48,7 @@ Phase-5では、Wokwi類の仮想ハードウェアで、FWパッケージのビ
 
 ## 関連文書
 
+- [`phase1-plan.md`](phase1-plan.md)：Phase 1完了計画とリスク
 - [`pipeline.md`](pipeline.md)：Step-6とフィードバック辺
 - [`design-graph.md`](design-graph.md)：`TestItem`と実測`Evidence`
 - [`verification-gates.md`](verification-gates.md)：試験を閉じる証拠

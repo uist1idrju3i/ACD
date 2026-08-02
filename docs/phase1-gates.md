@@ -142,6 +142,7 @@ unknown、stale result、実機Evidence不足はjidoka停止である。修正�
 
 ## 関連文書
 
+- [`phase1-plan.md`](phase1-plan.md)：smokeからESP32級goldenまでの順序計画
 - [`testing.md`](testing.md)
 - [`pipeline.md`](pipeline.md)
 - [`verification-gates.md`](verification-gates.md)

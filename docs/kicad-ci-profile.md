@@ -89,7 +89,9 @@ KiCadの回路図IPCはPhase 0/1の前提にしない。回路図投影は生成
 するまでjidoka停止とします。合格条件は、同一入力revision・tool/container
 provenanceで2回以上生成した`STABLE-SHA256SUMS`が一致することです。
 
-実行ラッパーは`pnpm kicad:spike`（`scripts/kicad-spike.sh`）です。Dockerがない、
+Phase 0の実行ラッパーは`pnpm kicad:spike`（`scripts/kicad-spike.sh`）、Phase 1
+smokeの受入runnerは`pnpm phase1:smoke`（`scripts/phase1-smoke.mts`）です。
+Dockerがない、
 またはimageが取得できない環境では、ラッパーは`SKIP`を返して終了します。
 
 ## 期待artifact
@@ -117,6 +119,7 @@ STEPを生成し、再実行時の`STABLE-SHA256SUMS`は一致しました。生
 
 ## 関連文書
 
+- [`phase1-plan.md`](phase1-plan.md)：Phase 1のlibrary／routing移行計画
 - [`adr/0009-provisional-kicad-ci-baseline.md`](adr/0009-provisional-kicad-ci-baseline.md)
 - [`kicad-interop.md`](kicad-interop.md)
 - [`golden-tasks.md`](golden-tasks.md)
