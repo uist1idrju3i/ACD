@@ -53,6 +53,10 @@ toolは合否を独自に決めるのではなく、入力、tool version、mode
 出力hash、error／findingを返す。最終的なgate pass/fail、stale、下流停止は
 verification-gatesの契約で決める。
 
+## ツールの適格性
+
+決定論的toolも無条件には信頼しない。既知の合格fixtureと意図的な不合格fixtureで期待どおりに判定できることを確認した記録を持ち、tool、container、model、libraryの版を更新したときは再確認する。再確認が済むまで、旧版で得た合格結果を新版の合格証拠として流用しない（[`golden-tasks.md`](golden-tasks.md)、[`testing.md`](testing.md)参照）。
+
 ## Transport
 
 Phase 0は直接TypeScript関数またはCLI adapterでよい。MCP、HTTP、worker IPC、

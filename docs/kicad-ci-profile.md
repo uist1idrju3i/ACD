@@ -93,8 +93,13 @@ Phase 0の実行ラッパーは`pnpm kicad:spike`（`scripts/kicad-spike.sh`）�
 `pnpm golden`（`scripts/golden-run.mts`）、Phase 1 smokeの受入runnerは
 `pnpm phase1:smoke`（`scripts/phase1-smoke.mts`）です。いずれも
 `fixtures/design-graphs/normal-2layer.json`または`fixtures/phase1/smoke.json`を
-投影した成果物のみを検査します。Dockerがない、またはimageが取得できない環境では、
-`kicad:spike`は`SKIP`を返して終了します。
+投影した成果物のみを検査します。ラッパーのexit codeはgate verdictではありません。
+Dockerがない、または固定imageが取得できない環境で`kicad:spike`が返す`SKIP`は合格では
+ありません。ゲート未実行として`blocked`相当に扱い、Phase 0/1の受入証拠にしません。
+現時点でラッパーは機械可読なblocked記録を出力しておらず、その記録の生成は未実装です。
+受入runner側でblocked相当として扱い、Dockerと固定imageが利用可能になることを再開条件
+として記録します。CIではラッパーの前に固定imageをpullし、digestを検証しているため、
+CI自体はこの条件を黙ってSKIPしません。
 
 ## 期待artifact
 
