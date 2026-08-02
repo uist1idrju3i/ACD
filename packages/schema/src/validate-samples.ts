@@ -6,8 +6,11 @@ import {
   errorTaxonomyDataPath,
   errorTaxonomySchemaPath,
   eventSchemaPath,
+  gateMatrixDataPath,
+  gateMatrixSchemaPath,
   patchSchemaPath,
   phase1FixtureSchemaPath,
+  phase1GatesDocPath,
   phase1GoldenFixturePath,
   phase1SmokeFixturePath,
   physicalEvidenceSamplePath,
@@ -15,6 +18,7 @@ import {
   repositoryRoot,
 } from "./paths.js";
 import { validatePhase1FixtureReferences } from "./phase1-semantic.js";
+import { gateMatrixSectionMatches, type GateMatrix } from "./gate-matrix.js";
 
 export const createValidator = (): Ajv2020 => {
   const ajv = new Ajv2020({ allErrors: true, strict: false, allowUnionTypes: true });
@@ -42,6 +46,7 @@ const samplePaths = [
   errorTaxonomySchemaPath,
   phase1FixtureSchemaPath,
   physicalEvidenceSchemaPath,
+  gateMatrixSchemaPath,
 ];
 for (const schemaPath of samplePaths) {
   await loadValidator(schemaPath);
@@ -67,6 +72,27 @@ if (!errorTaxonomyValidator(errorTaxonomy)) {
   );
 }
 process.stdout.write("validated data: schemas/error-taxonomy.json\n");
+
+const gateMatrixValidator = await loadValidator(gateMatrixSchemaPath);
+const gateMatrixData = JSON.parse(await readFile(gateMatrixDataPath, "utf8")) as unknown;
+if (!gateMatrixValidator(gateMatrixData)) {
+  throw new Error(`gate matrix is invalid: ${formatValidationErrors(gateMatrixValidator.errors)}`);
+}
+const gateMatrix = gateMatrixData as GateMatrix;
+const taxonomyCodes = new Set(
+  (errorTaxonomy as { errors: { code: string }[] }).errors.map((entry) => entry.code),
+);
+for (const gate of gateMatrix.gates) {
+  for (const code of gate.errorCodes) {
+    if (!taxonomyCodes.has(code)) {
+      throw new Error(`gate ${gate.id} references unknown error code ${code}`);
+    }
+  }
+}
+if (!gateMatrixSectionMatches(await readFile(phase1GatesDocPath, "utf8"), gateMatrix)) {
+  throw new Error("docs/phase1-gates.md gate matrix is out of sync with schemas/gate-matrix.json");
+}
+process.stdout.write("validated data: schemas/gate-matrix.json\n");
 
 const physicalEvidenceValidator = await loadValidator(physicalEvidenceSchemaPath);
 const physicalEvidenceSample = JSON.parse(

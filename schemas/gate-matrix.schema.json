@@ -1,0 +1,84 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://acd.local/schemas/gate-matrix.schema.json",
+  "title": "ACD Gate Matrix",
+  "type": "object",
+  "required": ["version", "gates"],
+  "additionalProperties": false,
+  "properties": {
+    "version": {
+      "type": "string",
+      "minLength": 1
+    },
+    "gates": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": [
+          "order",
+          "id",
+          "name",
+          "phase",
+          "status",
+          "appliesTo",
+          "inputs",
+          "passCondition",
+          "onFailure",
+          "errorCodes"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "order": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "id": {
+            "type": "string",
+            "pattern": "^gate:[a-z0-9]+(?:-[a-z0-9]+)*$"
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1
+          },
+          "phase": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "status": {
+            "enum": ["implemented", "contract-only", "planned"]
+          },
+          "appliesTo": {
+            "type": "array",
+            "minItems": 1,
+            "uniqueItems": true,
+            "items": {
+              "enum": ["smoke", "golden"]
+            }
+          },
+          "inputs": {
+            "type": "string",
+            "minLength": 1
+          },
+          "passCondition": {
+            "type": "string",
+            "minLength": 1
+          },
+          "onFailure": {
+            "type": "string",
+            "minLength": 1
+          },
+          "errorCodes": {
+            "type": "array",
+            "minItems": 1,
+            "uniqueItems": true,
+            "items": {
+              "type": "string",
+              "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$"
+            }
+          }
+        }
+      }
+    }
+  }
+}

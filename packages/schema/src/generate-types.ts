@@ -3,6 +3,7 @@ import { compile } from "json-schema-to-typescript";
 import {
   designGraphSchemaPath,
   eventSchemaPath,
+  gateMatrixSchemaPath,
   patchSchemaPath,
   phase1FixtureSchemaPath,
   physicalEvidenceSchemaPath,
@@ -16,6 +17,7 @@ const definitions = [
   ["event.schema.json", eventSchemaPath],
   ["phase1-fixture.schema.json", phase1FixtureSchemaPath],
   ["physical-evidence.schema.json", physicalEvidenceSchemaPath],
+  ["gate-matrix.schema.json", gateMatrixSchemaPath],
 ] as const;
 
 for (const [filename, schemaPath] of definitions) {
