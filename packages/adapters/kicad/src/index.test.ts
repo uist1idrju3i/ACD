@@ -44,6 +44,31 @@ describe("@acd/adapter-kicad", () => {
     expect(renderGraphBoard(model)).toBe(board);
   });
 
+  it("renders back-side pads on the back layers", async () => {
+    const graph = await loadPhase0Graph();
+    const layout = graph.entities.find((entity) => entity.id === "layout:main");
+    const placements = (
+      layout?.attributes as { placements: { componentId: string; layer: string }[] }
+    ).placements;
+    const led = placements.find((placement) => placement.componentId === "component:d1");
+    if (!led) throw new Error("missing placement for component:d1");
+    led.layer = "B.Cu";
+
+    const board = renderGraphBoard(readBoardModel(graph));
+
+    expect(board).toContain('(layers "B.Cu" "B.Paste" "B.Mask")');
+  });
+
+  it("stops instead of projecting a rotated schematic symbol", async () => {
+    const graph = await loadPhase0Graph();
+    const component = graph.entities.find((entity) => entity.id === "component:r1");
+    (component?.attributes as { schematic: { rotationDeg: number } }).schematic.rotationDeg = 90;
+
+    expect(() => renderGraphSchematic(readBoardModel(graph))).toThrowError(
+      /rotated schematic symbols are not projected/,
+    );
+  });
+
   it("derives the canonical netlist from the graph without power flags", async () => {
     const model = readBoardModel(await loadPhase0Graph());
 

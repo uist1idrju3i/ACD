@@ -396,26 +396,25 @@ const runPatchConflictTask = async (fixture: GoldenFixture): Promise<Observed> =
   const graph = await loadGraph(fixture);
   const engine = new PatchEngine();
   const accepted = engine.apply(graph, 0, patchOf("patch:accepted", 0, "Accepted rename"));
+  const beforeConflict = hash(JSON.stringify(accepted.graph));
   let observedError: GraphCoreError | undefined;
-  let rejectedGraph: DesignGraph | undefined;
   try {
     engine.apply(accepted.graph, accepted.revision, patchOf("patch:conflicting", 0, "Conflict"));
   } catch (error) {
     if (!(error instanceof GraphCoreError)) throw error;
     observedError = error;
-    rejectedGraph = accepted.graph;
   }
-  if (!observedError || !rejectedGraph) {
+  if (!observedError) {
     throw new GraphCoreError(
       "patch-conflict",
       "the conflicting patch was accepted instead of stopping",
       "critical",
     );
   }
+  const afterConflict = hash(JSON.stringify(accepted.graph));
   const atomic =
-    rejectedGraph.entities.find((entity) => entity.id === "project:normal-2layer")?.name ===
-      "Accepted rename" &&
-    hash(JSON.stringify(rejectedGraph)) === hash(JSON.stringify(accepted.graph));
+    accepted.graph.entities.find((entity) => entity.id === "project:normal-2layer")?.name ===
+      "Accepted rename" && beforeConflict === afterConflict;
   return {
     outcome: "fail",
     jidoka: "stop",
@@ -424,6 +423,8 @@ const runPatchConflictTask = async (fixture: GoldenFixture): Promise<Observed> =
     evidence: {
       acceptedRevision: accepted.revision,
       acceptedSnapshotHash: accepted.snapshotHash,
+      snapshotHashBeforeConflict: beforeConflict,
+      snapshotHashAfterConflict: afterConflict,
       atomic,
       message: observedError.message,
     },

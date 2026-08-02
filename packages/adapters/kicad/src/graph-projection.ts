@@ -35,11 +35,21 @@ const footprintOf = (model: BoardModel, component: BoardComponent) => {
   return footprint;
 };
 
+const padLayers = (placementLayer: string): string => {
+  if (placementLayer === "F.Cu") return `"F.Cu" "F.Paste" "F.Mask"`;
+  if (placementLayer === "B.Cu") return `"B.Cu" "B.Paste" "B.Mask"`;
+  throw new GraphCoreError(
+    "verification-failed",
+    `unsupported placement layer for SMD pads: ${placementLayer}`,
+  );
+};
+
 const renderFootprint = (model: BoardModel, component: BoardComponent): string => {
   const placement = model.placements.find((candidate) => candidate.componentId === component.id);
   if (!placement) {
     throw new GraphCoreError("reference-integrity", `component has no placement: ${component.id}`);
   }
+  const layers = padLayers(placement.layer);
   const footprint = footprintOf(model, component);
   const pads = component.pins
     .map((pin) => {
@@ -48,7 +58,7 @@ const renderFootprint = (model: BoardModel, component: BoardComponent): string =
         throw new GraphCoreError("reference-integrity", `pin has no pad geometry: ${pin.id}`);
       }
       const net = netOfPin(model, pin.id);
-      return `    (pad "${pad.number}" smd roundrect (at ${mm(pad.xMm)} ${mm(pad.yMm)}) (size ${mm(pad.widthMm)} ${mm(pad.heightMm)}) (layers "F.Cu" "F.Paste" "F.Mask") (roundrect_rratio 0.2) (net ${net.code} "${net.name}"))`;
+      return `    (pad "${pad.number}" smd roundrect (at ${mm(pad.xMm)} ${mm(pad.yMm)}) (size ${mm(pad.widthMm)} ${mm(pad.heightMm)}) (layers ${layers}) (roundrect_rratio 0.2) (net ${net.code} "${net.name}"))`;
     })
     .join("\n");
   return `  (footprint "${footprint.name}"
@@ -131,6 +141,12 @@ const pinLabelPosition = (
 
 export const renderGraphSchematic = (model: BoardModel): string => {
   const symbols = model.components.map((component, index) => {
+    if (component.schematic.rotationDeg !== 0) {
+      throw new GraphCoreError(
+        "verification-failed",
+        `rotated schematic symbols are not projected: ${component.id}`,
+      );
+    }
     const footprint =
       component.role === "device"
         ? `${footprintOf(model, component).libraryId}:${footprintOf(model, component).name}`
