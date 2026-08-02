@@ -983,12 +983,21 @@ try {
     adoptedKnowledgeItems,
     targetKnowledgeContext,
   );
-  const appliedResult = recordKnowledgeApplications(applicationResult, [
-    {
-      knowledgeId: adoptedKnowledgeForLibraryPatch.knowledgeId,
-      libraryRevision: adoptedLibraryPatch.libraryRevision,
-    },
-  ]);
+  const appliedResult = recordKnowledgeApplications(
+    applicationResult,
+    applicationResult.decisions
+      .filter(
+        (decision) =>
+          decision.lifecycleStatus === "adopted" &&
+          (decision.status === "pass" || decision.status === "unknown"),
+      )
+      .map((decision) => ({
+        knowledgeId: decision.knowledgeId,
+        ...(decision.knowledgeId === adoptedKnowledgeForLibraryPatch.knowledgeId
+          ? { libraryRevision: adoptedLibraryPatch.libraryRevision }
+          : {}),
+      })),
+  );
   assertKnowledgeApplicationsComplete(appliedResult, "projection");
   const applicationProjectRoot = join(artifactRoot, "knowledge-application-project");
   await projectToKicad(fixture, applicationProjectRoot, {

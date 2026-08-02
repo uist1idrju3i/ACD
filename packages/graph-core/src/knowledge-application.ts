@@ -29,8 +29,8 @@ export type KnowledgeApplicationContext = ApplicabilityContext & {
   designRevision: string;
   fabProfileId: string;
   footprintIds: string[];
-  ruleIds: string[];
-  classifications: string[];
+  ruleIds?: string[];
+  classifications?: string[];
   reproductionConditions: string[];
 };
 
@@ -170,15 +170,22 @@ export const createTargetDesignKnowledgeContext = (input: {
   designRevision: string;
   fabProfileId: string;
   footprintIds: string[];
-  ruleIds: string[];
-  classifications: string[];
+  ruleIds?: string[];
+  classifications?: string[];
   reproductionConditions: string[];
   partIds?: string[];
 }): KnowledgeApplicationContext => ({
-  ...input,
-  partId: input.partIds ?? [],
-  footprintId: input.footprintIds,
-  ruleId: input.ruleIds,
-  classification: input.classifications,
-  reproductionCondition: input.reproductionConditions,
+  designRevision: input.designRevision,
+  fabProfileId: input.fabProfileId,
+  footprintIds: input.footprintIds,
+  reproductionConditions: input.reproductionConditions,
+  ...(input.ruleIds?.length ? { ruleIds: input.ruleIds, ruleId: input.ruleIds } : {}),
+  ...(input.classifications?.length
+    ? { classifications: input.classifications, classification: input.classifications }
+    : {}),
+  ...(input.reproductionConditions.length
+    ? { reproductionCondition: input.reproductionConditions }
+    : {}),
+  ...(input.partIds?.length ? { partId: input.partIds } : {}),
+  ...(input.footprintIds.length ? { footprintId: input.footprintIds } : {}),
 });
