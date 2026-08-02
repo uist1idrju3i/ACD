@@ -232,13 +232,8 @@
       "appliesTo": ["golden"],
       "inputs": "記録済みfab report fixture、対象設計revision、fab profile",
       "passCondition": "source provenance、対象参照、重複統合、構造化結果とderivation hashが一致し、unknownは合格扱いにしない",
-      "onFailure": "`fab-feedback-unknown`で停止し、fab-feedback.jsonをEvidenceとして保持したうえで下流検証範囲を広げる",
-      "errorCodes": [
-        "verification-failed",
-        "fab-feedback-unknown",
-        "schema-invalid",
-        "reference-integrity"
-      ]
+      "onFailure": "`verification-failed`で停止し、unknownは検証範囲を広げる",
+      "errorCodes": ["verification-failed", "fab-feedback-unknown"]
     },
     {
       "order": 20,
@@ -252,6 +247,19 @@
       "passCondition": "candidateを生成し、provenance・source event・適用条件を検証したうえでreviewed、adoptedへ決定論的に遷移できることを検証する",
       "onFailure": "`verification-failed`または`schema-invalid`で停止し、承認不足・不正遷移・stale対象を記録",
       "errorCodes": ["verification-failed", "schema-invalid", "stale-result"]
+    },
+    {
+      "order": 21,
+      "id": "gate:library-patch",
+      "name": "Library overlay patch",
+      "phase": 3,
+      "runsAfter": "gate:pre-order-readiness",
+      "status": "implemented",
+      "appliesTo": ["golden"],
+      "inputs": "adopted KnowledgeItem、公式KiCad snapshot、overlay patch、geometry/reopen/DRC Evidence",
+      "passCondition": "宣言済みruleからpatchを導出し、公式snapshotを変更せず、geometry・reopen・DRCに合格した明示的library revisionをproject-localへ採用する",
+      "onFailure": "`verification-failed`または`schema-invalid`で停止し、失敗patchは保持する",
+      "errorCodes": ["verification-failed", "schema-invalid", "reopen-failure"]
     }
   ]
 }
