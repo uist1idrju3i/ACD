@@ -30,7 +30,10 @@ const item = (): KnowledgeItem => ({
   ],
   content: "mask-clearance: solder mask sliver",
   status: "candidate",
-  appliesWhen: [{ field: "fabProfileId", operator: "equals", value: "fab:jlcpcb-class-2layer" }],
+  appliesWhen: [
+    { field: "fabProfileId", operator: "equals", value: "fab:jlcpcb-class-2layer" },
+    { field: "reproductionCondition", operator: "equals", value: "2-layer" },
+  ],
   excludesWhen: [
     { field: "fabProfileId", operator: "notEquals", value: "fab:jlcpcb-class-2layer" },
   ],
@@ -357,6 +360,21 @@ describe("knowledge lifecycle", () => {
     expect(revised.knowledgeId).toBe(item().knowledgeId);
   });
 
+  it("requires a reproduction condition for promotion", () => {
+    const withoutReproduction = {
+      ...item(),
+      appliesWhen: item().appliesWhen.filter(
+        (condition) => condition.field !== "reproductionCondition",
+      ),
+    };
+    expect(() =>
+      transitionKnowledgeItem(withoutReproduction, {
+        status: "reviewed",
+        now: "2026-01-01T00:00:00.000Z",
+      }),
+    ).toThrow(/promotion metadata/);
+  });
+
   it("returns content revisions to candidate and project-local scope", () => {
     const adopted = transitionKnowledgeItem(
       transitionKnowledgeItem(item(), {
@@ -385,6 +403,23 @@ describe("knowledge lifecycle", () => {
     expect(revised.status).toBe("candidate");
     expect(revised.scope).toBe("project-local");
     expect(revised.approvalId).toBeUndefined();
+  });
+
+  it("clears terminal reasons when revising deprecated knowledge", () => {
+    const deprecated = {
+      ...item(),
+      status: "deprecated" as const,
+      staleReason: "superseded",
+      rejectionReason: "obsolete",
+    };
+    const revised = reviseKnowledgeItem(deprecated, {
+      content: "updated content",
+      sourceEventIds: deprecated.sourceEventIds,
+      provenance: deprecated.provenance,
+    });
+    expect(revised.status).toBe("candidate");
+    expect(revised.rejectionReason).toBeUndefined();
+    expect(revised.staleReason).toBeUndefined();
   });
 
   it("propagates deprecation through recorded graph references", () => {

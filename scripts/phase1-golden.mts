@@ -49,7 +49,7 @@ import {
   missingExecutedGates,
   validatePhase1FixtureReferences,
 } from "../packages/schema/src/index.js";
-import { loadSchemaValidator } from "../packages/schema/src/validator.js";
+import { loadSchemaValidator } from "../packages/schema/src/index.js";
 import type { Phase1Fixture } from "../packages/schema/src/generated/phase1-fixture.js";
 import preOrder from "./pre-order.ts";
 
