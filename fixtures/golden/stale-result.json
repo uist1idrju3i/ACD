@@ -1,0 +1,13 @@
+{
+  "taskId": "golden:stale-result",
+  "kind": "verification",
+  "expected": {
+    "outcome": "fail",
+    "jidoka": "stop",
+    "errorCode": "stale-result"
+  },
+  "scenario": {
+    "resultRevision": 0,
+    "currentRevision": 1
+  }
+}

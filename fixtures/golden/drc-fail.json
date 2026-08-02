@@ -1,0 +1,15 @@
+{
+  "taskId": "golden:drc-fail",
+  "kind": "verification",
+  "inputFixture": "design-graphs/normal-2layer.json",
+  "expected": {
+    "gate": "drc",
+    "outcome": "fail",
+    "jidoka": "stop",
+    "errorCode": "verification-failed"
+  },
+  "scenario": {
+    "description": "Intentional board rule violation",
+    "mutation": "add-clearance-violating-track"
+  }
+}
