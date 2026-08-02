@@ -47,6 +47,11 @@
       "jidokaAction": "stop"
     },
     {
+      "code": "fab-feedback-unknown",
+      "severity": ["warning", "error"],
+      "jidokaAction": "widen-verification"
+    },
+    {
       "code": "tool-failure",
       "severity": ["error"],
       "jidokaAction": "stop"

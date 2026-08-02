@@ -5,6 +5,7 @@ export const repositoryRoot = resolve(fileURLToPath(new URL("../../../", import.
 export const designGraphSchemaPath = resolve(repositoryRoot, "schemas/design-graph.schema.json");
 export const patchSchemaPath = resolve(repositoryRoot, "schemas/patch.schema.json");
 export const eventSchemaPath = resolve(repositoryRoot, "schemas/event.schema.json");
+export const fabFeedbackSchemaPath = resolve(repositoryRoot, "schemas/fab-feedback.schema.json");
 export const errorTaxonomySchemaPath = resolve(
   repositoryRoot,
   "schemas/error-taxonomy.schema.json",
@@ -27,4 +28,8 @@ export const physicalEvidenceSchemaPath = resolve(
 export const physicalEvidenceSamplePath = resolve(
   repositoryRoot,
   "fixtures/phase1/physical-evidence-pending.json",
+);
+export const fabFeedbackSamplePath = resolve(
+  repositoryRoot,
+  "fixtures/phase3/fab-report-prototype-1.json",
 );

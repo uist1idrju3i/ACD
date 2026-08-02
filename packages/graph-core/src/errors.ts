@@ -8,6 +8,7 @@ export const ERROR_CODES = [
   "verification-failed",
   "reopen-failure",
   "tool-timeout",
+  "fab-feedback-unknown",
 ] as const;
 
 export type ErrorCode = (typeof ERROR_CODES)[number];

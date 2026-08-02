@@ -18,6 +18,7 @@ packages/
     storage-fs/           # snapshot、patch、event logのファイル実装
     freerouting/          # DSN/SES境界
     spice/                # nominal SPICE deck生成とngspice出力の解釈
+    fab-feedback/         # recorded/live fab reportのintake adapter
   tool-contract/          # tool request/result/error envelope
   test-support/           # fixture loader、hash、deterministic clocks
 fixtures/

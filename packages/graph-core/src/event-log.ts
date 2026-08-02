@@ -10,7 +10,8 @@ export type EventType =
   | "verification.stale"
   | "checkpoint.created"
   | "run.stopped"
-  | "run.resumed";
+  | "run.resumed"
+  | "fab.feedback.received";
 
 export type EventEnvelope = {
   eventId: string;

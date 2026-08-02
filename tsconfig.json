@@ -4,6 +4,7 @@
     { "path": "./packages/schema" },
     { "path": "./packages/graph-core" },
     { "path": "./packages/adapters/kicad" },
+    { "path": "./packages/adapters/fab-feedback" },
     { "path": "./packages/adapters/storage-fs" },
     { "path": "./packages/adapters/spice" }
   ]

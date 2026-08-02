@@ -1,0 +1,84 @@
+{
+  "schemaVersion": "0.1.0-draft",
+  "reportId": "fab-report:prototype-1-negative",
+  "fabJobId": "job:prototype-1-negative",
+  "fabProfileId": "fab:jlcpcb-class-2layer",
+  "source": {
+    "kind": "fixture",
+    "locator": "fixtures/phase3/fab-report-negative.json",
+    "contentHash": "sha256:9f7f7cbf3ae00c4ee39fc64073c35e57ec0f82738ca636e2a40220757b96afb0",
+    "fixtureDerived": true,
+    "fixtureId": "fixture:fab-report-negative"
+  },
+  "target": {
+    "projectId": "fixture:phase1-golden-esp32",
+    "designRevision": "phase1-golden-2"
+  },
+  "rawReport": {
+    "contentType": "text/plain",
+    "content": "Fixture negative cases: unknown reference, duplicate finding, and unstructurable text.",
+    "contentHash": "sha256:9f7f7cbf3ae00c4ee39fc64073c35e57ec0f82738ca636e2a40220757b96afb0"
+  },
+  "rawFindings": [
+    {
+      "findingId": "NEG-UNKNOWN-REF",
+      "originalText": "Unknown component reference Z99 cannot be located.",
+      "severityReported": "high",
+      "references": { "partId": "part:z99" }
+    },
+    {
+      "findingId": "NEG-DUP-1",
+      "originalText": "Pad geometry warning at R1.",
+      "severityReported": "medium",
+      "references": { "partId": "part:r1", "ruleId": "pad-geometry" }
+    },
+    {
+      "findingId": "NEG-DUP-2",
+      "originalText": "Pad geometry warning at R1.",
+      "severityReported": "medium",
+      "references": { "partId": "part:r1", "ruleId": "pad-geometry" }
+    },
+    {
+      "findingId": "NEG-UNKNOWN-TEXT",
+      "originalText": "Manufacturing says please check this thing somehow.",
+      "severityReported": "unknown",
+      "references": { "partId": "part:r1" }
+    }
+  ],
+  "structuredFindings": [
+    {
+      "findingId": "NEG-UNKNOWN-REF",
+      "classification": "spacing",
+      "confidence": 0.95,
+      "reproductionConditions": [],
+      "derivedFromFindingIds": ["NEG-UNKNOWN-REF"]
+    },
+    {
+      "findingId": "NEG-DUP-1",
+      "classification": "pad-geometry",
+      "confidence": 0.9,
+      "reproductionConditions": [],
+      "derivedFromFindingIds": ["NEG-DUP-1"]
+    },
+    {
+      "findingId": "NEG-DUP-2",
+      "classification": "pad-geometry",
+      "confidence": 0.9,
+      "reproductionConditions": [],
+      "derivedFromFindingIds": ["NEG-DUP-2"]
+    },
+    {
+      "findingId": "NEG-UNKNOWN-TEXT",
+      "classification": "unknown",
+      "confidence": 0.1,
+      "reproductionConditions": [],
+      "derivedFromFindingIds": ["NEG-UNKNOWN-TEXT"]
+    }
+  ],
+  "derivation": {
+    "method": "recorded-jlcpcb-class-report-parser",
+    "version": "0.1.0",
+    "inputHash": "sha256:9f7f7cbf3ae00c4ee39fc64073c35e57ec0f82738ca636e2a40220757b96afb0",
+    "outputHash": "sha256:9f7f7cbf3ae00c4ee39fc64073c35e57ec0f82738ca636e2a40220757b96afb0"
+  }
+}

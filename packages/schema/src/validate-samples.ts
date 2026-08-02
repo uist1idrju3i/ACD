@@ -6,6 +6,8 @@ import {
   errorTaxonomyDataPath,
   errorTaxonomySchemaPath,
   eventSchemaPath,
+  fabFeedbackSamplePath,
+  fabFeedbackSchemaPath,
   gateMatrixDataPath,
   gateMatrixSchemaPath,
   gatesDocPath,
@@ -113,6 +115,24 @@ if (!physicalEvidenceValidator(physicalEvidenceSample)) {
 process.stdout.write(
   "validated physical evidence: fixtures/phase1/physical-evidence-pending.json\n",
 );
+
+const fabFeedbackValidator = await loadValidator(fabFeedbackSchemaPath);
+const fabFeedbackSample = JSON.parse(await readFile(fabFeedbackSamplePath, "utf8")) as unknown;
+if (!fabFeedbackValidator(fabFeedbackSample)) {
+  throw new Error(
+    `fab feedback sample is invalid: ${formatValidationErrors(fabFeedbackValidator.errors)}`,
+  );
+}
+process.stdout.write("validated fab feedback: fixtures/phase3/fab-report-prototype-1.json\n");
+const negativeFabFeedbackSample = JSON.parse(
+  await readFile(repositoryRoot + "/fixtures/phase3/fab-report-negative.json", "utf8"),
+) as unknown;
+if (!fabFeedbackValidator(negativeFabFeedbackSample)) {
+  throw new Error(
+    `negative fab feedback sample is invalid: ${formatValidationErrors(fabFeedbackValidator.errors)}`,
+  );
+}
+process.stdout.write("validated fab feedback: fixtures/phase3/fab-report-negative.json\n");
 
 const phase1FixtureValidator = await loadValidator(phase1FixtureSchemaPath);
 for (const [fixturePath, label] of [

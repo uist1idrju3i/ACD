@@ -3,6 +3,7 @@ import { compile } from "json-schema-to-typescript";
 import {
   designGraphSchemaPath,
   eventSchemaPath,
+  fabFeedbackSchemaPath,
   gateMatrixSchemaPath,
   patchSchemaPath,
   phase1FixtureSchemaPath,
@@ -15,6 +16,7 @@ const definitions = [
   ["design-graph.schema.json", designGraphSchemaPath],
   ["patch.schema.json", patchSchemaPath],
   ["event.schema.json", eventSchemaPath],
+  ["fab-feedback.schema.json", fabFeedbackSchemaPath],
   ["phase1-fixture.schema.json", phase1FixtureSchemaPath],
   ["physical-evidence.schema.json", physicalEvidenceSchemaPath],
   ["gate-matrix.schema.json", gateMatrixSchemaPath],

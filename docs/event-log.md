@@ -40,6 +40,8 @@ Phase 0では少なくとも次を扱います。
 - `checkpoint.created`
 - `run.stopped`
 - `run.resumed`
+- `fab.feedback.received`：記録済みfab reportの入力と、対象revision・provenanceを含む
+  決定論的なintake結果
 
 イベント種別ごとのpayload schemaとerror codeは実装時に追加し、未知の種別は
 削除せず`unknown event`として保存してreplayを停止します。

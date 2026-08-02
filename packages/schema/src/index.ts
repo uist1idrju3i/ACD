@@ -5,6 +5,8 @@ export type { ACDPatchEnvelope as PatchEnvelope } from "./generated/patch.js";
 export type { ACDEventEnvelope as EventEnvelope } from "./generated/event.js";
 export type { ACDPhase1Fixture as Phase1Fixture } from "./generated/phase1-fixture.js";
 export type { ACDPhase1PhysicalEvidence as PhysicalEvidence } from "./generated/physical-evidence.js";
+export type { ACDFabFeedbackReport as FabFeedbackReport } from "./generated/fab-feedback.js";
+export type { RawFinding, Reference, StructuredFinding } from "./generated/fab-feedback.js";
 export { validatePhase1FixtureReferences } from "./phase1-semantic.js";
 export { evaluatePhysicalEvidence } from "./physical-evidence.js";
 export type { PhysicalEvidenceVerdict } from "./physical-evidence.js";
@@ -21,4 +23,10 @@ export {
   replaceGateMatrixSection,
 } from "./gate-matrix.js";
 export type { GateDefinition, GateMatrix, GateScope, GateTableOptions } from "./gate-matrix.js";
-export { gateMatrixDataPath, gatesDocPath, phase1GatesDocPath, repositoryRoot } from "./paths.js";
+export {
+  fabFeedbackSamplePath,
+  gateMatrixDataPath,
+  gatesDocPath,
+  phase1GatesDocPath,
+  repositoryRoot,
+} from "./paths.js";

@@ -36,6 +36,7 @@ codeは小文字kebab-caseの`<class>-<condition>`形式とします。例：
 | `approval-required`    | 承認IDが必要                         | warning/error | 不可逆操作を保留               |
 | `budget-exceeded`      | 予算上限超過                         | error         | 発注を停止し承認を要求         |
 | `unknown-impact`       | 影響伝播が未定義                     | warning/error | 広い再検証へフォールバック     |
+| `fab-feedback-unknown` | fab指摘の分類または信頼度が未確定    | warning/error | 検証を広げ、合格扱いにしない   |
 | `patent-concern`       | 特許リスクの credible concern        | critical      | 実装を停止し法務判断へ         |
 
 ## Error envelope

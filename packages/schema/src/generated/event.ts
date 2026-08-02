@@ -17,7 +17,8 @@ export interface ACDEventEnvelope {
     | "verification.stale"
     | "checkpoint.created"
     | "run.stopped"
-    | "run.resumed";
+    | "run.resumed"
+    | "fab.feedback.received";
   occurredAt: string;
   actor: string;
   projectId: string;
