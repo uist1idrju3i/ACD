@@ -31,7 +31,7 @@ GitHubの[Security Advisories](https://github.com/uist1idrju3i/ACD/security/advi
 
 ## 対応の流れ
 
-1. 受領確認：可能な限り5営業日以内に返信します。
+1. 受領確認：確認でき次第、返信します。
 2. 影響評価：再現、影響範囲、深刻度を確認します。
 3. 修正：`main`へ修正を入れ、回帰を防ぐテストを追加します。
 4. 公開：報告者と調整のうえでSecurity Advisoryを公開します。希望があれば
