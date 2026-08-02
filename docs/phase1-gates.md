@@ -1,6 +1,20 @@
 # Phase 1ゲートと製造準備契約
 
-**ステータス：Draft**
+**ステータス：Draft（smoke fixtureのGate 1〜11を実装済み。goldenは将来）**
+
+## 実装済みsmoke vertical slice
+
+`pnpm phase1:smoke`は`fixtures/phase1/smoke.json`を入力としてGate 1〜11を
+順序実行します。KiCad公式symbolを埋め込んだ回路図、fixtureからのcanonical
+netlist、IPC-D-356との照合、ERC、2層の決定論的heuristic routing、Gerber／drill、
+BOM、manifest、pre-order checklistを`artifacts/phase1-smoke/`へ出力します。
+ESP32級golden fixture、実部品library geometryの完全な置換、自動発注、実機Evidence
+は本PRの対象外です。
+
+Routingの例外範囲はsmoke fixtureだけです。smokeでは決定論的なtrack/via
+projectionを使用できますが、non-smoke fixtureへ適用する場合はjidoka停止します。
+ESP32級goldenではFreeroutingのDSN/SES境界、または将来承認されるADRの外部routing
+toolを使用します。Phase 1で一般用途routerを実装することは許可しません。
 
 ## 目的と範囲
 
@@ -128,6 +142,7 @@ unknown、stale result、実機Evidence不足はjidoka停止である。修正�
 
 ## 関連文書
 
+- [`phase1-plan.md`](phase1-plan.md)：smokeからESP32級goldenまでの順序計画
 - [`testing.md`](testing.md)
 - [`pipeline.md`](pipeline.md)
 - [`verification-gates.md`](verification-gates.md)
