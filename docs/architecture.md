@@ -70,6 +70,8 @@ Phase 8のローカル製造では、`PrinterProfile`または`ManufacturingProf
 - [`design-graph.md`](design-graph.md)：正規状態とリビジョン
 - [`pipeline.md`](pipeline.md)：ステップごとの状態遷移
 - [`agent-runtime.md`](agent-runtime.md)：ワーカー、チェックポイント、再開
+- [`repo-structure.md`](repo-structure.md)：package境界と依存方向
+- [`tool-contract.md`](tool-contract.md)：型付きツール境界
 - [`../README.md`](../README.md#4-アーキテクチャの方向性)
 
 ## コンポーネント図

@@ -23,8 +23,13 @@
 6. [`agent-runtime.md`](agent-runtime.md) — 長時間実行ハーネス
 7. [`knowledge-base.md`](knowledge-base.md) — 知識の蓄積と書き戻し
 8. [`qc-tools.md`](qc-tools.md) — QC七つ道具・新QC七つ道具の生成分析
-9. [`kicad-interop.md`](kicad-interop.md)、[`testing.md`](testing.md) — 外部連携と評価
-10. [`adr/README.md`](adr/README.md) — ADR運用と既存の設計判断
+9. [`phase0-plan.md`](phase0-plan.md)、[`patch-revision.md`](patch-revision.md)、
+   [`event-log.md`](event-log.md) — Phase 0実装計画と状態契約
+10. [`kicad-ci-profile.md`](kicad-ci-profile.md)、[`golden-tasks.md`](golden-tasks.md)、
+    [`error-taxonomy.md`](error-taxonomy.md) — CI、fixture、エラー分類
+11. [`repo-structure.md`](repo-structure.md)、[`tool-contract.md`](tool-contract.md)、
+    [`kicad-interop.md`](kicad-interop.md)、[`testing.md`](testing.md) — 構成、ツール境界、外部連携、評価
+12. [`adr/README.md`](adr/README.md) — ADR運用と既存の設計判断
 
 ## ステータス凡例
 
