@@ -5,6 +5,7 @@ import {
   evaluateKnowledgeApplications,
   recordKnowledgeApplications,
 } from "./knowledge-application.js";
+import { rulesForFabProfile } from "./fab-profile-rules.js";
 import type { KnowledgeItem } from "./knowledge-lifecycle.js";
 
 const item = (overrides: Partial<KnowledgeItem> = {}): KnowledgeItem => ({
@@ -104,6 +105,35 @@ describe("knowledge application", () => {
       footprintId: ["footprint:OtherLib:R_0603_1608Metric"],
     });
     expect(otherLibrary.decisions[0]?.status).toBe("fail");
+  });
+
+  it("omits undeclared applicability dimensions", () => {
+    const target = createTargetDesignKnowledgeContext({
+      designRevision: "prototype-2",
+      fabProfileId: "fab:jlcpcb-class-2layer",
+      footprintIds: [],
+      reproductionConditions: [],
+    });
+    expect(target).not.toHaveProperty("footprintId");
+    expect(target).not.toHaveProperty("reproductionCondition");
+    expect(target).not.toHaveProperty("ruleId");
+    expect(target).not.toHaveProperty("classification");
+    expect(target).not.toHaveProperty("partId");
+  });
+
+  it("rejects recording ineligible decisions", () => {
+    const result = evaluateKnowledgeApplications([item({ status: "reviewed" })], context);
+    expect(() => recordKnowledgeApplications(result, [{ knowledgeId: "knowledge:test" }])).toThrow(
+      /not eligible/,
+    );
+  });
+
+  it("keeps correction rules free of application exemptions", () => {
+    const rule = rulesForFabProfile("fab:jlcpcb-class-2layer")?.rules.find(
+      (candidate) => candidate.ruleId === "mask-sliver-min",
+    );
+    expect(rule?.correction).toBeDefined();
+    expect(rule?.applicationExemption).toBeUndefined();
   });
 
   it("stops applicable knowledge without a correction or exemption", () => {
