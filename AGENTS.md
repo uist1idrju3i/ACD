@@ -67,10 +67,14 @@ record the resulting scope.
 These boundaries come from README §7 and the detailed Phase 0 plan:
 
 - **Phase 0 — Data model:** MUST NOT build UI, AI, or a custom engine.
-- **Phase 1 — Thin vertical slice:** MUST NOT build a custom router, WASM engine,
-  knowledge base, `FirmwarePackage`, or automatic ordering. Target-state Step 4
-  firmware output is excluded from Phase 1 acceptance and output verification; it
-  becomes active in Phase 5.
+- **Phase 1 — Thin vertical slice:** MUST NOT build a general-purpose router,
+  WASM engine, knowledge base, `FirmwarePackage`, or automatic ordering. The
+  explicitly approved smoke-fixture exception permits a deterministic,
+  fixture-limited track/via projection, jidoka-stopped for every non-smoke
+  fixture. The ESP32-class golden task MUST use an external routing tool
+  (Freerouting DSN/SES) or a future approved ADR. Target-state Step 4 firmware
+  output is excluded from Phase 1 acceptance and output verification; it becomes
+  active in Phase 5.
 - **Phase 2 — Verification and rationale:** MUST NOT add high-fidelity SI or thermal
   analysis.
 - **Phase 3 — Knowledge loop:** MUST NOT implement organization-wide knowledge

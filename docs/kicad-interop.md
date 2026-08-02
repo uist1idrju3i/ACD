@@ -1,6 +1,6 @@
 # EDA／MCAD相互運用（KiCad境界）
 
-**ステータス：Draft**
+**ステータス：Draft（smoke fixture投影とnetlist readbackを実装済み）**
 
 ## 目的と権威範囲
 
@@ -61,8 +61,9 @@ source of truthにはしません。
   成功しなければならない。結果には入力revision、netlist hash、tool version、
   読み戻し結果、差分を記録する。
 
-Phase 0の最小投影はこの契約のfixtureと再オープン基盤を準備するが、完全な
-netlist-driven回路図・PCB投影とnet-consistency gateの実装はPhase 1作業とする。
+Phase 1 smokeでは、上記契約に基づくembedded official symbol、net label、
+PWR_FLAG、PCB pad／track投影と、KiCad netlist／IPC-D-356のreadback比較を実装
+しています。ESP32級goldenの全symbol／footprint geometryと汎用routerは後続作業です。
 
 ## IPC API
 

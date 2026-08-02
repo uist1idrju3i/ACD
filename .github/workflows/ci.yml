@@ -50,3 +50,24 @@ jobs:
           name: kicad-diagnostics
           path: artifacts/kicad
           if-no-files-found: warn
+
+  phase1-smoke:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 11.18.0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm phase1:smoke
+      - name: Upload Phase 1 smoke evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: phase1-smoke-evidence
+          path: artifacts/phase1-smoke
+          if-no-files-found: warn
