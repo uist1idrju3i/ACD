@@ -1,6 +1,6 @@
 # Phase 2実装計画
 
-**ステータス：Draft（WP1〜WP5実装済み、WP6以降は未着手）**
+**ステータス：Draft（WP1〜WP6実装済み、WP7は未着手）**
 
 ## 目的と権威範囲
 
@@ -159,7 +159,8 @@ footprint／MPN不整合が後段で発見されました。KiCad ERCはこれ�
 
 ### WP6：SPICEゲート（忠実度ラダー レベル2〜3）
 
-**状態：未着手。**
+**状態：実装済み。** 契約は[`spice-gate.md`](spice-gate.md)、
+実行はgate 18（`gate:spice`、`runsAfter: gate:repair-loop`）。
 
 **作業**
 
@@ -171,10 +172,19 @@ footprint／MPN不整合が後段で発見されました。KiCad ERCはこれ�
 - golden fixtureの電源・LED回路について、nominal解析が収束し、結果がEvidenceになる。
 - 収束失敗は`convergence-failure`で停止する。
 
-**未決定**
+**決定済み**
 
-- engine選定（ngspice共有ライブラリ／WASM、Xyce等）とライセンス境界はADRで決める。
-  高忠実度SI／熱解析はPhase 2の対象外。
+- engineはngspiceを固定digest containerの外部processで実行するA案
+  （[ADR-0020](adr/0020-spice-engine-ngspice-external-process.md)）。KiCad containerが
+  ngspice 44.2を同梱するため、image digestを増やさずに同じprocess境界で実行します。
+  高忠実度SI／熱解析はPhase 2の対象外です。
+
+**実装で判明した事項**
+
+- 解析は理想電源と線形受動素子だけで構成し、vendorモデルを使いません。vendorモデルを
+  含む解析は`spice-model-provenance`が`unknown`となり、Evidenceになりません。
+- LED分岐の解析はGate 14／16と同じtopologyトレースから導出し、電流計算の二重実装を
+  避けています。
 
 ### WP7：schematic readability（Phase 1 WP6の繰延分）
 

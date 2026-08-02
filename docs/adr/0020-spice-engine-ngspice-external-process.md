@@ -1,6 +1,6 @@
 # ADR-0020：SPICE engineはngspiceを固定digestコンテナの外部processで実行する
 
-**ステータス：Accepted（Phase 2 WP6の境界。実装は未着手）**
+**ステータス：Accepted（Phase 2 WP6の境界。gate 18として実装済み）**
 
 ## 背景
 
@@ -47,6 +47,7 @@ SPICE gateはngspiceを**固定digestコンテナの外部process**として起�
 - [`../../README.md`](../../README.md)
 - [`../phase2-plan.md`](../phase2-plan.md)
 - [`../verification-gates.md`](../verification-gates.md)
+- [`../spice-gate.md`](../spice-gate.md)
 - [`../tool-contract.md`](../tool-contract.md)
 - [`0016-worst-case-analysis-fidelity.md`](0016-worst-case-analysis-fidelity.md)
 - [`0018-golden-routing-technology.md`](0018-golden-routing-technology.md)

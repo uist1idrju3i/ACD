@@ -8,6 +8,13 @@ import {
   projectToKicad,
 } from "../packages/adapters/kicad/src/index.js";
 import {
+  buildSpiceAnalyses,
+  evaluateSpiceRuns,
+  measurementMargin,
+  parseMeasurement,
+  type SpiceRun,
+} from "../packages/adapters/spice/src/index.js";
+import {
   applyFixturePatch,
   buildTestPlan,
   evaluateDesignRationale,
@@ -230,6 +237,63 @@ try {
     rejectedProposals: repairs.reduce((total, entry) => total + Number(entry.rejected ?? 0), 0),
     recordingsHash: hash(JSON.stringify(recordings.proposals)),
     artifact: "repair-loop.json",
+  });
+
+  const spiceRoot = join(artifactRoot, "spice");
+  await mkdir(spiceRoot, { recursive: true });
+  const analyses = buildSpiceAnalyses(fixture);
+  if (analyses.length === 0) throw new Error("verification-failed: no SPICE analysis was derived");
+  const spiceRuns: SpiceRun[] = [];
+  for (const analysis of analyses) {
+    const deckName = `${analysis.id.replace(/[^a-z0-9]+/g, "-")}.cir`;
+    await writeFile(join(spiceRoot, deckName), analysis.deck);
+    let stdout = "";
+    let exitCode = 0;
+    try {
+      stdout = docker(["ngspice", "-b", `/work/spice/${deckName}`]);
+    } catch (error) {
+      const failure = error as { stdout?: string; stderr?: string; status?: number };
+      stdout = `${failure.stdout ?? ""}${failure.stderr ?? ""}`;
+      exitCode = failure.status ?? 1;
+    }
+    await writeFile(join(spiceRoot, `${deckName}.log`), stdout);
+    spiceRuns.push({ analysisId: analysis.id, stdout, exitCode });
+  }
+  const spice = evaluateSpiceRuns(analyses, spiceRuns);
+  if (spice.verdict !== "pass") {
+    throw new Error(
+      `verification-failed: spice ${spice.verdict}: ${JSON.stringify(
+        spice.findings.filter((finding) => finding.status !== "pass"),
+      )}`,
+    );
+  }
+  const engineVersion = /ngspice-([0-9.]+)/.exec(spiceRuns[0]?.stdout ?? "")?.[1] ?? "unknown";
+  const spiceEvidence = analyses.map((analysis) => {
+    const stdout = spiceRuns.find((run) => run.analysisId === analysis.id)?.stdout ?? "";
+    const value = parseMeasurement(stdout, analysis.measurement.name);
+    return {
+      analysisId: analysis.id,
+      subject: analysis.subject,
+      measurement: analysis.measurement,
+      observed: value,
+      margin: value === undefined ? undefined : measurementMargin(analysis, value),
+      models: analysis.models,
+      assumptions: analysis.assumptions,
+      testItemId: analysis.testItemId,
+      deckHash: hash(analysis.deck),
+      outputHash: hash(stdout),
+    };
+  });
+  await writeFile(join(spiceRoot, "results.json"), `${JSON.stringify(spiceEvidence, null, 2)}\n`);
+  pass(18, {
+    engine: "ngspice",
+    engineVersion,
+    image,
+    verdict: spice.verdict,
+    analyses: analyses.length,
+    rulesEvaluated: spice.rulesEvaluated.length,
+    resultsHash: hash(JSON.stringify(spiceEvidence)),
+    artifact: "spice/results.json",
   });
 
   await projectToKicad(fixture, projectRoot);

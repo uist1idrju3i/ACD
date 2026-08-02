@@ -208,6 +208,19 @@
       "passCondition": "各caseで欠陥が期待rule IDで検出され、決定論的gateが受理したpatchだけで全findingが解消し、反復上限内で収束する",
       "onFailure": "`verification-failed`で停止し、収束しないcase・未解消のfinding・却下理由を記録",
       "errorCodes": ["verification-failed", "convergence-failure", "stale-result"]
+    },
+    {
+      "order": 18,
+      "id": "gate:spice",
+      "name": "Nominal SPICE analysis",
+      "phase": 2,
+      "runsAfter": "gate:repair-loop",
+      "status": "implemented",
+      "appliesTo": ["golden"],
+      "inputs": "typed fixtureから導出したnominal解析deck、固定digest containerのngspice",
+      "passCondition": "全解析が収束し、測定値が期待範囲に入り、モデルの出所とライセンスが記録されている（unknownはblocked）",
+      "onFailure": "`verification-failed`で停止。収束失敗は`convergence-failure`、tool異常終了は`tool-failure`として記録",
+      "errorCodes": ["verification-failed", "convergence-failure", "tool-failure", "tool-timeout"]
     }
   ]
 }

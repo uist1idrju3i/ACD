@@ -11,19 +11,26 @@ transitive dependencyもレビュー対象とし、CIでSBOM／ライセンス�
 検査し、許可リスト外、copyleft、またはunknown licenseで失敗します。許可リストは
 MIT、Apache-2.0、BSD-2-Clause、BSD-3-Clause、ISC、0BSD、Python-2.0です。
 
-| 依存                        | 版       | SPDX       | 用途                                                                    |
-| --------------------------- | -------- | ---------- | ----------------------------------------------------------------------- |
-| `ajv`                       | 8.17.1   | MIT        | JSON Schema 2020-12 runtime validation                                  |
-| `ajv-formats`               | 3.0.1    | MIT        | date-time等のformat validation                                          |
-| `json-schema-to-typescript` | 15.0.4   | MIT        | Schemaからの型生成                                                      |
-| `tsx`                       | 4.19.4   | MIT        | TypeScript script実行                                                   |
-| `typescript`                | 5.8.3    | Apache-2.0 | strict compile/typecheck                                                |
-| `vitest`                    | 3.2.4    | MIT        | unit/golden tests                                                       |
-| `eslint` / `@eslint/js`     | 9.30.1   | MIT        | lint                                                                    |
-| `typescript-eslint`         | 8.35.1   | MIT        | TypeScript lint integration                                             |
-| `prettier`                  | 3.6.2    | MIT        | formatting                                                              |
-| `@types/node`               | 22.15.21 | MIT        | Node.js type declarations                                               |
-| `Freerouting`               | 2.2.4    | GPL-3.0    | External routing process only; pinned container, not vendored or linked |
+| 依存                        | 版       | SPDX         | 用途                                                                    |
+| --------------------------- | -------- | ------------ | ----------------------------------------------------------------------- |
+| `ajv`                       | 8.17.1   | MIT          | JSON Schema 2020-12 runtime validation                                  |
+| `ajv-formats`               | 3.0.1    | MIT          | date-time等のformat validation                                          |
+| `json-schema-to-typescript` | 15.0.4   | MIT          | Schemaからの型生成                                                      |
+| `tsx`                       | 4.19.4   | MIT          | TypeScript script実行                                                   |
+| `typescript`                | 5.8.3    | Apache-2.0   | strict compile/typecheck                                                |
+| `vitest`                    | 3.2.4    | MIT          | unit/golden tests                                                       |
+| `eslint` / `@eslint/js`     | 9.30.1   | MIT          | lint                                                                    |
+| `typescript-eslint`         | 8.35.1   | MIT          | TypeScript lint integration                                             |
+| `prettier`                  | 3.6.2    | MIT          | formatting                                                              |
+| `@types/node`               | 22.15.21 | MIT          | Node.js type declarations                                               |
+| `Freerouting`               | 2.2.4    | GPL-3.0      | External routing process only; pinned container, not vendored or linked |
+| `ngspice`                   | 44.2     | BSD-3-Clause | External simulation process only; shipped in the pinned KiCad container |
+
+ngspice `44.2`はKiCad container（同一digest）同梱のバイナリを`ngspice -b`で
+外部processとしてのみ実行し、ACDへlink・vendor・再配布しません。vendor提供の
+`.lib`∕`.mod`は取り込まず、利用者が用意する外部入力として扱います
+（[`spice-gate.md`](spice-gate.md)、
+[`adr/0020-spice-engine-ngspice-external-process.md`](adr/0020-spice-engine-ngspice-external-process.md)）。
 
 KiCad `10.0.5`は`kicad/kicad:10.0`のDocker外部プロセスとしてのみ実行し、
 ACDへリンク・vendor・再配布しません。KiCad本体のライセンスとcontainerの

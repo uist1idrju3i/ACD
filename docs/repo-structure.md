@@ -17,7 +17,7 @@ packages/
     kicad/                # Graph -> KiCad、再オープン、artifact manifest
     storage-fs/           # snapshot、patch、event logのファイル実装
     freerouting/          # DSN/SES境界
-    simulation/           # SPICE等のtyped worker adapter（後続）
+    spice/                # nominal SPICE deck生成とngspice出力の解釈
   tool-contract/          # tool request/result/error envelope
   test-support/           # fixture loader、hash、deterministic clocks
 fixtures/
