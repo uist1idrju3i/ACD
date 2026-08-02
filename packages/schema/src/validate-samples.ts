@@ -7,8 +7,11 @@ import {
   errorTaxonomySchemaPath,
   eventSchemaPath,
   patchSchemaPath,
+  phase1FixtureSchemaPath,
+  phase1SmokeFixturePath,
   repositoryRoot,
 } from "./paths.js";
+import { validatePhase1FixtureReferences } from "./phase1-semantic.js";
 
 export const createValidator = (): Ajv2020 => {
   const ajv = new Ajv2020({ allErrors: true, strict: false, allowUnionTypes: true });
@@ -34,6 +37,7 @@ const samplePaths = [
   patchSchemaPath,
   eventSchemaPath,
   errorTaxonomySchemaPath,
+  phase1FixtureSchemaPath,
 ];
 for (const schemaPath of samplePaths) {
   await loadValidator(schemaPath);
@@ -59,3 +63,20 @@ if (!errorTaxonomyValidator(errorTaxonomy)) {
   );
 }
 process.stdout.write("validated data: schemas/error-taxonomy.json\n");
+
+const phase1FixtureValidator = await loadValidator(phase1FixtureSchemaPath);
+const phase1SmokeFixture = JSON.parse(await readFile(phase1SmokeFixturePath, "utf8")) as unknown;
+if (!phase1FixtureValidator(phase1SmokeFixture)) {
+  throw new Error(
+    `phase 1 smoke fixture is invalid: ${formatValidationErrors(phase1FixtureValidator.errors)}`,
+  );
+}
+const phase1ReferenceErrors = validatePhase1FixtureReferences(
+  phase1SmokeFixture as Parameters<typeof validatePhase1FixtureReferences>[0],
+);
+if (phase1ReferenceErrors.length > 0) {
+  throw new Error(
+    `phase 1 fixture reference-integrity failure: ${phase1ReferenceErrors.join("; ")}`,
+  );
+}
+process.stdout.write("validated fixture: fixtures/phase1/smoke.json\n");

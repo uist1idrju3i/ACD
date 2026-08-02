@@ -6,15 +6,17 @@ import {
   errorTaxonomySchemaPath,
   eventSchemaPath,
   patchSchemaPath,
+  phase1FixtureSchemaPath,
 } from "./paths.js";
 
-export type SchemaName = "design-graph" | "patch" | "event" | "error-taxonomy";
+export type SchemaName = "design-graph" | "patch" | "event" | "error-taxonomy" | "phase1-fixture";
 
 const paths: Record<SchemaName, string> = {
   "design-graph": designGraphSchemaPath,
   patch: patchSchemaPath,
   event: eventSchemaPath,
   "error-taxonomy": errorTaxonomySchemaPath,
+  "phase1-fixture": phase1FixtureSchemaPath,
 };
 
 export const createSchemaValidator = (): Ajv2020 => {

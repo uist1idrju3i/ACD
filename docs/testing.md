@@ -8,7 +8,11 @@ READMEのロードマップにあるゴールデンタスク、決定論的CIゲ
 
 ## ゴールデンタスク
 
-Phase-1の代表タスクは、ESP32、センサー、ステータスLED、電源、通信を含む2層基板です。Phase-1の受入テスト入力は、あらかじめ構造化・変換済みの`Requirement` fixtureです。自然言語要件の解釈、対話、LLMによる`Requirement`変換は後続フェーズの対象であり、Phase-1の入力境界および合否判定には含めません。README §7の「やらないこと」に従い、Phase-1ではFWパッケージと自動発注を含めず、`Requirement` fixtureから部品選定、ネットリスト、配置・配線、`kicad-cli`検証、Gerberを生成し、人手で発注できる状態を完了条件とします。製造後に実機が動くことは、Phase-1の実機確認および後続フェーズの継続条件として扱います。
+Phase-1の代表タスクは、ESP32、センサー、ステータスLED、電源、通信を含む2層基板です。Phase-1の受入テスト入力は、あらかじめ構造化・変換済みの`Requirement` fixtureです。自然言語要件の解釈、対話、LLMによる`Requirement`変換、sourcing APIによる候補取得は後続フェーズの対象であり、Phase-1の入力境界および合否判定には含めません。Phase-1ではfixtureがMPN/AVLを提供し、部品選定はその範囲から行います。README §7の「やらないこと」に従い、Phase-1ではFWパッケージと自動発注を含めず、`Requirement` fixtureから部品選定、ネットリスト、配置・配線、`kicad-cli`検証、Gerberを生成し、人手で発注できる状態を完了条件とします。配線は`unrouted=0`を必須とし、ratsnest付き未配線基板を合格扱いにしません。Phase-1の受入はCLI／fixture runnerで行い、viewerは後続のread-only投影へ延期します。製造後に実機が動くことは、Phase-1の最終golden taskにおける実機確認および後続フェーズの継続条件として扱います。
+
+Phase-1には、3〜5部品のsmoke fixtureと、ESP32級の最終golden fixtureを分けて設けます。smoke fixtureはprojection、netlist consistency、ERC/DRC、Gerber、配線の内部gateです。最終golden fixtureは同じgateをESP32級の実装で通過し、BOM／manufacturing packageを人手発注可能な状態まで生成します。
+
+Phase-1のgate順序、BOM／manufacturing package、実機完了Evidenceの形式は[`phase1-gates.md`](phase1-gates.md)を正とします。
 
 具体的な入力fixture、意図的失敗、期待終端状態、許容差、採点の機械契約は
 [`golden-tasks.md`](golden-tasks.md)で定義します。本書は評価軸と回帰方針を

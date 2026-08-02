@@ -84,6 +84,19 @@ Phase 0は、次の全てを同じCI環境で再現できた時点で完了と�
 - 最終的なIndexedDB、OPFS、SQLite、RDBの選定
 - `ManufacturingProfile`の独立Entity化
 
+## Phase 1境界（Phase 0実装後に確定した事項）
+
+Phase 1は、自然言語やLLMからの変換ではなく、事前変換済みの`Requirement`
+fixtureから開始します。Phase 1の初期sourcing入力はfixture提供のMPN/AVLに限定し、
+sourcing APIは後続adapterです。受入はCLI／fixture runnerで行い、viewerは後続の
+read-only投影へ延期します。配線は`unrouted=0`を必須とし、未配線ratsnestを発注
+準備として許容しません。
+
+3〜5部品のsmoke fixtureは実装中の内部gate、ESP32・センサー・LED・電源・通信を
+含む2層fixtureはPhase 1の最終golden taskとします。FW package、自動発注、自然言語
+入力はPhase 1の受入対象外です。詳細なgateと製造package契約は
+[`phase1-gates.md`](phase1-gates.md)に定義します。
+
 ## 技術spike
 
 | Spike               | 成功基準                                                                   | 失敗時の扱い                                            |

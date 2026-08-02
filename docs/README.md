@@ -25,11 +25,13 @@
 8. [`qc-tools.md`](qc-tools.md) — QC七つ道具・新QC七つ道具の生成分析
 9. [`phase0-plan.md`](phase0-plan.md)、[`patch-revision.md`](patch-revision.md)、
    [`event-log.md`](event-log.md) — Phase 0実装計画と状態契約
-10. [`kicad-ci-profile.md`](kicad-ci-profile.md)、[`golden-tasks.md`](golden-tasks.md)、
-    [`error-taxonomy.md`](error-taxonomy.md) — CI、fixture、エラー分類
-11. [`repo-structure.md`](repo-structure.md)、[`tool-contract.md`](tool-contract.md)、
+10. [`phase1-gates.md`](phase1-gates.md)、[`kicad-ci-profile.md`](kicad-ci-profile.md)、
+    [`golden-tasks.md`](golden-tasks.md)、[`../schemas/phase1-fixture.schema.json`](../schemas/phase1-fixture.schema.json) —
+    Phase 1受入gate、KiCad、fixture契約
+11. [`error-taxonomy.md`](error-taxonomy.md) — エラー分類
+12. [`repo-structure.md`](repo-structure.md)、[`tool-contract.md`](tool-contract.md)、
     [`kicad-interop.md`](kicad-interop.md)、[`testing.md`](testing.md) — 構成、ツール境界、外部連携、評価
-12. [`adr/README.md`](adr/README.md) — ADR運用と既存の設計判断
+13. [`adr/README.md`](adr/README.md) — ADR運用と既存の設計判断
 
 ## ステータス凡例
 
