@@ -8,10 +8,12 @@ import {
   projectToKicad,
 } from "../packages/adapters/kicad/src/index.js";
 import {
+  buildTestPlan,
   evaluateDesignRationale,
   failedFindings,
   lintElectricalTopology,
   unresolvedRationaleFindings,
+  unresolvedTestPlanFindings,
 } from "../packages/graph-core/src/index.js";
 import {
   gateByOrder,
@@ -159,6 +161,27 @@ try {
     subjects: rationale.coverage.length,
     findings: rationale.findings.length,
     findingsHash: hash(JSON.stringify(rationale.findings)),
+  });
+
+  const testPlan = buildTestPlan(fixture, lint.rulesEvaluated);
+  if (testPlan.verdict !== "pass") {
+    throw new Error(
+      `verification-failed: test plan ${testPlan.verdict}: ${JSON.stringify(
+        unresolvedTestPlanFindings(testPlan),
+      )}`,
+    );
+  }
+  await writeFile(
+    join(artifactRoot, "test-plan.json"),
+    `${JSON.stringify(testPlan.items, null, 2)}\n`,
+  );
+  pass(16, {
+    verdict: testPlan.verdict,
+    rulesEvaluated: testPlan.rulesEvaluated.length,
+    testItems: testPlan.items.length,
+    measurementItems: testPlan.items.filter((item) => item.method === "measurement").length,
+    testPlanHash: hash(JSON.stringify(testPlan.items)),
+    artifact: "test-plan.json",
   });
 
   await projectToKicad(fixture, projectRoot);

@@ -182,6 +182,19 @@
       "passCondition": "要求・機能ブロック・全部品にrationaleが対応し、参照が解決し、仮定に検証手段があり、rationaleがEvidenceとして引用されていない",
       "onFailure": "`verification-failed`で停止し、未記録の判断・未解決参照・未検証の仮定を記録",
       "errorCodes": ["verification-failed"]
+    },
+    {
+      "order": 16,
+      "id": "gate:test-plan",
+      "name": "Test item generation",
+      "phase": 2,
+      "runsAfter": "gate:design-rationale",
+      "status": "implemented",
+      "appliesTo": ["golden"],
+      "inputs": "要求のacceptance criteria、電気parameter、net宣言、lint rule、rationaleの未確認仮定",
+      "passCondition": "全acceptance criteriaに検証方法が割り当たり、rationaleが宣言したTestItemが生成され、各TestItemの方法・条件・合格基準が解決している",
+      "onFailure": "`verification-failed`で停止し、未検証の要求・未生成のTestItem・未解決の合格基準を記録",
+      "errorCodes": ["verification-failed"]
     }
   ]
 }

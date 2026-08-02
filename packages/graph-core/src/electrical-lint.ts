@@ -282,13 +282,19 @@ const decouplingPerSupplyPin = (context: Context): LintFinding[] => {
 type LedBranch = {
   resistanceOhm?: number;
   undeclaredResistors: string[];
+  seriesResistorRefs: string[];
   driveVoltageV?: number;
   reachedGround: boolean;
 };
 
 /** Walks the two-terminal chain around an LED to collect series resistance and the drive node. */
 const traceLedBranch = (context: Context, led: Part): LedBranch => {
-  const branch: LedBranch = { resistanceOhm: 0, undeclaredResistors: [], reachedGround: false };
+  const branch: LedBranch = {
+    resistanceOhm: 0,
+    undeclaredResistors: [],
+    seriesResistorRefs: [],
+    reachedGround: false,
+  };
   const visited = new Set<string>([led.id]);
   for (const start of netsOfPart(context, led.id)) {
     let net: Net | undefined = start;
@@ -318,6 +324,7 @@ const traceLedBranch = (context: Context, led: Part): LedBranch => {
         .filter((part) => !visited.has(part.id))
         .flatMap((resistor) => {
           visited.add(resistor.id);
+          branch.seriesResistorRefs.push(resistor.reference);
           const value = resistor.parameters?.resistanceOhm;
           if (value === undefined) branch.undeclaredResistors.push(resistor.reference);
           else if (branch.resistanceOhm !== undefined) branch.resistanceOhm += value;
@@ -584,3 +591,56 @@ export const lintElectricalTopology = (
 
 export const failedFindings = (report: ElectricalLintReport): LintFinding[] =>
   unresolvedFindings(report.findings);
+
+export type LedBranchCurrent = {
+  partId: string;
+  reference: string;
+  seriesResistorRefs: string[];
+  currentMa?: number;
+  minMa?: number;
+  maxMa?: number;
+  driveVoltageV?: number;
+};
+
+/**
+ * LED branch currents derived from the same topology trace the lint uses, so a generated
+ * test item and the lint finding cannot drift apart.
+ */
+export const ledBranchCurrents = (
+  fixture: Phase1Fixture,
+  profile: ElectricalLintProfile = defaultElectricalLintProfile,
+): LedBranchCurrent[] => {
+  const context = buildContext(fixture, profile);
+  return fixture.parts
+    .filter((part) => part.kind === "led")
+    .map((led) => {
+      const branch = traceLedBranch(context, led);
+      const forwardVoltageV = led.parameters?.forwardVoltageV;
+      const computable =
+        forwardVoltageV !== undefined &&
+        branch.driveVoltageV !== undefined &&
+        branch.resistanceOhm !== undefined &&
+        branch.resistanceOhm > 0 &&
+        branch.undeclaredResistors.length === 0;
+      return {
+        partId: led.id,
+        reference: led.reference,
+        seriesResistorRefs: branch.seriesResistorRefs,
+        ...(computable
+          ? {
+              currentMa:
+                (((branch.driveVoltageV ?? 0) - (forwardVoltageV ?? 0)) /
+                  (branch.resistanceOhm ?? 1)) *
+                1000,
+            }
+          : {}),
+        ...(led.parameters?.forwardCurrentMinMa === undefined
+          ? {}
+          : { minMa: led.parameters.forwardCurrentMinMa }),
+        ...(led.parameters?.forwardCurrentMaxMa === undefined
+          ? {}
+          : { maxMa: led.parameters.forwardCurrentMaxMa }),
+        ...(branch.driveVoltageV === undefined ? {} : { driveVoltageV: branch.driveVoltageV }),
+      };
+    });
+};

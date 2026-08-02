@@ -9,4 +9,5 @@ export * from "./hash.js";
 export * from "./patch.js";
 export * from "./repository.js";
 export * from "./semantic.js";
+export * from "./test-items.js";
 export * from "./verification.js";

@@ -1,6 +1,6 @@
 # Phase 2実装計画
 
-**ステータス：Draft（WP1〜WP3実装済み、WP4以降は未着手）**
+**ステータス：Draft（WP1〜WP4実装済み、WP5以降は未着手）**
 
 ## 目的と権威範囲
 
@@ -104,7 +104,8 @@ footprint／MPN不整合が後段で発見されました。KiCad ERCはこれ�
 
 ### WP4：テスト項目の自動生成
 
-**状態：未着手。**
+**状態：実装済み。** 契約と生成元は[`test-plan-generation.md`](test-plan-generation.md)、
+実行はgate 16（`gate:test-plan`、`runsAfter: gate:design-rationale`）。
 
 **作業**
 
@@ -116,6 +117,13 @@ footprint／MPN不整合が後段で発見されました。KiCad ERCはこれ�
 
 - golden fixtureから生成したTestItemリストが決定論的（同一入力で同一hash）である。
 - 各要求・制約に検証方法が割り当てられ、未割当は未検証として報告される。
+
+**実装で判明した事項**
+
+- LED電流の期待値はGate 14と同じtopology trace（`ledBranchCurrents`）から導出します。
+  生成側で同じ計算を再実装すると、lintの判定とテスト項目の期待値が黙って乖離します。
+- 合格基準を導出できないitemは`unknown`とし、blockedで停止します。「測ることは決まったが
+  合格範囲は不明」という項目を成果物として出さないためです。
 
 ### WP5：故障注入と自動検出・自動修復ループ
 
