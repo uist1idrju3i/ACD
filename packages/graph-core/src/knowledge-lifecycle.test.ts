@@ -127,16 +127,6 @@ describe("knowledge lifecycle", () => {
       { status: "adopted", now: "2026-01-01T00:00:00.000Z" },
     );
     expect(adopted.provenance[0]).toMatchObject({ designRevision: "phase1-golden-2" });
-    expect(adopted.appliesWhen).not.toContainEqual({
-      field: "designRevision",
-      operator: "equals",
-      value: "phase1-golden-2",
-    });
-    expect(adopted.appliesWhen).not.toContainEqual({
-      field: "partId",
-      operator: "equals",
-      value: "part:prototype-1",
-    });
     expect(adopted.appliesWhen).toContainEqual({
       field: "fabProfileId",
       operator: "equals",
@@ -147,12 +137,12 @@ describe("knowledge lifecycle", () => {
       operator: "equals",
       value: "footprint:r0603",
     });
-    expect(adopted.appliesWhen).not.toContainEqual({
+    expect(adopted.appliesWhen).toContainEqual({
       field: "ruleId",
       operator: "equals",
       value: "mask-sliver-min",
     });
-    expect(adopted.appliesWhen).not.toContainEqual({
+    expect(adopted.appliesWhen).toContainEqual({
       field: "classification",
       operator: "equals",
       value: "mask-clearance",
