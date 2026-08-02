@@ -15,8 +15,12 @@ READMEの「オープンなエンジンとフォーマット」およびロー�
 - IDFv3（レガシーな基板・部品外形交換）
 - IDX（ProSTEP iViPの増分交換）は将来候補
 - 必要に応じてSpecctra DSN/SESによるfreerouting交換
+- IBIS／IBIS-AMIモデル、Touchstone 2.1（`.s2p`／`.s4p`）等のSI／PI解析入力
+- Verilog-A／SystemVerilog-AMSモデル、FMI／Modelica連成の将来入力候補
 
 KiCadの`kicad-cli`は3DモデルをSTEP、GLB、BREP、STL等へ出力できます。IDFv3は基板外形、カットアウト、穴、部品外形などの基本機械情報を扱いますが、全ての機械意味論を表現するものではありません。IDXの初期対応とSTEPのみの初期対応のどちらを採用するかは未決定です。
+
+KiCadの回路図エディタはngspiceを統合し、SPICE解析と波形確認を提供します。これは回路図を正とする設計へ戻す根拠ではなく、KiCad投影のレビュー・互換性経路です。ACDの決定論的なバッチ検証では、生成したSPICEネットリストを明示的なシミュレーションワーカーへ渡し、エンジン版、SPICE方言、モデル出所、収束状態、入力ハッシュを記録します。KiCad 10の`kicad-cli`は回路図のネットリスト出力などを提供しますが、独立したSPICE実行CLIやシミュレーションIPCを本仕様で仮定しません。
 
 具体的な最低対応KiCadバージョン、ライブラリ固定方法、IPC APIの対応範囲は未決定（[ADR-0007](adr/0007-kicad-minimum-version.md)で決定）です。KiCad [10.0](https://github.com/KiCad/kicad-source-mirror/releases/tag/10.0.0)は2026年3月にリリースされ、9.xは積極的メンテナンス対象外です。公式ソースでは[2026年3月にSWIG/wxPython旧Python統合が削除](https://github.com/KiCad/kicad-source-mirror/commit/65a442b1d2bf153be7979de8926ab71fd095f4bd)され、IPC APIが今後の経路とされています。公式[`kicad-python`](https://docs.kicad.org/kicad-python-main/kicad.html)では`get_schematic()`がKiCad 11追加として記載されるため、回路図IPCはバージョン別能力として扱います。
 
