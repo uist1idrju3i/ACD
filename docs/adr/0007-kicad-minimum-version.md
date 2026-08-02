@@ -29,10 +29,22 @@ ACDは、バッチ検証、生成投影、保護されたライブ編集、回�
 
 ## 決定
 
-未決定。必要なACD相互運用fixtureとKiCad機能テストが揃った後に、最低対応バージョンとフォールバック方針を選択します。それまでは、[`kicad-interop.md`](../kicad-interop.md)でバージョン対応の機能検出を維持し、すべての対応インストールで回路図IPCが利用できると仮定してはいけません。
+未決定。Phase 0/1のCI用暫定基準は
+[`ADR-0009`](0009-provisional-kicad-ci-baseline.md)でKiCad 10.xへ固定しますが、
+これは製品の最低対応バージョンを決めるものではありません。必要なACD相互運用
+fixtureとKiCad機能テストが揃った後に、最低対応バージョンとフォールバック方針を
+選択します。それまでは、[`kicad-interop.md`](../kicad-interop.md)でバージョン
+対応の機能検出を維持し、すべての対応インストールで回路図IPCが利用できると
+仮定してはいけません。
 
 ## 結果
 
 - 選択した基準にかかわらず、ACDは設計グラフを正規モデルとして維持し、KiCad成果物を投影として扱う必要があります。
 - CIは、選択した基準と、明示的にサポートする互換性プロファイルを実行する必要があります。
 - 基準バージョンの変更には、このADR、機能マトリックス、ゴールデンタスクfixtureの更新が必要です。
+- Phase 0/1 CIの実行環境は、暫定的にADR-0009とそのCIプロファイルへ従います。
+
+## 参照
+
+- [`0009-provisional-kicad-ci-baseline.md`](0009-provisional-kicad-ci-baseline.md)
+- [`../kicad-ci-profile.md`](../kicad-ci-profile.md)

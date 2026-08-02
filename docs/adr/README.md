@@ -29,3 +29,6 @@ ADRはACDの技術選定を、理由・代替案・前提・結果とともに�
 - [`0004-browser-first-optional-workers.md`](0004-browser-first-optional-workers.md)
 - [`0005-byok-self-hosted-llm.md`](0005-byok-self-hosted-llm.md)
 - [`0006-implementation-language-storage.md`](0006-implementation-language-storage.md)
+- [`0007-kicad-minimum-version.md`](0007-kicad-minimum-version.md)
+- [`0008-phase0-provisional-implementation-profile.md`](0008-phase0-provisional-implementation-profile.md)
+- [`0009-provisional-kicad-ci-baseline.md`](0009-provisional-kicad-ci-baseline.md)
