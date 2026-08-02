@@ -319,8 +319,8 @@ const output = {
 await writeFile(join(artifactRoot, "knowledge-loop.json"), `${JSON.stringify(output, null, 2)}\n`);
 console.log(
   JSON.stringify({
-    controlFindings: 1,
-    knowledgeEnabledFindings: 0,
+    controlFindings: maskFindingCount(controlIntake),
+    knowledgeEnabledFindings: maskFindingCount(enabledIntake),
     libraryRevision: patchArtifact.libraryRevision,
   }),
 );
