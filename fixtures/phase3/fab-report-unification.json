@@ -6,7 +6,7 @@
   "source": {
     "kind": "fixture",
     "locator": "fixtures/phase3/fab-report-unification.json",
-    "contentHash": "sha256:d46f918b78b63b168a021cba8314c3c2bd67972b4c80d4d6e639bca84ff1bf7d",
+    "contentHash": "sha256:143da7b540328837ed360af227318013f666e09e0c68642eae5b5120cfccb135",
     "fixtureDerived": true,
     "fixtureId": "fixture:fab-report-unification"
   },

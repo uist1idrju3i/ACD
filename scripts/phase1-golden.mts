@@ -347,10 +347,6 @@ try {
     fabFeedbackReport,
     referenceIndexFromPhase1Fixture(fixture),
   );
-  const fabFeedbackUnknown =
-    fabFeedback.verdict === "unknown"
-      ? fabFeedbackUnknownError(fabFeedback.evidence.value.unknownFindingIds)
-      : undefined;
   const fabFeedbackEventLog = new InMemoryEventLog();
   await fabFeedbackEventLog.append(
     createFabFeedbackReceivedEvent({
@@ -394,6 +390,9 @@ try {
     evidence: fabFeedback.evidence,
     artifact: "fab-feedback.json",
   });
+  if (fabFeedback.verdict === "unknown") {
+    throw fabFeedbackUnknownError(fabFeedback.evidence.value.unknownFindingIds);
+  }
 
   enter(6);
   await projectToKicad(fixture, projectRoot);

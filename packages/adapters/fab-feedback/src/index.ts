@@ -2,6 +2,7 @@ import { createHash } from "node:crypto";
 import { readFile } from "node:fs/promises";
 import {
   intakeFabFeedback,
+  sha256,
   type FabFeedbackReferenceIndex,
   type FabFeedbackReport,
 } from "@acd/graph-core";
@@ -18,12 +19,10 @@ const sha256Text = (content: string): string =>
   `sha256:${createHash("sha256").update(content, "utf8").digest("hex")}`;
 
 const fixtureArtifactHash = (report: SchemaFabFeedbackReport): string =>
-  sha256Text(
-    JSON.stringify({
-      ...report,
-      source: { ...report.source, contentHash: "" },
-    }),
-  );
+  sha256({
+    ...report,
+    source: { ...report.source, contentHash: "" },
+  });
 
 export class FixtureFabFeedbackReader implements FabFeedbackReader {
   constructor(private readonly path: string) {}
@@ -41,12 +40,10 @@ export class FixtureFabFeedbackReader implements FabFeedbackReader {
     }
     const typed = report as FabFeedbackReport;
     const rawHash = sha256Text(typed.rawReport.content);
-    if (
-      typed.rawReport.contentHash !== rawHash ||
-      typed.source.contentHash !== fixtureArtifactHash(report)
-    ) {
-      throw new Error("fab feedback raw report content hash mismatch");
-    }
+    if (typed.rawReport.contentHash !== rawHash)
+      throw new Error("fab feedback raw report body hash mismatch");
+    if (typed.source.contentHash !== fixtureArtifactHash(report))
+      throw new Error("fab feedback source artifact hash mismatch");
     return typed;
   }
 }

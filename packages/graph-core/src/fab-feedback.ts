@@ -190,12 +190,13 @@ export const intakeFabFeedback = (
   assertSourceProvenance(report);
   assertTarget(report, index);
   assertUniqueFindingIds(report);
-  const profile: FabProfileRules = profileRules ?? {
-    profileId: report.fabProfileId,
-    version: "unknown",
-    confidenceFloor: 1,
-    rules: [],
-  };
+  if (!profileRules) {
+    throw new GraphCoreError(
+      "schema-invalid",
+      `fab profile is not declared: ${report.fabProfileId}`,
+    );
+  }
+  const profile: FabProfileRules = profileRules;
   const findingsByKey = new Map<string, FabFeedbackFinding>();
   for (const finding of report.rawFindings) {
     assertReferences(finding, index);

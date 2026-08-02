@@ -6,7 +6,7 @@
   "source": {
     "kind": "fixture",
     "locator": "fixtures/phase3/fab-report-negative.json",
-    "contentHash": "sha256:37cf493c27cd53fccff5934e5a88adc1b6428a2b7369250f1ba111e73ce8fdc3",
+    "contentHash": "sha256:8addea4f471b8803a8c9b2c3e85b6d1023f3f21405164b36327f60c3f962b0b5",
     "fixtureDerived": true,
     "fixtureId": "fixture:fab-report-negative"
   },
