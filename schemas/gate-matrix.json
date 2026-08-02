@@ -249,7 +249,7 @@
       "status": "implemented",
       "appliesTo": ["golden"],
       "inputs": "gate 19 intake result、source event、applicability metadata、approval",
-      "passCondition": "candidate生成、遷移・scope承認・改訂・deprecation伝播が決定論的に検証され、却下候補とstale結果が保持される",
+      "passCondition": "candidateを生成し、provenance・source event・適用条件を検証したうえでreviewed、adoptedへ決定論的に遷移できることを検証する",
       "onFailure": "`verification-failed`または`schema-invalid`で停止し、承認不足・不正遷移・stale対象を記録",
       "errorCodes": ["verification-failed", "schema-invalid", "stale-result"]
     }

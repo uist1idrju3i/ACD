@@ -208,15 +208,36 @@ export const transitionKnowledgeItem = (
     rejectionReason?: string;
   },
 ): KnowledgeItem => {
+  if (item.status === "rejected" || item.status === "deprecated") {
+    throw new GraphCoreError(
+      "schema-invalid",
+      `terminal knowledge status cannot transition: ${item.status}`,
+    );
+  }
   const targetScope = input.scope ?? item.scope;
+  if (item.scope === "library-wide" && targetScope === "project-local") {
+    throw new GraphCoreError(
+      "schema-invalid",
+      "library-wide knowledge cannot be downgraded; revise the item instead",
+    );
+  }
   if (targetScope === "library-wide" && item.scope !== "library-wide") {
     assertPromotionMetadata(item);
     const approval = input.approval;
+    const now = Date.parse(input.now);
+    const expiresAt = approval ? Date.parse(approval.expiresAt) : Number.NaN;
+    const approvedAt = approval ? Date.parse(approval.approvedAt) : Number.NaN;
     if (
       !approval ||
+      !approval.approvalId ||
+      !approval.subject ||
       approval.subject !== item.knowledgeId ||
       approval.scope !== "library-wide" ||
-      Date.parse(approval.expiresAt) <= Date.parse(input.now)
+      !Number.isFinite(now) ||
+      !Number.isFinite(approvedAt) ||
+      !Number.isFinite(expiresAt) ||
+      expiresAt <= approvedAt ||
+      expiresAt <= now
     ) {
       throw new GraphCoreError(
         "verification-failed",
@@ -224,6 +245,11 @@ export const transitionKnowledgeItem = (
         "error",
       );
     }
+  } else if (input.approval) {
+    throw new GraphCoreError(
+      "schema-invalid",
+      "approval may only be recorded during a validated library-wide promotion",
+    );
   }
   if (
     item.scope !== "library-wide" &&
@@ -250,7 +276,9 @@ export const transitionKnowledgeItem = (
     status: input.status,
     scope: targetScope,
   };
-  if (input.approval) changes.approvalId = input.approval.approvalId;
+  if (targetScope === "library-wide" && item.scope !== "library-wide" && input.approval) {
+    changes.approvalId = input.approval.approvalId;
+  }
   if (input.rejectionReason) changes.rejectionReason = input.rejectionReason;
   return nextRevision(item, changes);
 };
@@ -330,6 +358,7 @@ export const propagateKnowledgeDeprecation = (
 ): {
   graph: typeof graph;
   staleEntityIds: string[];
+  preservedEntityIds: string[];
   traversalBasis: string[];
 } => {
   const dependents = new Map<string, { ids: string[]; basis: string }>();
@@ -363,18 +392,33 @@ export const propagateKnowledgeDeprecation = (
     }
   }
   const staleEntityIds: string[] = [];
+  const preservedEntityIds: string[] = [];
   const updated = graph.entities.map((entity) => {
     if (
       affected.has(entity.id) &&
       entity.id !== knowledgeItemId &&
       (entity.type === "Rationale" || entity.type === "VerificationResult")
     ) {
+      if (
+        entity.status === "failed" ||
+        entity.status === "blocked" ||
+        entity.status === "waived" ||
+        entity.status === "stale"
+      ) {
+        preservedEntityIds.push(entity.id);
+        return entity;
+      }
       staleEntityIds.push(entity.id);
-      return { ...entity, status: "stale", staleReason: reason };
+      return { ...entity, revision: entity.revision + 1, status: "stale", staleReason: reason };
     }
     return entity;
   });
-  return { graph: { ...graph, entities: updated }, staleEntityIds, traversalBasis };
+  return {
+    graph: { ...graph, entities: updated },
+    staleEntityIds,
+    preservedEntityIds,
+    traversalBasis,
+  };
 };
 
 export type KnowledgeCandidateCreatedPayload = {
