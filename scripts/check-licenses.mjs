@@ -10,14 +10,26 @@ const allowed = new Set([
   "MIT",
   "Python-2.0",
 ]);
+const isAllowedExpression = (expression) => {
+  const alternatives = expression
+    .replace(/[()]/gu, "")
+    .split(/\s+OR\s+/u)
+    .map((alternative) => alternative.trim())
+    .filter(Boolean);
+  return alternatives.some((alternative) =>
+    alternative
+      .split(/\s+AND\s+/u)
+      .map((term) => term.trim())
+      .every((term) => allowed.has(term)),
+  );
+};
 const inventory = JSON.parse(
   execFileSync("pnpm", ["licenses", "list", "--json"], { encoding: "utf8" }),
 );
 const violations = [];
 
 for (const [license, packages] of Object.entries(inventory)) {
-  const expressions = license.split(/\s+OR\s+/u);
-  if (!expressions.every((expression) => allowed.has(expression))) {
+  if (!isAllowedExpression(license)) {
     for (const packageInfo of packages) {
       violations.push(`${packageInfo.name}@${packageInfo.versions.join(",")}: ${license}`);
     }

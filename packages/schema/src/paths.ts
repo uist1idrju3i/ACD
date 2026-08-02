@@ -9,3 +9,4 @@ export const errorTaxonomySchemaPath = resolve(
   repositoryRoot,
   "schemas/error-taxonomy.schema.json",
 );
+export const errorTaxonomyDataPath = resolve(repositoryRoot, "schemas/error-taxonomy.json");
