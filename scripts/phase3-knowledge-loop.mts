@@ -42,9 +42,16 @@ if (unknownConditions.length > 0) {
     `schema-invalid: target process conditions drift: ${unknownConditions.join(", ")}`,
   );
 }
-const patchArtifact = JSON.parse(
-  await readFile(join(artifactRoot, "library-patch.json"), "utf8"),
-) as { patch: LibraryOverlayPatch; libraryRevision: string };
+let patchArtifact: { patch: LibraryOverlayPatch; libraryRevision: string };
+try {
+  patchArtifact = JSON.parse(
+    await readFile(join(artifactRoot, "library-patch.json"), "utf8"),
+  ) as typeof patchArtifact;
+} catch (error) {
+  throw new Error(
+    `verification-failed: missing Phase 1 library-patch.json; run pnpm phase1:golden first (${error instanceof Error ? error.message : String(error)})`,
+  );
+}
 const patch = patchArtifact.patch;
 const hash = (value: string): string =>
   `sha256:${createHash("sha256").update(value).digest("hex")}`;
