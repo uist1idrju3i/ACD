@@ -89,11 +89,14 @@ KiCadの回路図IPCはPhase 0/1の前提にしない。回路図投影は生成
 するまでjidoka停止とします。合格条件は、同一入力revision・tool/container
 provenanceで2回以上生成した`STABLE-SHA256SUMS`が一致することです。
 
-Phase 0の実行ラッパーは`pnpm kicad:spike`（`scripts/kicad-spike.sh`）、Phase 1
-smokeの受入runnerは`pnpm phase1:smoke`（`scripts/phase1-smoke.mts`）です。
-Dockerがない、または固定imageが取得できない環境での`SKIP`は合格ではありません。
-ゲート未実行として`blocked`相当に扱い、Phase 0/1の受入証拠にしません。Dockerと固定imageが
-利用可能になることを再開条件として記録します。
+Phase 0の実行ラッパーは`pnpm kicad:spike`（`scripts/kicad-spike.sh`）と
+`pnpm golden`（`scripts/golden-run.mts`）、Phase 1 smokeの受入runnerは
+`pnpm phase1:smoke`（`scripts/phase1-smoke.mts`）です。いずれも
+`fixtures/design-graphs/normal-2layer.json`または`fixtures/phase1/smoke.json`を
+投影した成果物のみを検査します。Dockerがない、または固定imageが取得できない環境で
+`kicad:spike`が返す`SKIP`は合格ではありません。ゲート未実行として`blocked`相当に扱い、
+Phase 0/1の受入証拠にしません。Dockerと固定imageが利用可能になることを再開条件として
+記録します。
 
 ## 期待artifact
 

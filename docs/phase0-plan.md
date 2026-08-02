@@ -1,6 +1,6 @@
 # Phase 0実装計画
 
-**ステータス：Draft（Schema、graph-core、KiCad投影spikeを実装済み）**
+**ステータス：完了（完了条件1〜7を同一検証環境で再現。残存制約は「実装状況」参照）**
 
 ## 目的と権威範囲
 
@@ -24,47 +24,77 @@ Phase 0は、次の全てを同じCI環境で再現できた時点で完了と�
 7. 正常系と意図的失敗系のgolden taskをreplayし、期待結果とエラー分類を比較
    できる。
 
+## 実装状況
+
+完了条件1〜7は次の実装で再現できます。
+
+| 条件 | 実装                                                                                           | 実行コマンド                                |
+| ---- | ---------------------------------------------------------------------------------------------- | ------------------------------------------- |
+| 1、2 | `schemas/`、`packages/schema`                                                                  | `pnpm schema:validate`、`pnpm typegen-sync` |
+| 3    | `packages/graph-core/src/semantic.ts`、`packages/graph-core/src/board.ts`                      | `pnpm test`                                 |
+| 4、5 | `packages/graph-core/src/patch.ts`、`verification.ts`、`event-log.ts`                          | `pnpm test`、`pnpm golden`                  |
+| 6    | `fixtures/design-graphs/normal-2layer.json`、`packages/adapters/kicad/src/graph-projection.ts` | `pnpm kicad:spike`、`pnpm golden`           |
+| 7    | `scripts/golden-run.mts`、`fixtures/golden/*.json`                                             | `pnpm golden`                               |
+
+`normal-2layer` fixtureは、Project、Requirement、BoardStackup、Part、Footprint、
+Component、Pin、Net、Layoutを持つ20×15 mmの2層基板です。graph-coreの
+`readBoardModel`がpad対応、net所属、配置、stackupの参照整合性を検査し、KiCad
+adapterが同一グラフから`.kicad_pro`／`.kicad_sch`／`.kicad_pcb`を投影します。
+`pnpm golden`はfixture 6本を実replayし、netlist読み戻し（schematic netlistと
+IPC-D-356）、ERC/DRC、Gerber/drill、再投影による正規化artifact hash一致、
+patch conflict、stale result、再オープン失敗の停止をevidenceとして
+`artifacts/golden/`へ保存します。
+
+### 残存制約
+
+- Footprintのpad geometryはfixture内の簡略値（0603系1.2 mm角、1x02コネクタ
+  2 mmピッチ）であり、KiCad公式footprintの実geometryではありません。fixtureの
+  `uncertainty`に記録し、公式ライブラリ抽出はPhase 1のライブラリ作業で行います。
+- 配線はfixtureが持つ固定track/viaであり、routerは実装していません（Phase 0の
+  範囲外）。
+- 回路図投影はlabelベースのnet接続で、wire描画・階層シートは扱いません。
+
 ## マイルストーン
 
-### M0：fixturesと開発基盤
+### M0：fixturesと開発基盤（完了）
 
 - 正常な最小2層基板fixtureを作る
 - 意図的ERC/DRC失敗、patch conflict、stale result、再オープン失敗の入力を
   作る
 - pnpm workspace、Node.js LTS、型チェック・テスト・lintの契約を置く
 
-### M1：Schema検証と型生成
+### M1：Schema検証と型生成（完了）
 
 - `schemas/design-graph.schema.json`から型を生成する
 - AJV runtime validationを実行する
 - Schema validだが意味的に不正なfixtureをsemantic validatorで拒否する
 
-### M2：graph-core semantic validator
+### M2：graph-core semantic validator（完了）
 
 - Entity ID、Entity type、revision、参照先存在を検査する
 - Projectとentitiesの整合性を検査する
 - Phase 0では影響伝播の完全な型付きリンク規則を実装せず、未定義の影響は
   広い再検証へフォールバックする
 
-### M3：patch／replay
+### M3：patch／replay（完了）
 
 - [`patch-revision.md`](patch-revision.md)に従いRFC 6902操作を適用する
 - snapshot、patch JSONL、イベントの再生結果を比較する
 - conflict、重複送信、途中停止からの再開を検証する
 
-### M4：KiCad投影adapter
+### M4：KiCad投影adapter（完了）
 
 - graph fixtureから最小`.kicad_pro`、`.kicad_pcb`、必要な回路図投影を生成する
 - adapterの入出力、tool version、入力hash、出力hashを記録する
 - 回路図IPCを前提にしない
 
-### M5：`kicad-cli` CI
+### M5：`kicad-cli` CI（完了）
 
 - [`kicad-ci-profile.md`](kicad-ci-profile.md)の固定環境で再オープン、ERC/DRC、
   Gerber/drillを実行する
 - capability probeとstdout/stderr、終了コード、成果物hashを保存する
 
-### M6：golden task
+### M6：golden task（完了）
 
 - [`golden-tasks.md`](golden-tasks.md)の全fixtureをreplayする
 - 合否、停止理由、stale、conflict、artifact hashの期待値を比較する
@@ -130,6 +160,29 @@ read-only投影へ延期します。配線は`unrouted=0`を必須とし、未�
 
 完了時には、実行コマンド、Node/pnpm/KiCadの版、fixture hash、生成物hash、
 既知の未決定事項、失敗したspikeと縮退方針をイベントとCI artifactへ残します。
+
+### Phase 0完了検証（2026-08-02）
+
+- 検証環境：Node.js `v22.23.2`、pnpm `11.18.0`、Docker `27.4.1`、
+  KiCad `10.0.5`、digest固定イメージ
+  `kicad/kicad@sha256:182c8005cb775a2c448a4c18681d489f1ff472a761885eba3e08b07e3c0564de`
+- `pnpm schema:validate`：終了コード0。全Schema、sample、fixtureを検証。
+- `pnpm typegen-sync`：終了コード0。型を生成し、`src/generated`の差分なし。
+- `pnpm test`：終了コード0。13 test files、37 testsすべてpass。
+- `pnpm lint`：終了コード0。
+- `pnpm typecheck`：終了コード0。全workspace packageの型チェックpass。
+- `pnpm golden`：終了コード0。6 fixtureすべてpass、期待結果との不一致なし。
+  `artifacts/golden/summary.json`および各fixtureの`result.json`に証拠を保存した。
+  正常系ではschematic/PCB netlist readback、ERC/DRC、Gerber/drill、
+  再投影artifact hash一致を確認し、失敗系ではERC/DRC失敗、
+  patch conflict、stale result、再オープン失敗時の停止とエラー分類を確認した。
+  正常系のgraph hashは
+  `sha256:7be6a9ed61680e3d5a9abca9f14a73afdf69ca467b62ae82c82c96601c8af325`。
+- `pnpm kicad:spike`：既定の`kicad/kicad:10.0`タグは検証機に取得されておらず
+  `SKIP: Docker or KiCad image unavailable`となるため、`KICAD_IMAGE`へ上記digest
+  固定イメージを指定して実行した。終了コード0。`kicad-cli`は`10.0.5`、DRC 0
+  violations／0 unconnected items、Gerber 8面とdrill、STEP、ERC 0 violationsを
+  生成した。SKIPは成功として扱わない。
 
 ## 関連文書
 
