@@ -157,7 +157,9 @@
         "provenance",
         "content",
         "status",
-        "knowledgeId"
+        "knowledgeId",
+        "appliesWhen",
+        "excludesWhen"
       ],
       "properties": {
         "id": { "$ref": "#/$defs/id" },

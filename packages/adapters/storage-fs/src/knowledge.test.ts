@@ -44,4 +44,15 @@ describe("FileKnowledgeRepository", () => {
       3,
     );
   });
+
+  it("makes identical saves idempotent and rejects conflicting IDs", async () => {
+    directory = await mkdtemp(join(tmpdir(), "acd-knowledge-"));
+    const repository = new FileKnowledgeRepository(join(directory, "knowledge.jsonl"));
+    await repository.save(item);
+    await repository.save(structuredClone(item));
+    await expect(repository.save({ ...item, content: "different" })).rejects.toThrow(
+      /already exists/,
+    );
+    expect((await repository.list()).map((entry) => entry.id)).toEqual(["knowledge:test"]);
+  });
 });
