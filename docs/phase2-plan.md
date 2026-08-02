@@ -134,10 +134,12 @@ footprint／MPN不整合が後段で発見されました。KiCad ERCはこれ�
 - 修復できない場合はjidoka停止し、停止理由と再開条件を記録する。
 - 修復ループが無限ループにならず、試行上限と収束条件を持つ。
 
-**未決定**
+**決定済み**
 
-- 修復候補の生成方式（決定論的ルールベースか、LLM提案＋決定論的検証か）はADRで決める。
-  いずれの場合も合否判定は決定論的gateが行い、LLM出力を合格証拠にしない。
+- 修復候補の生成方式はLLM提案＋決定論的検証。
+  [ADR-0019](adr/0019-repair-loop-llm-proposal-with-deterministic-validation.md)。
+  合否判定は決定論的gateが行い、LLM出力を合格証拠にしない。CIはoffline再現可能な
+  記録済み提案（hash固定）で回し、live LLM呼び出しはopt-in。
 
 ### WP6：SPICEゲート（忠実度ラダー レベル2〜3）
 
@@ -153,10 +155,11 @@ footprint／MPN不整合が後段で発見されました。KiCad ERCはこれ�
 - golden fixtureの電源・LED回路について、nominal解析が収束し、結果がEvidenceになる。
 - 収束失敗は`convergence-failure`で停止する。
 
-**未決定**
+**決定済み**
 
-- engine選定（ngspice共有ライブラリ／WASM、Xyce等）とライセンス境界はADRで決める。
-  高忠実度SI／熱解析はPhase 2の対象外。
+- engineはngspiceを固定digestコンテナの外部processとして実行する。
+  [ADR-0020](adr/0020-spice-engine-ngspice-external-process.md)。
+  nominal解析のみを対象とし、高忠実度SI／熱解析はPhase 2の対象外。
 
 ### WP7：schematic readability（Phase 1 WP6の繰延分）
 

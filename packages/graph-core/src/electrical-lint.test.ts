@@ -159,6 +159,40 @@ describe("electrical lint", () => {
     expect(rulesOf(wrong, "fail")).toEqual(["capacitor-voltage-derating"]);
   });
 
+  it("blocks instead of summing a shunt resistor into the LED series path", () => {
+    const shunted = clone(golden);
+    const anode = shunted.nets.find(
+      (net) => net.class !== "ground" && net.pins.some((pin) => pin.partId === "part:d1"),
+    );
+    if (!anode) throw new Error("fixture has no net on part:d1");
+    shunted.parts = nonEmpty(
+      [
+        ...shunted.parts,
+        {
+          ...findPart(shunted, "part:r3"),
+          id: "part:r99",
+          reference: "R99",
+          parameters: { source: "injected", resistanceOhm: 100000 },
+        },
+      ],
+      "parts",
+    );
+    anode.pins = nonEmpty([...anode.pins, { partId: "part:r99", pin: "1" }], anode.id);
+    const report = lintElectricalTopology(shunted);
+    expect(report.verdict).toBe("blocked");
+    expect(rulesOf(shunted, "unknown")).toContain("led-series-current");
+  });
+
+  it("blocks instead of skipping a capacitor whose nets declare no voltage", () => {
+    const undeclared = clone(golden);
+    for (const net of undeclared.nets) {
+      if (net.pins.some((pin) => pin.partId === "part:c4")) delete net.nominalVoltageV;
+    }
+    const report = lintElectricalTopology(undeclared);
+    expect(report.verdict).toBe("blocked");
+    expect(rulesOf(undeclared, "unknown")).toContain("capacitor-voltage-derating");
+  });
+
   it("blocks instead of passing when a parameter is undeclared", () => {
     const incomplete = clone(golden);
     findPart(incomplete, "part:d1").parameters = { source: "injected" };

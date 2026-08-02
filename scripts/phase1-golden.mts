@@ -79,16 +79,20 @@ const freerouting = (args: string[]): string =>
     "/app/freerouting-executable.jar",
     ...args,
   ]);
-const pass = (gate: number, evidence: Record<string, unknown>): void => {
-  const { name } = gateByOrder(gateMatrix, gate);
+/** Names the gate being evaluated so a stop is recorded against it, not against the last pass. */
+const enter = (gate: number): void => {
   currentGate = gate;
-  currentName = name;
-  results.push({ gate, name, status: "passed", evidence });
+  currentName = gateByOrder(gateMatrix, gate).name;
+};
+const pass = (gate: number, evidence: Record<string, unknown>): void => {
+  enter(gate);
+  results.push({ gate, name: currentName, status: "passed", evidence });
 };
 await rm(artifactRoot, { recursive: true, force: true });
 await mkdir(projectRoot, { recursive: true });
 
 try {
+  enter(1);
   const referenceErrors = validatePhase1FixtureReferences(fixture);
   if (referenceErrors.length > 0) throw new Error(referenceErrors.join("; "));
   pass(1, { fixture: fixture.fixtureId, schemaVersion: fixture.schemaVersion });
@@ -97,11 +101,7 @@ try {
     status: "passed",
     note: "Phase 1 golden uses the typed fixture as the graph semantic boundary",
   });
-  pass(3, {
-    parts: fixture.parts.length,
-    bomLines: fixture.bom.length,
-    source: "fixture-provided AVL",
-  });
+  enter(3);
   for (const line of fixture.bom) {
     if (
       !line.mpn ||
@@ -118,6 +118,12 @@ try {
       throw new Error(`order-relevant BOM unknown for ${line.partId}`);
     }
   }
+  pass(3, {
+    parts: fixture.parts.length,
+    bomLines: fixture.bom.length,
+    source: "fixture-provided AVL",
+  });
+  enter(4);
   const placement = placeFixture(fixture);
   pass(4, {
     components: placement.length,
@@ -125,6 +131,7 @@ try {
     board: fixture.requirement.board,
   });
 
+  enter(5);
   const canonical = compareNetlists(fixture, "", "");
   const canonicalHash = hash(JSON.stringify(canonical.expected));
   pass(5, {
@@ -132,6 +139,7 @@ try {
     canonicalNetlistHash: canonicalHash,
   });
 
+  enter(14);
   const lint = lintElectricalTopology(fixture);
   if (lint.verdict !== "pass") {
     throw new Error(
@@ -145,6 +153,7 @@ try {
     findingsHash: hash(JSON.stringify(lint.findings)),
   });
 
+  enter(15);
   const rationale = evaluateDesignRationale(fixture);
   if (rationale.verdict !== "pass") {
     throw new Error(
@@ -161,6 +170,7 @@ try {
     findingsHash: hash(JSON.stringify(rationale.findings)),
   });
 
+  enter(6);
   await projectToKicad(fixture, projectRoot);
   docker([
     "kicad-cli",
@@ -182,6 +192,7 @@ try {
   ]);
   pass(6, { toolVersion: "KiCad 10.0.5" });
 
+  enter(7);
   const schematicNetlist = await readFile(join(projectRoot, "design.net"), "utf8");
   const ipc356 = await readFile(join(projectRoot, "design.d356"), "utf8");
   const comparison = compareNetlists(fixture, schematicNetlist, ipc356);
@@ -193,6 +204,7 @@ try {
     canonicalNetlistHash: canonicalHash,
   });
 
+  enter(8);
   try {
     docker([
       "kicad-cli",
@@ -218,6 +230,7 @@ try {
     throw new Error(`golden ERC contains findings: ${JSON.stringify(counts)}`);
   pass(8, { ...counts, waiver: "none" });
 
+  enter(9);
   const u1Placement = fixture.placementConstraints.components.find(
     (candidate) => candidate.partId === "part:u1",
   );
@@ -279,6 +292,7 @@ try {
     antennaKeepout: { source: "U1 official courtyard", points: antennaPoints },
     freerouting: "2.2.4",
   });
+  enter(10);
   try {
     docker([
       "kicad-cli",
@@ -304,6 +318,7 @@ try {
   if (drcCounts.violations !== 0 || drcCounts.unconnected !== 0 || drcCounts.footprintErrors !== 0)
     throw new Error(`golden DRC contains findings: ${JSON.stringify(drcCounts)}`);
   pass(10, drcCounts);
+  enter(11);
   docker([
     "kicad-cli",
     "pcb",
@@ -361,6 +376,7 @@ try {
     manifest: true,
     deterministic: true,
   });
+  enter(12);
   const manufacturingManifest = JSON.parse(
     await readFile(join(projectRoot, "manufacturing-manifest.json"), "utf8"),
   ) as Record<string, unknown>;
