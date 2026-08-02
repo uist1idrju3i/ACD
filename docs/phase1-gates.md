@@ -1,6 +1,6 @@
 # Phase 1ゲートと製造準備契約
 
-**ステータス：Draft（smokeおよびgoldenのGate 1〜13契約を実装済み。Gate 13実機完了は未実施）**
+**ステータス：Gate 1〜12実装・合格、Gate 13 contract実装済み・実機測定待ち**
 
 ## 実装済みsmoke vertical slice
 

@@ -1,8 +1,8 @@
 ## WP3実装境界
 
 golden fixtureは決定論的placement後、公式symbolとfootprintを用いてschematicおよび
-未配線PCBへ投影する。`pnpm phase1:golden`はGate 1〜8（ERCを含む）を実行し、
-Gate 9〜11は未配線boardに対して実行せず、WP4へ明示的に延期する。
+PCBへ投影する。`pnpm phase1:golden`はgolden Gate 1〜12を実行する。Gate 13は
+実機Evidenceを`pnpm phase1:gate13`で別途検証する。
 
 AMS1117-3.3は公式symbolが`extends`で親symbolへ依存するため、固定snapshotの
 schematic pin geometryには`Regulator_Linear:AP1117-15`を代替symbolとして使用する。
@@ -10,7 +10,9 @@ fixtureの実部品MPNはAMS1117-3.3であり、この代替判断はmapping pro
 
 # Golden task fixture
 
-**ステータス：Draft（Phase 0の6 fixtureは`pnpm golden`でreplay済み）**
+**ステータス：Phase 1完了（main）。smoke Gate 1〜11、golden Gate 1〜12が合格。
+Gate 13 contractは実装済みだが、physical evidenceはhardware測定待ち。Phase 0の6 fixtureは
+`pnpm golden`でreplay済み。**
 
 ## 目的と権威範囲
 
@@ -51,9 +53,8 @@ LED直列抵抗は330Ω、EN/IO0 pull-upは10kΩです。
 `pnpm schema:validate`でSchemaとreference-integrityを検証し、公式KiCad
 symbol/footprint mappingはcontent-hash pinned snapshotから解決します。
 
-このWPではfixture定義とGate 1/2のみを受入対象とします。golden fixtureをsmoke-only
-projection/routerへ渡してはならず、placementはWP3、外部routing toolのDSN/SES
-round-tripと`unrouted=0`はWP4で実装します。
+fixture定義はWP2、placementとprojectionはWP3、外部routing toolのDSN/SES
+round-tripと`unrouted=0`はWP4、Gate 12/13 contractはWP5で実装済みです。
 
 ### `normal-2layer`
 

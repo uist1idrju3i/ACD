@@ -1,6 +1,6 @@
 # Phase 1完了計画
 
-**ステータス：Draft（smoke vertical slice後の実装計画）**
+**ステータス：完了（実機Gate 13 Evidenceのみ後日）**
 
 ## 目的と前提
 
@@ -17,7 +17,7 @@ Phase 1は、事前変換済みの`Requirement` fixtureから、ESP32級golden t
 
 ### WP1：公式symbol／footprint library snapshot
 
-**状態：smoke fixture範囲で完了。**
+**状態：完了（PR #12、Phase 1 fixture範囲）。**
 
 **作業**
 
@@ -47,7 +47,7 @@ projectionは公式pad位置、size、layer、THT drillを使用します。生�
 
 ### WP2：ESP32級golden fixture定義
 
-**状態：fixture定義・Gate 1/2検証・必要library snapshot拡張まで完了。**
+**状態：完了（PR #14）。**
 
 **作業**
 
@@ -80,8 +80,7 @@ golden routingと`unrouted=0`はWP4で実装する。
 
 ### WP3：一般化された決定論的placement
 
-**状態：golden placement、KiCad schematic/PCB projection、Gate 1〜8 runnerを実装済み。
-Gate 9〜11（routing、DRC、manufacturing）はWP4へ延期。**
+**状態：完了（PR #17）。**
 
 **作業**
 
@@ -103,6 +102,8 @@ Gate 9〜11（routing、DRC、manufacturing）はWP4へ延期。**
 
 ### WP4：golden routing
 
+**状態：完了（PR #19）。**
+
 **作業**
 
 - 改良したpad geometry、board boundary、wiring ruleを含むDSN exportを作る。
@@ -117,9 +118,10 @@ Gate 9〜11（routing、DRC、manufacturing）はWP4へ延期。**
 - DSN、SES、PCB、DRCのrevision／input hash／tool versionをEvidenceへ保存する。
 - 同一入力のstable artifact hashが一致する。
 
-**リスク**
+**履歴（初期spike）**
 
-- 現行Freerouting spikeはSES生成までで、141 nets中128 netsが未配線だった。
+- 初期の手書きDSN spikeでは、141 nets中128 netsが未配線だった。この結果は
+  exporter境界の問題を切り分けるための履歴であり、現行golden受入結果ではない。
 - DSNのimage/component grouping、pad geometry、layer rule、SES importが主リスクである。
 - smokeの決定論的track/via projectionは一般用途routerではなく、goldenへ拡張しない。
 
@@ -135,6 +137,8 @@ Gate 9〜11（routing、DRC、manufacturing）はWP4へ延期。**
 - smokeのrouting pathは変更しない
 
 ### WP5：Gate 12/13
+
+**状態：完了（PR #21、Gate 13実機測定を除く）。**
 
 **作業**
 
@@ -168,6 +172,8 @@ Gate 9〜11（routing、DRC、manufacturing）はWP4へ延期。**
 
 ### WP6：schematic readability
 
+**状態：未着手・低優先。Phase 2へ繰延。**
+
 **作業**
 
 - smokeで実装したnet label中心の回路図を、必要に応じてwire中心の読みやすい投影へ改善する。
@@ -179,13 +185,13 @@ Gate 9〜11（routing、DRC、manufacturing）はWP4へ延期。**
 
 ## リスク登録簿
 
-| リスク                       | 影響                                 | 現在の対策                          | 次の判断                   |
-| ---------------------------- | ------------------------------------ | ----------------------------------- | -------------------------- |
-| golden routingの収束         | 最大。Phase 1完了を阻害              | DSN品質を改善し外部tool境界で再検証 | WP4で採否をADR候補化       |
-| library geometry／hash drift | netlist、DRC、製造データの信頼性低下 | container digestとmanifest          | WP1で機械snapshot化        |
-| ESP32 fixtureの複雑性        | fixture不備とprojection不備の混同    | schema validationを先行             | WP2を段階導入              |
-| 実機Evidence不足             | Gate 13を閉じられない                | 手動TestItemとEvidence契約          | WP5で測定条件を固定        |
-| sourcing時点性               | 発注準備の不確実性                   | fixture AVL境界、unknownを停止      | Phase 1ではAPIを導入しない |
+| リスク                       | 影響                                 | 現在の対策                                                     | 次の判断                     |
+| ---------------------------- | ------------------------------------ | -------------------------------------------------------------- | ---------------------------- |
+| golden routingの収束         | 解消済み                             | KiCad native DSN/SES、Freerouting 2.2.4、unrouted=0、DRC 0/0/0 | 完了。再発時は同じ境界で停止 |
+| library geometry／hash drift | netlist、DRC、製造データの信頼性低下 | container digestとmanifest                                     | WP1で機械snapshot化          |
+| ESP32 fixtureの複雑性        | fixture不備とprojection不備の混同    | schema validationを先行                                        | WP2を段階導入                |
+| 実機Evidence不足             | Gate 13を閉じられない                | 手動TestItemとEvidence契約                                     | ユーザーが実機測定を後日実施 |
+| sourcing時点性               | 発注準備の不確実性                   | fixture AVL境界、unknownを停止                                 | Phase 1ではAPIを導入しない   |
 
 ## Phase 1に残すもの／残さないもの
 
@@ -219,10 +225,21 @@ Gate 9〜11（routing、DRC、manufacturing）はWP4へ延期。**
 - **spikeの扱い：** FreeroutingはDSN parse／SES生成のfeasibilityを示しただけで、
   round-trip routing完了の証拠ではない。negative resultを次の設計判断へ引き継ぐ。
 
+## Phase 2へのフォワードプラン
+
+- AI要件からtyped fixtureを生成する入力エントリを設計する。
+- 電源系、終端、LED電流、定格を対象とするtopology-level electrical lintをGate化する。
+- fixture限定から一般化されたrouting boundaryへの移行条件を再検討する。
+- live sourcing APIは、fixture AVL境界と同じprovenance／停止契約で追加する。
+- WP6 schematic readabilityをPhase 2の低優先候補として実施する。
+- `docs/phase1-gates.md`のgate matrixをrunnerが参照できるmachine-readable single sourceへ
+  移行する。
+
 ## 関連文書
 
 - [`phase1-gates.md`](phase1-gates.md)
 - [`kicad-interop.md`](kicad-interop.md)
 - [`kicad-ci-profile.md`](kicad-ci-profile.md)
 - [`golden-tasks.md`](golden-tasks.md)
+- [`phase1-retrospective.md`](phase1-retrospective.md)
 - [`../schemas/phase1-fixture.schema.json`](../schemas/phase1-fixture.schema.json)

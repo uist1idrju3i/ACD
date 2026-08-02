@@ -4,7 +4,7 @@
 
 ## 目的と権威範囲
 
-READMEのロードマップにあるゴールデンタスク、決定論的CIゲート、Step-6の実機テストを定義します。smoke vertical sliceとgolden Gate 1〜12は実装済みですが、実機EvidenceによるGate 13完了は未実施のため、契約を先に固定して段階的に検証します。
+READMEのロードマップにあるゴールデンタスク、決定論的CIゲート、Step-6の実機テストを定義します。mainではsmoke Gate 1〜11、golden Gate 1〜12が合格しています。Gate 13のcontractは実装済みですが、実機Evidenceによる完了はhardware測定待ちです。
 
 ## ゴールデンタスク
 
@@ -51,6 +51,26 @@ Gate 13 runnerは合格を返しません。実機に依存しないunit testは
 Phase-5では、Wokwi類の仮想ハードウェアで、FWパッケージのビルド、ピン割り当て、通信、センサー読出し、LED、基本的なエラー処理を事前検査します。仮想試験は実測の代替ではありません。
 
 設計根拠の`tuningNeeded`、高リスク、測定不足から、Step-6の`TestItem`を自動生成します。各項目は測定条件、期待範囲、測定器、判定、証拠リンクを持ち、実機結果を次の設計リビジョンと知識候補へ戻します。
+
+## Gate 13実機測定の手順
+
+1. `fixtures/phase1/physical-evidence-pending.json`を複製または編集し、対象boardの
+   revision、PCB/BOM artifact hash、assembly recordを実機に合わせる。
+2. `provenance.mode`を`real`、トップレベル`status`を`passed`、`assembly.status`を
+   `assembled`に変更する。
+3. `instruments`を1件以上記録する。各instrumentは有効な校正状態
+   （`calibrationStatus: "valid"`）でなければならない。
+4. 測定条件（電源、環境、測定方法など）を`conditions`へ記録し、各TestItemへ
+   `observed`、`expected`、`pass`、`uncertainty`を記録する。
+5. 次を実行する。既定fixture以外を検証する場合は、任意のJSON pathを渡せる。
+
+   ```sh
+   pnpm phase1:gate13
+   pnpm phase1:gate13 path/to/physical-evidence.json
+   ```
+
+   simulated／pending、未校正instrument、条件欠落、観測値欠落、または不合格TestItemは
+   Gate 13を閉じない。実機測定はユーザーが後日実施する。
 
 ## 関連文書
 
