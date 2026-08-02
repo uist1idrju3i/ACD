@@ -6,7 +6,7 @@
   "source": {
     "kind": "fixture",
     "locator": "fixtures/phase3/fab-report-negative.json",
-    "contentHash": "sha256:6003b233497a0b2eb5239f3bc7903b7cc00f861603a2590c0a63b2fd181f7618",
+    "contentHash": "sha256:37cf493c27cd53fccff5934e5a88adc1b6428a2b7369250f1ba111e73ce8fdc3",
     "fixtureDerived": true,
     "fixtureId": "fixture:fab-report-negative"
   },
@@ -24,25 +24,35 @@
       "findingId": "NEG-UNKNOWN-REF",
       "originalText": "Unknown component reference Z99 cannot be located.",
       "severityReported": "high",
-      "references": { "partId": "part:z99" }
+      "references": {
+        "partId": "part:z99"
+      }
     },
     {
       "findingId": "NEG-DUP-ID",
       "originalText": "Pad geometry warning at R1.",
       "severityReported": "medium",
-      "references": { "partId": "part:r1", "ruleId": "pad-geometry" }
+      "references": {
+        "partId": "part:r1",
+        "ruleId": "pad-geometry"
+      }
     },
     {
       "findingId": "NEG-DUP-ID",
       "originalText": "Pad geometry warning at R1.",
       "severityReported": "medium",
-      "references": { "partId": "part:r1", "ruleId": "pad-geometry" }
+      "references": {
+        "partId": "part:r1",
+        "ruleId": "pad-geometry"
+      }
     },
     {
       "findingId": "NEG-UNKNOWN-TEXT",
       "originalText": "Manufacturing says please check this thing somehow.",
       "severityReported": "unknown",
-      "references": { "partId": "part:r1" }
+      "references": {
+        "partId": "part:r1"
+      }
     }
   ]
 }

@@ -17,6 +17,14 @@ export interface FabFeedbackReader {
 const sha256Text = (content: string): string =>
   `sha256:${createHash("sha256").update(content, "utf8").digest("hex")}`;
 
+const fixtureArtifactHash = (report: SchemaFabFeedbackReport): string =>
+  sha256Text(
+    JSON.stringify({
+      ...report,
+      source: { ...report.source, contentHash: "" },
+    }),
+  );
+
 export class FixtureFabFeedbackReader implements FabFeedbackReader {
   constructor(private readonly path: string) {}
 
@@ -33,7 +41,10 @@ export class FixtureFabFeedbackReader implements FabFeedbackReader {
     }
     const typed = report as FabFeedbackReport;
     const rawHash = sha256Text(typed.rawReport.content);
-    if (typed.rawReport.contentHash !== rawHash || typed.source.contentHash !== rawHash) {
+    if (
+      typed.rawReport.contentHash !== rawHash ||
+      typed.source.contentHash !== fixtureArtifactHash(report)
+    ) {
       throw new Error("fab feedback raw report content hash mismatch");
     }
     return typed;
@@ -65,6 +76,7 @@ export const referenceIndexFromPhase1Fixture = (fixture: {
 };
 
 export { intakeFabFeedback };
+export { fabFeedbackUnknownError } from "@acd/graph-core";
 export type {
   FabFeedbackEvidence,
   FabFeedbackFinding,

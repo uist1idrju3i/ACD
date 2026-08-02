@@ -6,7 +6,7 @@
   "source": {
     "kind": "fixture",
     "locator": "fixtures/phase3/fab-report-prototype-1.json",
-    "contentHash": "sha256:4d04e6a9d784dedbe73dce2c7cc1334ffa0e80be0372f84d467d380d6b8b06b5",
+    "contentHash": "sha256:0ac25a02a5e483136e0f13f1f97a3782be2ff71e729179b55300ccbff3194bd2",
     "fixtureDerived": true,
     "fixtureId": "fixture:fab-report-prototype-1-jlcpcb"
   },
@@ -27,7 +27,10 @@
       "references": {
         "partId": "part:r1",
         "footprintId": "footprint:Resistor_SMD:R_0603_1608Metric",
-        "coordinate": { "xMm": 21.2, "yMm": 14.8 },
+        "coordinate": {
+          "xMm": 21.2,
+          "yMm": 14.8
+        },
         "ruleId": "mask-sliver-min"
       }
     },
@@ -47,7 +50,10 @@
       "severityReported": "low",
       "references": {
         "partId": "part:j2",
-        "coordinate": { "xMm": 49.1, "yMm": 39.4 },
+        "coordinate": {
+          "xMm": 49.1,
+          "yMm": 39.4
+        },
         "ruleId": "silkscreen-edge"
       }
     }

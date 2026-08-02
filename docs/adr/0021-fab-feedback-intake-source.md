@@ -17,7 +17,9 @@ Phase 3の完了条件は、1次試作で受けたDFM指摘とフットプリン
 CIと受入検証は、実際のfab（JLCPCB級）のDFM report形式を模した、記録済みfab-report
 fixtureで実行します。
 
-1. fixtureは入力ファイル、内容hash、fixture由来であることを示すprovenanceを持ちます。
+1. fixtureは入力ファイル、fixture artifactのcanonical hash、fixture由来であることを示す
+   provenanceを持ちます。`rawReport.contentHash`はreport本文のhash、`source.contentHash`
+   は`source.contentHash`自身を空にしたfixture JSONのcanonical hashです。
    fixtureから導出したfindingは、実fabのEvidenceとして表示または扱いません。
 2. 実fabのreportを取り込むlive adapterは、fixtureと同じ構造化intake contractの背後に
    opt-inで追加します。live経路をCIの必須入力にはしません。

@@ -106,6 +106,46 @@ describe("fab feedback intake", () => {
     expect(result.evidence.value.unknownFindingIds).toEqual(["F-1"]);
   });
 
+  it("prioritizes an explicit rule ID over text-pattern matches", () => {
+    const result = intakeFabFeedback(
+      report({
+        rawFindings: [
+          {
+            ...report().rawFindings[0]!,
+            originalText: "Copper clearance below minimum at the board edge.",
+            references: { partId: "part:r1", ruleId: "copper-clearance-min" },
+          },
+        ],
+      }),
+      index,
+    );
+    expect(result.findings[0]?.classification).toBe("spacing");
+  });
+
+  it("does not unify distinct unknown findings", () => {
+    const result = intakeFabFeedback(
+      report({
+        rawFindings: [
+          {
+            findingId: "UNKNOWN-1",
+            originalText: "Please inspect this area.",
+            severityReported: "low",
+            references: { partId: "part:r1" },
+          },
+          {
+            findingId: "UNKNOWN-2",
+            originalText: "Please inspect this area again.",
+            severityReported: "high",
+            references: { partId: "part:r1" },
+          },
+        ],
+      }),
+      index,
+    );
+    expect(result.evidence.value.countAfter).toBe(2);
+    expect(result.findings.map((finding) => finding.findingId)).toEqual(["UNKNOWN-1", "UNKNOWN-2"]);
+  });
+
   it("stops on a target revision mismatch", () => {
     expect(() =>
       intakeFabFeedback(

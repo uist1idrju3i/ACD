@@ -74,6 +74,14 @@ export type FabFeedbackIntakeResult = {
   };
 };
 
+export const fabFeedbackUnknownError = (findingIds: string[]): GraphCoreError =>
+  new GraphCoreError(
+    "fab-feedback-unknown",
+    `fab feedback contains unknown findings: ${findingIds.join(", ")}`,
+    "warning",
+    { action: "widen-verification", findingIds },
+  );
+
 const referenceValues = (reference: Reference): string[] =>
   [
     reference.partId,
@@ -159,11 +167,11 @@ const deriveFinding = (
   profile: FabProfileRules,
 ): Pick<FabFeedbackFinding, "classification" | "confidence" | "reproductionConditions"> => {
   const normalizedText = finding.originalText.toLowerCase();
-  const rule = profile.rules.find(
-    (candidate) =>
-      candidate.ruleId === finding.references.ruleId ||
-      candidate.textPatterns.some((pattern) => normalizedText.includes(pattern)),
-  );
+  const rule = finding.references.ruleId
+    ? profile.rules.find((candidate) => candidate.ruleId === finding.references.ruleId)
+    : profile.rules.find((candidate) =>
+        candidate.textPatterns.some((pattern) => normalizedText.includes(pattern)),
+      );
   if (!rule) {
     return {
       classification: "unknown",
@@ -205,7 +213,10 @@ export const intakeFabFeedback = (
       duplicateFindingIds: [],
       verdict: isUnknown ? "unknown" : "pass",
     };
-    const key = unificationKey(finding, derived.classification);
+    const key =
+      derived.classification === "unknown"
+        ? `unknown|findingId|${finding.findingId}`
+        : unificationKey(finding, derived.classification);
     const existing = findingsByKey.get(key);
     if (existing) {
       existing.duplicateFindingIds.push(result.findingId);

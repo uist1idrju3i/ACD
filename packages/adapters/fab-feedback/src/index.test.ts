@@ -1,5 +1,6 @@
 import { readFile } from "node:fs/promises";
 import { describe, expect, it } from "vitest";
+import { intakeFabFeedback } from "@acd/graph-core";
 import { FixtureFabFeedbackReader, referenceIndexFromPhase1Fixture } from "./index.js";
 
 describe("fixture fab feedback adapter", () => {
@@ -55,5 +56,36 @@ describe("fixture fab feedback adapter", () => {
     expect(result.evidence.value.countBefore).toBe(2);
     expect(result.evidence.value.countAfter).toBe(1);
     expect(result.findings[0]?.duplicateFindingIds).toEqual(["UNIFY-2"]);
+  });
+
+  it("exercises every negative fixture path through intake", async () => {
+    const report = JSON.parse(
+      await readFile(
+        new URL("../../../../fixtures/phase3/fab-report-negative.json", import.meta.url),
+        "utf8",
+      ),
+    ) as Awaited<ReturnType<FixtureFabFeedbackReader["read"]>>;
+    const fixture = JSON.parse(
+      await readFile(
+        new URL("../../../../fixtures/phase1/golden-esp32.json", import.meta.url),
+        "utf8",
+      ),
+    );
+    const index = referenceIndexFromPhase1Fixture(fixture);
+    expect(() =>
+      intakeFabFeedback({ ...report, rawFindings: [report.rawFindings[0]!] }, index),
+    ).toThrow(/outside the target revision/);
+    const withoutUnknownReference = {
+      ...report,
+      rawFindings: [report.rawFindings[1]!, report.rawFindings[2]!, report.rawFindings[3]!],
+    } as typeof report;
+    expect(() => intakeFabFeedback(withoutUnknownReference, index)).toThrow(/duplicate finding ID/);
+    const unknownOnly = {
+      ...report,
+      rawFindings: [report.rawFindings[3]!],
+    } as typeof report;
+    const result = intakeFabFeedback(unknownOnly, index);
+    expect(result.verdict).toBe("unknown");
+    expect(result.evidence.value.unknownFindingIds).toEqual(["NEG-UNKNOWN-TEXT"]);
   });
 });

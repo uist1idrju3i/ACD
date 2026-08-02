@@ -26,7 +26,11 @@
       "properties": {
         "kind": { "enum": ["fixture", "live"] },
         "locator": { "type": "string", "minLength": 1 },
-        "contentHash": { "type": "string", "pattern": "^sha256:[0-9a-f]{64}$" },
+        "contentHash": {
+          "type": "string",
+          "pattern": "^sha256:[0-9a-f]{64}$",
+          "description": "Canonical hash of the fetched artifact named by locator; for fixtures, hash the JSON with this field blank."
+        },
         "fixtureDerived": { "type": "boolean" },
         "fixtureId": { "type": "string", "minLength": 1 }
       },
@@ -60,7 +64,11 @@
       "properties": {
         "contentType": { "type": "string", "minLength": 1 },
         "content": { "type": "string" },
-        "contentHash": { "type": "string", "pattern": "^sha256:[0-9a-f]{64}$" }
+        "contentHash": {
+          "type": "string",
+          "pattern": "^sha256:[0-9a-f]{64}$",
+          "description": "SHA-256 of the report body in content."
+        }
       }
     },
     "rawFindings": {
