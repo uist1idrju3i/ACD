@@ -7,6 +7,7 @@
   "required": [
     "id",
     "type",
+    "patchId",
     "revision",
     "libraryRevision",
     "snapshotManifestHash",
@@ -22,6 +23,7 @@
   "properties": {
     "id": { "type": "string", "minLength": 1 },
     "type": { "const": "LibraryOverlayPatch" },
+    "patchId": { "type": "string", "minLength": 1 },
     "revision": { "type": "integer", "minimum": 0 },
     "libraryRevision": { "type": "string", "minLength": 1 },
     "snapshotManifestHash": { "type": "string", "pattern": "^sha256:[a-f0-9]{64}$" },
@@ -42,12 +44,13 @@
         "properties": {
           "kind": { "const": "set-pad-mask-clearance" },
           "target": { "type": "string", "minLength": 1 },
-          "requiredValueMm": { "type": "number", "exclusiveMinimum": 0 }
+          "requiredValueMm": { "type": "number" }
         }
       }
     },
     "content": { "type": "string", "minLength": 1 },
     "contentHash": { "type": "string", "pattern": "^sha256:[a-f0-9]{64}$" },
+    "materializedContentHash": { "type": "string", "pattern": "^sha256:[a-f0-9]{64}$" },
     "status": {
       "type": "string",
       "enum": ["candidate", "reviewed", "adopted", "rejected"]
@@ -55,6 +58,7 @@
     "scope": { "enum": ["project-local", "library-wide"] },
     "failureReason": { "type": "string", "minLength": 1 },
     "approvalId": { "type": "string", "minLength": 1 },
+    "previousRevisionId": { "type": "string", "minLength": 1 },
     "verification": {
       "type": "object",
       "additionalProperties": false,

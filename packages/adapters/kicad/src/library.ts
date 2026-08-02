@@ -17,6 +17,7 @@ export type FootprintPad = {
   rotation?: number;
   drill?: number;
   layers: string[];
+  solderMaskMargin?: number;
 };
 
 export type FootprintBounds = {
@@ -78,6 +79,7 @@ export const parseFootprintSource = (footprintName: string, source: string): Foo
     const size = block.match(/\(size\s+(-?\d+(?:\.\d+)?)\s+(-?\d+(?:\.\d+)?)/);
     const hasDrill = /\(drill(?:\s|\))/.test(block);
     const drill = block.match(/\(drill\s+(-?\d+(?:\.\d+)?)\s*\)/);
+    const solderMaskMargin = block.match(/\(solder_mask_margin\s+(-?\d+(?:\.\d+)?)\s*\)/);
     const layersBlock = block.match(/\(layers\s+([^)]*)\)/);
     if (!header || !at || !size || !layersBlock) {
       throw new KicadLibraryError(`unsupported pad construct in ${footprintName}`);
@@ -106,6 +108,7 @@ export const parseFootprintSource = (footprintName: string, source: string): Foo
       height: Number(size[2]),
       ...(at[3] ? { rotation: Number(at[3]) } : {}),
       ...(drill?.[1] ? { drill: Number(drill[1]) } : {}),
+      ...(solderMaskMargin?.[1] ? { solderMaskMargin: Number(solderMaskMargin[1]) } : {}),
       layers: layerText.match(/"[^"]+"/g)?.map((layer) => layer.slice(1, -1)) ?? [],
     });
     cursor = start + block.length;
@@ -114,12 +117,15 @@ export const parseFootprintSource = (footprintName: string, source: string): Foo
   return pads;
 };
 
-export const parseFootprintPads = (footprintName: string): FootprintPad[] => {
+export const parseFootprintPads = (
+  footprintName: string,
+  sourceOverride?: string,
+): FootprintPad[] => {
   const entry = snapshotManifest.files.find(
     (candidate) => candidate.kind === "footprint" && candidate.id === footprintName,
   );
   if (!entry) throw new KicadLibraryError(`missing footprint manifest entry ${footprintName}`);
-  const source = snapshotFiles[entry.path as keyof typeof snapshotFiles];
+  const source = sourceOverride ?? snapshotFiles[entry.path as keyof typeof snapshotFiles];
   if (!source) throw new KicadLibraryError(`missing footprint snapshot ${entry.path}`);
   return parseFootprintSource(footprintName, source);
 };
@@ -193,12 +199,15 @@ export const parseFootprintCourtyardSource = (
   };
 };
 
-export const parseFootprintCourtyard = (footprintName: string): FootprintBounds | undefined => {
+export const parseFootprintCourtyard = (
+  footprintName: string,
+  sourceOverride?: string,
+): FootprintBounds | undefined => {
   const entry = snapshotManifest.files.find(
     (candidate) => candidate.kind === "footprint" && candidate.id === footprintName,
   );
   if (!entry) throw new KicadLibraryError(`missing footprint manifest entry ${footprintName}`);
-  const source = snapshotFiles[entry.path as keyof typeof snapshotFiles];
+  const source = sourceOverride ?? snapshotFiles[entry.path as keyof typeof snapshotFiles];
   if (!source) throw new KicadLibraryError(`missing footprint snapshot ${entry.path}`);
   return parseFootprintCourtyardSource(footprintName, source);
 };

@@ -1,6 +1,6 @@
 import { execFileSync, spawnSync } from "node:child_process";
 import { createHash } from "node:crypto";
-import { mkdir, readFile, readdir, rm, writeFile } from "node:fs/promises";
+import { copyFile, mkdir, readFile, readdir, rm, writeFile } from "node:fs/promises";
 import { join, resolve } from "node:path";
 import {
   compareNetlists,
@@ -960,12 +960,76 @@ try {
       `verification-failed: library patch geometry failed: ${geometryVerification.failureEvidence}`,
     );
   }
-  const reopenPassed = results.some((result) => result.gate === 6 && result.status === "passed");
-  const drcPassed = results.some((result) => result.gate === 10 && result.status === "passed");
+  const patchProjectRoot = join(artifactRoot, "library-patch-project");
+  await projectToKicad(fixture, patchProjectRoot, {
+    libraryRevision: libraryPatch.libraryRevision,
+    patches: [libraryPatch],
+    allowUnadoptedForVerification: true,
+  });
+  await copyFile(join(projectRoot, "routed.kicad_pcb"), join(patchProjectRoot, "design.kicad_pcb"));
+  await copyFile(join(projectRoot, "routed.kicad_pcb"), join(patchProjectRoot, "routed.kicad_pcb"));
+  await copyFile(join(projectRoot, "routed.kicad_pro"), join(patchProjectRoot, "routed.kicad_pro"));
+  await copyFile(join(projectRoot, "routed.kicad_prl"), join(patchProjectRoot, "routed.kicad_prl"));
+  let reopen: "passed" | "failed" | "blocked" = "passed";
+  let drc: "passed" | "failed" | "blocked" = "passed";
+  let failureEvidence: string | undefined;
+  try {
+    docker([
+      "kicad-cli",
+      "sch",
+      "export",
+      "netlist",
+      "-o",
+      "/work/library-patch-project/design.net",
+      "/work/library-patch-project/design.kicad_sch",
+    ]);
+    docker([
+      "kicad-cli",
+      "pcb",
+      "export",
+      "ipcd356",
+      "-o",
+      "/work/library-patch-project/design.d356",
+      "/work/library-patch-project/routed.kicad_pcb",
+    ]);
+  } catch (error) {
+    reopen = "failed";
+    failureEvidence = error instanceof Error ? error.message : String(error);
+  }
+  try {
+    docker([
+      "kicad-cli",
+      "pcb",
+      "drc",
+      "--output",
+      "/work/library-patch-project/reports-drc.rpt",
+      "/work/library-patch-project/routed.kicad_pcb",
+    ]);
+  } catch {
+    // Parse the report below; KiCad returns non-zero when it finds violations.
+  }
+  const patchDrcReport = await readFile(join(patchProjectRoot, "reports-drc.rpt"), "utf8").catch(
+    () => "",
+  );
+  const patchDrcMatch = patchDrcReport.match(
+    /\*\* Found (\d+) DRC violations \*\*[\s\S]*?\*\* Found (\d+) unconnected pads \*\*[\s\S]*?\*\* Found (\d+) Footprint errors \*\*/,
+  );
+  if (!patchDrcMatch) {
+    drc = "failed";
+    failureEvidence ??= "patched projection DRC summary is missing";
+  } else if (
+    Number(patchDrcMatch[1]) !== 0 ||
+    Number(patchDrcMatch[2]) !== 0 ||
+    Number(patchDrcMatch[3]) !== 0
+  ) {
+    drc = "failed";
+    failureEvidence ??= `patched projection DRC contains findings: ${patchDrcMatch[0]}`;
+  }
   const verification = {
     ...geometryVerification,
-    reopen: reopenPassed ? ("passed" as const) : ("blocked" as const),
-    drc: drcPassed ? ("passed" as const) : ("blocked" as const),
+    reopen,
+    drc,
+    ...(failureEvidence ? { failureEvidence } : {}),
   };
   const adoptedLibraryPatch = adoptVerifiedLibraryPatch(libraryPatch, verification);
   if (adoptedLibraryPatch.status !== "adopted") {

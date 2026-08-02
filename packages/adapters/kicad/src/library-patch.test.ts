@@ -4,8 +4,10 @@ import type { KnowledgeItem } from "@acd/graph-core";
 import {
   adoptVerifiedLibraryPatch,
   createLibraryPatchCandidate,
+  officialLibraryRevision,
   promoteLibraryPatch,
   resolveLibraryRevision,
+  reviseLibraryPatch,
   snapshotManifestHash,
   verifyLibraryPatchGeometry,
 } from "./library-patch.js";
@@ -54,12 +56,25 @@ describe("KiCad library overlay patches", () => {
       {
         kind: "set-pad-mask-clearance",
         target: "pad-mask-clearance",
-        requiredValueMm: 0.1,
+        requiredValueMm: 0,
       },
     ]);
     expect(first.contentHash).toMatch(/^sha256:[a-f0-9]{64}$/);
     expect(first.libraryRevision).toMatch(/^library:overlay:[a-f0-9]{64}$/);
+    expect(first.content).toContain("(solder_mask_margin 0)");
+    expect(first.patchId).toBe(first.id);
+    expect(first.revision).toBe(0);
     expect(verifyLibraryPatchGeometry(first)?.geometry).toBe("passed");
+  });
+
+  it("rejects content changed outside the declared correction", () => {
+    const patch = createLibraryPatchCandidate(adoptedKnowledge());
+    const verification = verifyLibraryPatchGeometry({
+      ...patch,
+      content: `${patch.content}\n(unapproved "change")`,
+    })!;
+    expect(verification.geometry).toBe("failed");
+    expect(verification.failureEvidence).toMatch(/does not match declared correction/);
   });
 
   it("keeps the official snapshot manifest and file hashes immutable", () => {
@@ -107,6 +122,7 @@ describe("KiCad library overlay patches", () => {
 
   it("stops on unresolved or ambiguous library revisions", () => {
     const patch = createLibraryPatchCandidate(adoptedKnowledge());
+    expect(resolveLibraryRevision(officialLibraryRevision(), [])).toBeUndefined();
     expect(() => resolveLibraryRevision("library:missing", [patch])).toThrow(/unresolved/);
     expect(() =>
       resolveLibraryRevision(patch.libraryRevision, [patch, { ...patch, id: "duplicate" }]),
@@ -114,5 +130,26 @@ describe("KiCad library overlay patches", () => {
     expect(
       resolveLibraryRevision(patch.libraryRevision, [{ ...patch, status: "adopted" }]),
     ).toEqual({ ...patch, status: "adopted" });
+  });
+
+  it("creates superseding patch revisions without changing the stable patch id", () => {
+    const patch = createLibraryPatchCandidate(adoptedKnowledge());
+    const revised = reviseLibraryPatch(patch, patch.content.replace("margin 0", "margin 0.01"));
+    expect(revised.patchId).toBe(patch.patchId);
+    expect(revised.id).toBe(`${patch.patchId}:r1`);
+    expect(revised.previousRevisionId).toBe(patch.id);
+    expect(revised.revision).toBe(1);
+  });
+
+  it("does not adopt when reopen or DRC evidence is missing", () => {
+    const patch = createLibraryPatchCandidate(adoptedKnowledge());
+    const verification = verifyLibraryPatchGeometry(patch)!;
+    expect(
+      adoptVerifiedLibraryPatch(patch, {
+        ...verification,
+        reopen: "blocked",
+        drc: "blocked",
+      }).status,
+    ).toBe("rejected");
   });
 });
