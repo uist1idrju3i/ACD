@@ -199,3 +199,4 @@ QC七つ道具（Q7）は、件数、測定値、時系列などの**数量デ�
 - [`testing.md`](testing.md)：ゴールデンタスクと差分回帰
 - [`pipeline.md`](pipeline.md)：要件整理と実機故障フィードバック
 - [`agent-runtime.md`](agent-runtime.md)：TaskLedger、PDPC、クリティカルパス
+- [`reliability-practices.md`](reliability-practices.md)：信頼性・安全性設計プラクティス

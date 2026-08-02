@@ -52,4 +52,5 @@ N7は、親和図でStep 1の要求・自由記述をクラスタリングし、
 - [`design-graph.md`](design-graph.md)：`Evidence`、`Rationale`、`KnowledgeItem`
 - [`pipeline.md`](pipeline.md)：各ステップの知識取得フック
 - [`testing.md`](testing.md)：実測からの知識書き戻し
+- [`reliability-practices.md`](reliability-practices.md)：信頼性・安全性設計プラクティス
 - [`../README.md`](../README.md#3-知識の蓄積)
