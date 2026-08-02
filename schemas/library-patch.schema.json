@@ -68,6 +68,7 @@
         "reopen": { "enum": ["passed", "failed", "blocked"] },
         "drc": { "enum": ["passed", "failed", "blocked"] },
         "inputHash": { "type": "string", "pattern": "^sha256:[a-f0-9]{64}$" },
+        "boardInputHash": { "type": "string", "pattern": "^sha256:[a-f0-9]{64}$" },
         "failureEvidence": { "type": "string", "minLength": 1 }
       }
     }

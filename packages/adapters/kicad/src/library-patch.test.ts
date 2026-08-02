@@ -4,6 +4,7 @@ import type { KnowledgeItem } from "@acd/graph-core";
 import {
   adoptVerifiedLibraryPatch,
   createLibraryPatchCandidate,
+  materializeLibraryPatchInBoardSource,
   officialLibraryRevision,
   promoteLibraryPatch,
   resolveLibraryRevision,
@@ -57,6 +58,7 @@ describe("KiCad library overlay patches", () => {
         kind: "set-pad-mask-clearance",
         target: "pad-mask-clearance",
         requiredValueMm: 0.1,
+        padNumber: "1",
       },
     ]);
     expect(first.contentHash).toMatch(/^sha256:[a-f0-9]{64}$/);
@@ -75,6 +77,19 @@ describe("KiCad library overlay patches", () => {
     })!;
     expect(verification.geometry).toBe("failed");
     expect(verification.failureEvidence).toMatch(/does not match declared correction/);
+  });
+
+  it("materializes the correction into the board input used for verification", () => {
+    const patch = createLibraryPatchCandidate(adoptedKnowledge());
+    const board = `(kicad_pcb (footprint "R_0603_1608Metric" (pad "1" smd roundrect (size 0.8 0.95))))`;
+    const patchedBoard = materializeLibraryPatchInBoardSource(
+      board,
+      patch.footprintId,
+      patch.operations,
+    );
+    expect(patchedBoard).not.toBe(board);
+    expect(patchedBoard).toContain('ACD_LibraryOverlay" "pad-mask-clearance=0.1');
+    expect(materializeLibraryPatchInBoardSource(board, "other", patch.operations)).toBe(board);
   });
 
   it("keeps the official snapshot manifest and file hashes immutable", () => {
