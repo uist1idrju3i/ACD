@@ -10,6 +10,7 @@
   },
   "scenario": {
     "description": "Intentional board rule violation",
-    "mutation": "add-clearance-violating-track"
+    "mutation": "overlapping-component-placement",
+    "injection": "component:d1 is placed at x=8.6 mm so that its pads overlap component:r1"
   }
 }

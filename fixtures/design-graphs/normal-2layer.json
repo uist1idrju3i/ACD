@@ -5,7 +5,9 @@
     "type": "Project",
     "revision": 0,
     "name": "Normal two-layer fixture",
-    "status": "draft"
+    "status": "draft",
+    "requirements": ["requirement:led-indicator"],
+    "links": ["requirement:led-indicator", "layout:main", "stackup:2layer"]
   },
   "entities": [
     {
@@ -13,7 +15,615 @@
       "type": "Project",
       "revision": 0,
       "name": "Normal two-layer fixture",
-      "status": "draft"
+      "status": "draft",
+      "requirements": ["requirement:led-indicator"],
+      "links": ["requirement:led-indicator", "layout:main", "stackup:2layer"]
+    },
+    {
+      "id": "requirement:led-indicator",
+      "type": "Requirement",
+      "revision": 0,
+      "name": "Two-layer power indicator board",
+      "status": "accepted",
+      "attributes": {
+        "supplyVoltageV": 5,
+        "maxCurrentMa": 25,
+        "acceptanceCriteria": [
+          "The graph and the projected KiCad connectivity are identical",
+          "ERC and DRC report no unwaived findings",
+          "Gerber and drill artifacts are reproducible from the same revision"
+        ]
+      },
+      "provenance": [
+        {
+          "kind": "requirement",
+          "locator": "fixtures/design-graphs/normal-2layer.json#requirement",
+          "capturedAt": "2026-08-02T00:00:00.000Z"
+        }
+      ]
+    },
+    {
+      "id": "stackup:2layer",
+      "type": "BoardStackup",
+      "revision": 0,
+      "name": "2 layer 1.6 mm FR4",
+      "attributes": {
+        "layerCount": 2,
+        "thicknessMm": 1.6,
+        "material": "FR4",
+        "copperLayers": ["F.Cu", "B.Cu"],
+        "copperThicknessUm": 35
+      },
+      "provenance": [
+        {
+          "kind": "fab-rule",
+          "locator": "fixture://fab-profile/generic-2layer",
+          "capturedAt": "2026-08-02T00:00:00.000Z"
+        }
+      ]
+    },
+    {
+      "id": "part:j1",
+      "type": "Part",
+      "revision": 0,
+      "name": "B2B-PH-K-S(LF)(SN)",
+      "attributes": {
+        "mpn": "B2B-PH-K-S(LF)(SN)",
+        "manufacturer": "JST",
+        "package": "JST_PH_B2B-PH-K_1x02_P2.00mm_Vertical"
+      },
+      "provenance": [
+        {
+          "kind": "datasheet",
+          "locator": "fixture://datasheet/jst-ph-b2b",
+          "capturedAt": "2026-08-02T00:00:00.000Z"
+        }
+      ]
+    },
+    {
+      "id": "part:r1",
+      "type": "Part",
+      "revision": 0,
+      "name": "RC0603FR-071KL",
+      "attributes": { "mpn": "RC0603FR-071KL", "manufacturer": "Yageo", "package": "0603" },
+      "provenance": [
+        {
+          "kind": "datasheet",
+          "locator": "fixture://datasheet/yageo-rc0603",
+          "capturedAt": "2026-08-02T00:00:00.000Z"
+        }
+      ]
+    },
+    {
+      "id": "part:d1",
+      "type": "Part",
+      "revision": 0,
+      "name": "LTST-C190KRKT",
+      "attributes": { "mpn": "LTST-C190KRKT", "manufacturer": "Lite-On", "package": "0603" },
+      "provenance": [
+        {
+          "kind": "datasheet",
+          "locator": "fixture://datasheet/liteon-ltst-c190krkt",
+          "capturedAt": "2026-08-02T00:00:00.000Z"
+        }
+      ]
+    },
+    {
+      "id": "part:c1",
+      "type": "Part",
+      "revision": 0,
+      "name": "CC0603ZRY5V8BB104",
+      "attributes": { "mpn": "CC0603ZRY5V8BB104", "manufacturer": "Yageo", "package": "0603" },
+      "provenance": [
+        {
+          "kind": "datasheet",
+          "locator": "fixture://datasheet/yageo-cc0603",
+          "capturedAt": "2026-08-02T00:00:00.000Z"
+        }
+      ]
+    },
+    {
+      "id": "footprint:conn-1x02",
+      "type": "Footprint",
+      "revision": 0,
+      "name": "JST_PH_B2B-PH-K_1x02_P2.00mm_Vertical",
+      "attributes": {
+        "libraryId": "Connector_JST",
+        "name": "JST_PH_B2B-PH-K_1x02_P2.00mm_Vertical",
+        "geometrySource": "fixture-simplified",
+        "pads": [
+          { "number": "1", "xMm": 0, "yMm": -1, "widthMm": 1.2, "heightMm": 1.2 },
+          { "number": "2", "xMm": 0, "yMm": 1, "widthMm": 1.2, "heightMm": 1.2 }
+        ]
+      },
+      "provenance": [
+        {
+          "kind": "fab-rule",
+          "locator": "fixture://footprint/simplified-1x02",
+          "capturedAt": "2026-08-02T00:00:00.000Z"
+        }
+      ],
+      "uncertainty": {
+        "state": "assumed",
+        "description": "Pad geometry is a fixture-simplified 1.2 mm square SMD pad pair, not the official KiCad footprint geometry",
+        "impactScope": "medium",
+        "resolution": "Replace with the extracted official footprint snapshot in the Phase 1 library work package"
+      }
+    },
+    {
+      "id": "footprint:r0603",
+      "type": "Footprint",
+      "revision": 0,
+      "name": "R_0603_1608Metric",
+      "attributes": {
+        "libraryId": "Resistor_SMD",
+        "name": "R_0603_1608Metric",
+        "geometrySource": "fixture-simplified",
+        "pads": [
+          { "number": "1", "xMm": -0.75, "yMm": 0, "widthMm": 1.2, "heightMm": 1.2 },
+          { "number": "2", "xMm": 0.75, "yMm": 0, "widthMm": 1.2, "heightMm": 1.2 }
+        ]
+      },
+      "provenance": [
+        {
+          "kind": "fab-rule",
+          "locator": "fixture://footprint/simplified-0603",
+          "capturedAt": "2026-08-02T00:00:00.000Z"
+        }
+      ],
+      "uncertainty": {
+        "state": "assumed",
+        "description": "Pad geometry is a fixture-simplified 0603 approximation, not the official KiCad footprint geometry",
+        "impactScope": "medium",
+        "resolution": "Replace with the extracted official footprint snapshot in the Phase 1 library work package"
+      }
+    },
+    {
+      "id": "footprint:led0603",
+      "type": "Footprint",
+      "revision": 0,
+      "name": "LED_0603_1608Metric",
+      "attributes": {
+        "libraryId": "LED_SMD",
+        "name": "LED_0603_1608Metric",
+        "geometrySource": "fixture-simplified",
+        "pads": [
+          { "number": "1", "xMm": -0.75, "yMm": 0, "widthMm": 1.2, "heightMm": 1.2 },
+          { "number": "2", "xMm": 0.75, "yMm": 0, "widthMm": 1.2, "heightMm": 1.2 }
+        ]
+      },
+      "provenance": [
+        {
+          "kind": "fab-rule",
+          "locator": "fixture://footprint/simplified-0603",
+          "capturedAt": "2026-08-02T00:00:00.000Z"
+        }
+      ],
+      "uncertainty": {
+        "state": "assumed",
+        "description": "Pad geometry is a fixture-simplified 0603 approximation, not the official KiCad footprint geometry",
+        "impactScope": "medium",
+        "resolution": "Replace with the extracted official footprint snapshot in the Phase 1 library work package"
+      }
+    },
+    {
+      "id": "footprint:c0603",
+      "type": "Footprint",
+      "revision": 0,
+      "name": "C_0603_1608Metric",
+      "attributes": {
+        "libraryId": "Capacitor_SMD",
+        "name": "C_0603_1608Metric",
+        "geometrySource": "fixture-simplified",
+        "pads": [
+          { "number": "1", "xMm": -0.75, "yMm": 0, "widthMm": 1.2, "heightMm": 1.2 },
+          { "number": "2", "xMm": 0.75, "yMm": 0, "widthMm": 1.2, "heightMm": 1.2 }
+        ]
+      },
+      "provenance": [
+        {
+          "kind": "fab-rule",
+          "locator": "fixture://footprint/simplified-0603",
+          "capturedAt": "2026-08-02T00:00:00.000Z"
+        }
+      ],
+      "uncertainty": {
+        "state": "assumed",
+        "description": "Pad geometry is a fixture-simplified 0603 approximation, not the official KiCad footprint geometry",
+        "impactScope": "medium",
+        "resolution": "Replace with the extracted official footprint snapshot in the Phase 1 library work package"
+      }
+    },
+    {
+      "id": "component:j1",
+      "type": "Component",
+      "revision": 0,
+      "name": "Power input connector",
+      "links": ["part:j1", "footprint:conn-1x02", "pin:j1-1", "pin:j1-2"],
+      "attributes": {
+        "role": "device",
+        "reference": "J1",
+        "value": "B2B-PH-K-S(LF)(SN)",
+        "partId": "part:j1",
+        "footprintId": "footprint:conn-1x02",
+        "symbol": { "libraryId": "Connector_Generic", "name": "Conn_01x02" },
+        "schematic": { "xMm": 106.68, "yMm": 76.2, "rotationDeg": 0 }
+      }
+    },
+    {
+      "id": "component:r1",
+      "type": "Component",
+      "revision": 0,
+      "name": "LED series resistor",
+      "links": ["part:r1", "footprint:r0603", "pin:r1-1", "pin:r1-2"],
+      "attributes": {
+        "role": "device",
+        "reference": "R1",
+        "value": "RC0603FR-071KL",
+        "partId": "part:r1",
+        "footprintId": "footprint:r0603",
+        "symbol": { "libraryId": "Device", "name": "R" },
+        "schematic": { "xMm": 127, "yMm": 76.2, "rotationDeg": 0 }
+      },
+      "rationale": {
+        "reason": "Limit the indicator LED current below the requirement maximum",
+        "alternativesConsidered": ["Constant-current driver", "Direct drive without a resistor"],
+        "assumptions": ["5 V supply", "LED forward voltage around 2 V"],
+        "evidenceLinks": [],
+        "risks": ["Brightness depends on the actual LED binning"],
+        "tuningNeeded": true
+      }
+    },
+    {
+      "id": "component:d1",
+      "type": "Component",
+      "revision": 0,
+      "name": "Status LED",
+      "links": ["part:d1", "footprint:led0603", "pin:d1-1", "pin:d1-2"],
+      "attributes": {
+        "role": "device",
+        "reference": "D1",
+        "value": "LTST-C190KRKT",
+        "partId": "part:d1",
+        "footprintId": "footprint:led0603",
+        "symbol": { "libraryId": "Device", "name": "LED" },
+        "schematic": { "xMm": 152.4, "yMm": 76.2, "rotationDeg": 0 }
+      }
+    },
+    {
+      "id": "component:c1",
+      "type": "Component",
+      "revision": 0,
+      "name": "Supply decoupling capacitor",
+      "links": ["part:c1", "footprint:c0603", "pin:c1-1", "pin:c1-2"],
+      "attributes": {
+        "role": "device",
+        "reference": "C1",
+        "value": "CC0603ZRY5V8BB104",
+        "partId": "part:c1",
+        "footprintId": "footprint:c0603",
+        "symbol": { "libraryId": "Device", "name": "C" },
+        "schematic": { "xMm": 127, "yMm": 101.6, "rotationDeg": 0 }
+      }
+    },
+    {
+      "id": "component:flg1",
+      "type": "Component",
+      "revision": 0,
+      "name": "Supply power flag",
+      "links": ["pin:flg1-1"],
+      "attributes": {
+        "role": "power-flag",
+        "reference": "#FLG01",
+        "value": "PWR_FLAG",
+        "symbol": { "libraryId": "power", "name": "PWR_FLAG" },
+        "schematic": { "xMm": 114.3, "yMm": 88.9, "rotationDeg": 0 }
+      }
+    },
+    {
+      "id": "component:flg2",
+      "type": "Component",
+      "revision": 0,
+      "name": "Ground power flag",
+      "links": ["pin:flg2-1"],
+      "attributes": {
+        "role": "power-flag",
+        "reference": "#FLG02",
+        "value": "PWR_FLAG",
+        "symbol": { "libraryId": "power", "name": "PWR_FLAG" },
+        "schematic": { "xMm": 114.3, "yMm": 114.3, "rotationDeg": 0 }
+      }
+    },
+    {
+      "id": "pin:j1-1",
+      "type": "Pin",
+      "revision": 0,
+      "links": ["component:j1"],
+      "attributes": {
+        "componentId": "component:j1",
+        "number": "1",
+        "electricalType": "passive",
+        "padNumber": "1",
+        "symbolOffsetMm": { "xMm": -5.08, "yMm": 0 }
+      }
+    },
+    {
+      "id": "pin:j1-2",
+      "type": "Pin",
+      "revision": 0,
+      "links": ["component:j1"],
+      "attributes": {
+        "componentId": "component:j1",
+        "number": "2",
+        "electricalType": "passive",
+        "padNumber": "2",
+        "symbolOffsetMm": { "xMm": -5.08, "yMm": -2.54 }
+      }
+    },
+    {
+      "id": "pin:r1-1",
+      "type": "Pin",
+      "revision": 0,
+      "links": ["component:r1"],
+      "attributes": {
+        "componentId": "component:r1",
+        "number": "1",
+        "electricalType": "passive",
+        "padNumber": "1",
+        "symbolOffsetMm": { "xMm": 0, "yMm": 3.81 }
+      }
+    },
+    {
+      "id": "pin:r1-2",
+      "type": "Pin",
+      "revision": 0,
+      "links": ["component:r1"],
+      "attributes": {
+        "componentId": "component:r1",
+        "number": "2",
+        "electricalType": "passive",
+        "padNumber": "2",
+        "symbolOffsetMm": { "xMm": 0, "yMm": -3.81 }
+      }
+    },
+    {
+      "id": "pin:d1-1",
+      "type": "Pin",
+      "revision": 0,
+      "links": ["component:d1"],
+      "attributes": {
+        "componentId": "component:d1",
+        "number": "1",
+        "name": "K",
+        "electricalType": "passive",
+        "padNumber": "1",
+        "symbolOffsetMm": { "xMm": -3.81, "yMm": 0 }
+      }
+    },
+    {
+      "id": "pin:d1-2",
+      "type": "Pin",
+      "revision": 0,
+      "links": ["component:d1"],
+      "attributes": {
+        "componentId": "component:d1",
+        "number": "2",
+        "name": "A",
+        "electricalType": "passive",
+        "padNumber": "2",
+        "symbolOffsetMm": { "xMm": 3.81, "yMm": 0 }
+      }
+    },
+    {
+      "id": "pin:c1-1",
+      "type": "Pin",
+      "revision": 0,
+      "links": ["component:c1"],
+      "attributes": {
+        "componentId": "component:c1",
+        "number": "1",
+        "electricalType": "passive",
+        "padNumber": "1",
+        "symbolOffsetMm": { "xMm": 0, "yMm": 3.81 }
+      }
+    },
+    {
+      "id": "pin:c1-2",
+      "type": "Pin",
+      "revision": 0,
+      "links": ["component:c1"],
+      "attributes": {
+        "componentId": "component:c1",
+        "number": "2",
+        "electricalType": "passive",
+        "padNumber": "2",
+        "symbolOffsetMm": { "xMm": 0, "yMm": -3.81 }
+      }
+    },
+    {
+      "id": "pin:flg1-1",
+      "type": "Pin",
+      "revision": 0,
+      "links": ["component:flg1"],
+      "attributes": {
+        "componentId": "component:flg1",
+        "number": "1",
+        "electricalType": "power-output",
+        "symbolOffsetMm": { "xMm": 0, "yMm": 0 }
+      }
+    },
+    {
+      "id": "pin:flg2-1",
+      "type": "Pin",
+      "revision": 0,
+      "links": ["component:flg2"],
+      "attributes": {
+        "componentId": "component:flg2",
+        "number": "1",
+        "electricalType": "power-output",
+        "symbolOffsetMm": { "xMm": 0, "yMm": 0 }
+      }
+    },
+    {
+      "id": "net:vcc",
+      "type": "Net",
+      "revision": 0,
+      "name": "+5V",
+      "links": ["pin:j1-1", "pin:r1-1", "pin:c1-1", "pin:flg1-1"],
+      "attributes": {
+        "netName": "+5V",
+        "netClass": "power",
+        "pinIds": ["pin:j1-1", "pin:r1-1", "pin:c1-1", "pin:flg1-1"]
+      }
+    },
+    {
+      "id": "net:led-a",
+      "type": "Net",
+      "revision": 0,
+      "name": "LED_A",
+      "links": ["pin:r1-2", "pin:d1-2"],
+      "attributes": {
+        "netName": "LED_A",
+        "netClass": "signal",
+        "pinIds": ["pin:r1-2", "pin:d1-2"]
+      }
+    },
+    {
+      "id": "net:gnd",
+      "type": "Net",
+      "revision": 0,
+      "name": "GND",
+      "links": ["pin:j1-2", "pin:d1-1", "pin:c1-2", "pin:flg2-1"],
+      "attributes": {
+        "netName": "GND",
+        "netClass": "ground",
+        "pinIds": ["pin:j1-2", "pin:d1-1", "pin:c1-2", "pin:flg2-1"]
+      }
+    },
+    {
+      "id": "layout:main",
+      "type": "Layout",
+      "revision": 0,
+      "name": "Two-layer indicator layout",
+      "links": [
+        "stackup:2layer",
+        "component:j1",
+        "component:r1",
+        "component:d1",
+        "component:c1",
+        "net:vcc",
+        "net:led-a",
+        "net:gnd"
+      ],
+      "attributes": {
+        "stackupId": "stackup:2layer",
+        "boardOutline": {
+          "shape": "rectangle",
+          "originMm": { "xMm": 0, "yMm": 0 },
+          "widthMm": 20,
+          "heightMm": 15
+        },
+        "placements": [
+          {
+            "componentId": "component:j1",
+            "xMm": 3,
+            "yMm": 7.5,
+            "rotationDeg": 90,
+            "layer": "F.Cu"
+          },
+          { "componentId": "component:r1", "xMm": 8, "yMm": 5, "rotationDeg": 0, "layer": "F.Cu" },
+          { "componentId": "component:d1", "xMm": 12, "yMm": 5, "rotationDeg": 0, "layer": "F.Cu" },
+          { "componentId": "component:c1", "xMm": 8, "yMm": 10, "rotationDeg": 0, "layer": "F.Cu" }
+        ],
+        "tracks": [
+          {
+            "netId": "net:vcc",
+            "layer": "B.Cu",
+            "widthMm": 0.25,
+            "startMm": { "xMm": 2, "yMm": 7.5 },
+            "endMm": { "xMm": 7.25, "yMm": 5 }
+          },
+          {
+            "netId": "net:vcc",
+            "layer": "B.Cu",
+            "widthMm": 0.25,
+            "startMm": { "xMm": 7.25, "yMm": 5 },
+            "endMm": { "xMm": 7.25, "yMm": 10 }
+          },
+          {
+            "netId": "net:led-a",
+            "layer": "B.Cu",
+            "widthMm": 0.25,
+            "startMm": { "xMm": 8.75, "yMm": 5 },
+            "endMm": { "xMm": 12.75, "yMm": 5 }
+          },
+          {
+            "netId": "net:gnd",
+            "layer": "F.Cu",
+            "widthMm": 0.25,
+            "startMm": { "xMm": 4, "yMm": 7.5 },
+            "endMm": { "xMm": 2, "yMm": 13 }
+          },
+          {
+            "netId": "net:gnd",
+            "layer": "F.Cu",
+            "widthMm": 0.25,
+            "startMm": { "xMm": 2, "yMm": 13 },
+            "endMm": { "xMm": 18, "yMm": 13 }
+          },
+          {
+            "netId": "net:gnd",
+            "layer": "F.Cu",
+            "widthMm": 0.25,
+            "startMm": { "xMm": 18, "yMm": 13 },
+            "endMm": { "xMm": 11.25, "yMm": 5 }
+          },
+          {
+            "netId": "net:gnd",
+            "layer": "F.Cu",
+            "widthMm": 0.25,
+            "startMm": { "xMm": 11.25, "yMm": 5 },
+            "endMm": { "xMm": 8.75, "yMm": 10 }
+          }
+        ],
+        "vias": [
+          {
+            "netId": "net:vcc",
+            "atMm": { "xMm": 2, "yMm": 7.5 },
+            "diameterMm": 0.8,
+            "drillMm": 0.4,
+            "layers": ["F.Cu", "B.Cu"]
+          },
+          {
+            "netId": "net:vcc",
+            "atMm": { "xMm": 7.25, "yMm": 5 },
+            "diameterMm": 0.8,
+            "drillMm": 0.4,
+            "layers": ["F.Cu", "B.Cu"]
+          },
+          {
+            "netId": "net:vcc",
+            "atMm": { "xMm": 7.25, "yMm": 10 },
+            "diameterMm": 0.8,
+            "drillMm": 0.4,
+            "layers": ["F.Cu", "B.Cu"]
+          },
+          {
+            "netId": "net:led-a",
+            "atMm": { "xMm": 8.75, "yMm": 5 },
+            "diameterMm": 0.8,
+            "drillMm": 0.4,
+            "layers": ["F.Cu", "B.Cu"]
+          },
+          {
+            "netId": "net:led-a",
+            "atMm": { "xMm": 12.75, "yMm": 5 },
+            "diameterMm": 0.8,
+            "drillMm": 0.4,
+            "layers": ["F.Cu", "B.Cu"]
+          }
+        ]
+      }
     }
   ]
 }
