@@ -74,6 +74,12 @@ const decisionForItem = (
     profileId && ruleId
       ? rulesForFabProfile(profileId)?.rules.find((candidate) => candidate.ruleId === ruleId)
       : undefined;
+  if (rule?.correction && rule.applicationExemption) {
+    throw new GraphCoreError(
+      "schema-invalid",
+      `fab rule cannot declare both correction and applicationExemption: ${rule.ruleId}`,
+    );
+  }
   return {
     knowledgeItemId: item.id,
     knowledgeId: item.knowledgeId,
@@ -122,6 +128,16 @@ export const recordKnowledgeApplications = (
   );
   const decisions = result.decisions.map((decision) => {
     const application = byKnowledgeId.get(decision.knowledgeId);
+    if (
+      application &&
+      (decision.lifecycleStatus !== "adopted" ||
+        (decision.status !== "pass" && decision.status !== "unknown"))
+    ) {
+      throw new GraphCoreError(
+        "verification-failed",
+        `knowledge application is not eligible: ${decision.knowledgeId}`,
+      );
+    }
     return application
       ? {
           ...decision,
@@ -180,8 +196,10 @@ export const createTargetDesignKnowledgeContext = (input: {
   fabProfileId: input.fabProfileId,
   footprintIds: input.footprintIds,
   reproductionConditions: input.reproductionConditions,
-  footprintId: input.footprintIds,
-  reproductionCondition: input.reproductionConditions,
+  ...(input.footprintIds.length ? { footprintId: input.footprintIds } : {}),
+  ...(input.reproductionConditions.length
+    ? { reproductionCondition: input.reproductionConditions }
+    : {}),
   ...(input.ruleIds?.length ? { ruleIds: input.ruleIds, ruleId: input.ruleIds } : {}),
   ...(input.classifications?.length
     ? { classifications: input.classifications, classification: input.classifications }
