@@ -65,7 +65,7 @@ timeoutや一時的なtool起動失敗だけを、同一input hash、同一idemp
 明示されたretry budget内で再試行できます。patch conflict、schema-invalid、
 license-restriction、patent-concern、approval-required、budget-exceededは
 盲目的に再試行しません。停止時は何が、どこで、なぜ、再開条件、推奨アクション
-をイベントへ記録します。
+をイベントへ記録します。停止を閉じるときは、処置区分（再実行、修正、要求・設計変更、免除、破棄してやり直し）、再開時のrevisionと入力hash、再発防止の要否、水平展開の対象もイベントへ記録します。既存codeの意味を黙って広げず、code追加や意味変更はtaxonomy dataと本書を同じ変更で更新します。
 
 ## 関連文書
 

@@ -89,9 +89,10 @@ MPN、quantity、supplier情報の欠落、fixture AVL外の選択、またはli
 
 ```yaml
 id: evidence:phase1-golden:board-bringup
+type: Evidence
 revision: 0
-kind: measurement
-status: passed
+evidenceKind: measurement
+observedAt: "<RFC3339>"
 board:
   projectId: project:phase1-golden
   graphRevision: 0
@@ -106,21 +107,27 @@ conditions:
   instruments:
     - id: "<instrument-id>"
       calibrationDue: "<RFC3339>"
-measurements:
+observations:
   - testItemId: test:power-rail
+    claim: "Power rail measurement"
     procedure: "<procedure>"
-    observed: "<value and unit>"
+    value: "<value>"
+    unit: "<unit>"
     expected: "<range and unit>"
     pass: true
   - testItemId: test:communication
+    claim: "Communication test"
     procedure: "<procedure>"
-    observed: "<result>"
+    value: "<result>"
     expected: "<criterion>"
     pass: true
 provenance:
-  toolVersion: "<measurement-tool-version>"
-  operator: "<operator-or-redacted-id>"
-  capturedAt: "<RFC3339>"
+  - kind: measurement
+    locator: "measurement://phase1-golden/board-bringup"
+    toolVersion: "<measurement-tool-version>"
+    capturedAt: "<RFC3339>"
+    capturedBy: "<operator-or-redacted-id>"
+    contentHash: "sha256:<hash>"
 uncertainty:
   state: verified
   description: "<remaining uncertainty or none>"

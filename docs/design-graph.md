@@ -60,7 +60,7 @@
 
 `Evidence`は、そのソースまたは検査で観測された事実・検証成果物です。たとえば、指定リビジョンの基板で測定した3.31 V、測定条件、測定器、時刻、合否、対応する測定ファイルを`Evidence`として保存し、データシートのページを`provenance`として参照します。部品、フットプリント、ネット、ルールは出所なしに確定状態へ進めません。
 
-`uncertainty`には、少なくとも状態（`unknown`、`assumed`、`inferred`、`verified`）、説明、影響範囲、解消方法、期限を記録します。黙った補完は禁止です。
+`uncertainty`には、少なくとも状態（`unknown`、`assumed`、`inferred`、`verified`、`rejected`）、説明、解消方法（`resolution`）、影響範囲（`impactScope`）、期限（`dueAt`）を記録します。期限の到達で自動的に解消扱いにせず、期限切れの未解消事項は停止条件として扱います。解消は測定、ツール出力、出所付き資料などの`Evidence`で示します。黙った補完は禁止です。
 
 機械制約は既存の`Constraint`で表します。たとえば、`source.kind = "mechanical"`、`source.locator = "enclosure://case-a/rev-3"`、`attributes = { "constraint": "maxComponentHeight", "value": 8, "unit": "mm" }`のように、筐体・取付穴・外形・keepout・コネクタ位置・最大高さを記録します。`Layout.attributes`にはboard outline、mounting holes、keepoutsを、`BoardStackup.attributes`には基板厚・部品高さ包絡・機械クリアランスを保持できます。専用`MechanicalInterface` Entityは、IDXや複数部品の所有権同期が必要になるまで将来候補とします。
 
