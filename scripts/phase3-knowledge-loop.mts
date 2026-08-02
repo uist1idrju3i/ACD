@@ -13,6 +13,7 @@ import {
   recordKnowledgeApplications,
   transitionKnowledgeItem,
   type FabFeedbackReport,
+  rulesForFabProfile,
 } from "../packages/graph-core/src/index.js";
 import {
   intakeFabFeedback,
@@ -37,24 +38,115 @@ const hash = (value: string): string =>
   `sha256:${createHash("sha256").update(value).digest("hex")}`;
 const fileHash = async (path: string): Promise<string> => hash(await readFile(path, "utf8"));
 
-const detectMaskSliver = (board: string): boolean =>
-  board.includes('(footprint "R_0603_1608Metric"') &&
-  !board.includes('ACD_LibraryOverlay" "pad-mask-clearance=0.1');
+type PadGeometry = {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+  maskMargin: number;
+};
+
+const blockFor = (source: string, marker: string): string => {
+  const start = source.indexOf(marker);
+  if (start < 0) return "";
+  let depth = 0;
+  for (let index = start; index < source.length; index += 1) {
+    if (source[index] === "(") depth += 1;
+    if (source[index] === ")" && --depth === 0) return source.slice(start, index + 1);
+  }
+  return "";
+};
+
+const padsForFootprint = (board: string, footprintName: string): PadGeometry[] => {
+  const footprint = blockFor(board, `(footprint "${footprintName}"`);
+  const defaultMargin = Number(
+    board.match(/\(setup\s+\(pad_to_mask_clearance\s+(-?[\d.]+)/)?.[1] ?? 0,
+  );
+  return [...footprint.matchAll(/\(pad\s+"[^"]+"\s+smd\b/g)].flatMap((match) => {
+    const block = blockFor(footprint, match[0]!);
+    const at = block.match(/\(at\s+(-?[\d.]+)\s+(-?[\d.]+)(?:\s+(-?[\d.]+))?/);
+    const size = block.match(/\(size\s+([\d.]+)\s+([\d.]+)/);
+    if (!at || !size) return [];
+    const rotation = Math.abs(Number(at[3] ?? 0)) % 180 === 90;
+    const width = Number(size[rotation ? 2 : 1]);
+    const height = Number(size[rotation ? 1 : 2]);
+    const override = block.match(/\(solder_mask_margin\s+(-?[\d.]+)/)?.[1];
+    return [
+      {
+        x: Number(at[1]),
+        y: Number(at[2]),
+        width,
+        height,
+        maskMargin: override === undefined ? defaultMargin : Number(override),
+      },
+    ];
+  });
+};
+
+const measuredMaskSliver = (board: string, footprintName: string): number => {
+  const pads = padsForFootprint(board, footprintName);
+  let minimum = Number.POSITIVE_INFINITY;
+  for (const left of pads) {
+    for (const right of pads) {
+      if (left === right) continue;
+      if (Math.abs(left.y - right.y) < 1e-6) {
+        minimum = Math.min(
+          minimum,
+          Math.abs(left.x - right.x) -
+            (left.width + right.width) / 2 -
+            left.maskMargin -
+            right.maskMargin,
+        );
+      }
+      if (Math.abs(left.x - right.x) < 1e-6) {
+        minimum = Math.min(
+          minimum,
+          Math.abs(left.y - right.y) -
+            (left.height + right.height) / 2 -
+            left.maskMargin -
+            right.maskMargin,
+        );
+      }
+    }
+  }
+  return minimum;
+};
+
+const detectMaskSliver = (
+  board: string,
+): { violates: boolean; measuredMm: number; minimumMm: number } => {
+  const rule = rulesForFabProfile("fab:jlcpcb-class-2layer")?.rules.find(
+    (candidate) => candidate.ruleId === "mask-sliver-min",
+  );
+  if (!rule?.minimumSliverMm) {
+    throw new Error("schema-invalid: mask-sliver rule lacks numeric minimum");
+  }
+  const measuredMm = measuredMaskSliver(
+    board,
+    "USB_C_Receptacle_GCT_USB4135-GF-A_6P_TopMnt_Horizontal",
+  );
+  return {
+    violates: measuredMm < rule.minimumSliverMm,
+    measuredMm,
+    minimumMm: rule.minimumSliverMm,
+  };
+};
 
 const makeReport = (board: string): FabFeedbackReport => {
+  const measurement = detectMaskSliver(board);
   const finding = {
     findingId: "P2-DFM-001",
-    originalText: "Solder mask sliver below minimum near R1 pad 1.",
+    originalText: "Solder mask sliver below minimum near J1 A5/B5 pads.",
     severityReported: "high" as const,
     references: {
-      partId: "part:p2-r1",
-      footprintId: "footprint:Resistor_SMD:R_0603_1608Metric",
-      ...(detectMaskSliver(board) ? { ruleId: "mask-sliver-min" } : {}),
+      partId: "part:p2-j1",
+      footprintId: "footprint:Connector_USB:USB_C_Receptacle_GCT_USB4135-GF-A_6P_TopMnt_Horizontal",
+      ...(measurement.violates ? { ruleId: "mask-sliver-min" } : {}),
     },
   };
-  const findingText = detectMaskSliver(board)
+  const findingText = measurement.violates
     ? finding.originalText
-    : "Deterministic DFM scan found no solder mask sliver.";
+    : `Deterministic DFM scan measured ${measurement.measuredMm.toFixed(3)}mm, meeting the ${measurement.minimumMm.toFixed(3)}mm minimum.`;
   const content = `Prototype-2 deterministic DFM scan\n${findingText}\n`;
   const contentHash = hash(content);
   return {
@@ -94,8 +186,12 @@ await writeFile(
 );
 const controlBoardHash = await fileHash(officialProject.boardPath);
 const enabledBoardHash = await fileHash(enabledProject.boardPath);
-const controlReport = makeReport(await readFile(officialProject.boardPath, "utf8"));
-const enabledReport = makeReport(await readFile(enabledProject.boardPath, "utf8"));
+const controlBoard = await readFile(officialProject.boardPath, "utf8");
+const enabledBoard = await readFile(enabledProject.boardPath, "utf8");
+const controlMeasurement = detectMaskSliver(controlBoard);
+const enabledMeasurement = detectMaskSliver(enabledBoard);
+const controlReport = makeReport(controlBoard);
+const enabledReport = makeReport(enabledBoard);
 const controlIntake = intakeFabFeedback(controlReport, referenceIndexFromPhase1Fixture(fixture));
 const enabledIntake = intakeFabFeedback(enabledReport, referenceIndexFromPhase1Fixture(fixture));
 const maskFindingCount = (intake: ReturnType<typeof intakeFabFeedback>): number =>
@@ -137,7 +233,7 @@ const adopted = transitionKnowledgeItem(reviewed, {
 const context = createTargetDesignKnowledgeContext({
   designRevision: "prototype-2",
   fabProfileId: fixture.manufacturingProfile!.fabProfileId,
-  footprintIds: ["R_0603_1608Metric"],
+  footprintIds: ["USB_C_Receptacle_GCT_USB4135-GF-A_6P_TopMnt_Horizontal"],
   ruleIds: [],
   classifications: [],
   reproductionConditions: fixture.manufacturingProfile!.processConditions,
@@ -204,6 +300,7 @@ const output = {
   control: {
     libraryRevision: officialLibraryRevision(),
     boardHash: controlBoardHash,
+    geometry: controlMeasurement,
     findings: maskFindingCount(controlIntake),
     reportHash: controlReport.rawReport.contentHash,
     intakeDerivationHash: controlIntake.derivationHash,
@@ -211,6 +308,7 @@ const output = {
   knowledgeEnabled: {
     libraryRevision: patchArtifact.libraryRevision,
     boardHash: enabledBoardHash,
+    geometry: enabledMeasurement,
     findings: maskFindingCount(enabledIntake),
     reportHash: enabledReport.rawReport.contentHash,
     intakeDerivationHash: enabledIntake.derivationHash,

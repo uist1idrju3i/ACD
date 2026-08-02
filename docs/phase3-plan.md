@@ -157,8 +157,10 @@ Phase 5、自働発注はPhase 6の範囲であり、本フェーズでは扱い
 
 Gate 22のtarget placeholderをこの2次試作fixtureへ置き換え、controlとknowledge-enabledの
 両runを`knowledge-loop.json`へ記録する。controlでは公式library revisionを使用し、target
-boardから同じfab-profile rule pathでmask-sliver findingを導出する。knowledge-enabledでは
-adopted KnowledgeItemとWP3 overlay revisionを適用し、同findingが0件になることを検証する。
+boardから同じfab-profile rule pathでmask-sliver findingを導出する。profileの最小値は
+0.30mmで、USB-C fine-pitch pad間の実測値を使用する。knowledge-enabledではadopted
+KnowledgeItemとWP3 overlay revisionを適用し、負のmask marginでmask openingを縮小して
+sliverを拡大し、同findingが0件になることを検証する。
 
 ### WP6：電子部品ライブラリの本格整備
 

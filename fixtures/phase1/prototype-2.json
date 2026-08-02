@@ -5,7 +5,7 @@
   "manufacturingProfile": {
     "fabProfileId": "fab:jlcpcb-class-2layer",
     "processConditions": [
-      "0.1mm minimum mask sliver",
+      "0.30mm minimum mask sliver",
       "0.127mm copper clearance profile",
       "2-layer",
       "HASL",
