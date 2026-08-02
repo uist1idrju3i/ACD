@@ -6,7 +6,7 @@
   "source": {
     "kind": "fixture",
     "locator": "fixtures/phase3/fab-report-prototype-1.json",
-    "contentHash": "sha256:2de754ec6a2a2a28a9c8a71a6cb3d6b2b192a5ec03718fef285934044566e8cf",
+    "contentHash": "sha256:4d04e6a9d784dedbe73dce2c7cc1334ffa0e80be0372f84d467d380d6b8b06b5",
     "fixtureDerived": true,
     "fixtureId": "fixture:fab-report-prototype-1-jlcpcb"
   },
@@ -16,8 +16,8 @@
   },
   "rawReport": {
     "contentType": "text/plain",
-    "content": "JLCPCB DFM report fixture for prototype-1. Findings are recorded format examples, not real fab evidence.",
-    "contentHash": "sha256:2de754ec6a2a2a28a9c8a71a6cb3d6b2b192a5ec03718fef285934044566e8cf"
+    "content": "JLCPCB DFM REPORT - FIXTURE REPRODUCTION ONLY\nProject: prototype-1\nJob: job:prototype-1-jlcpcb-001\nProfile: 2 Layer / HASL / standard mask\n\n[DFM-001] HIGH  Solder mask sliver below minimum near R1 pad 1.\nReference: R1 / footprint Resistor_SMD:R_0603_1608Metric / rule mask-sliver-min\n\n[DFM-002] MEDIUM  Copper clearance below profile minimum on net:3v3 near U2.\nReference: U2 / net:3v3 / rule copper-clearance-min\n\n[DFM-003] LOW  Silkscreen reference overlaps the board edge near J2.\nReference: J2 / rule silkscreen-edge\n\nThis recorded text reproduces a JLCPCB-class report format and is not real fab evidence.",
+    "contentHash": "sha256:4d04e6a9d784dedbe73dce2c7cc1334ffa0e80be0372f84d467d380d6b8b06b5"
   },
   "rawFindings": [
     {
@@ -51,34 +51,5 @@
         "ruleId": "silkscreen-edge"
       }
     }
-  ],
-  "structuredFindings": [
-    {
-      "findingId": "JLC-DFM-001",
-      "classification": "mask-clearance",
-      "confidence": 0.98,
-      "reproductionConditions": ["2-layer", "HASL", "0.1mm minimum mask sliver"],
-      "derivedFromFindingIds": ["JLC-DFM-001"]
-    },
-    {
-      "findingId": "JLC-DFM-002",
-      "classification": "spacing",
-      "confidence": 0.91,
-      "reproductionConditions": ["2-layer", "0.127mm copper clearance profile"],
-      "derivedFromFindingIds": ["JLC-DFM-002"]
-    },
-    {
-      "findingId": "JLC-DFM-003",
-      "classification": "silkscreen",
-      "confidence": 0.88,
-      "reproductionConditions": ["2-layer", "board-edge silkscreen exclusion"],
-      "derivedFromFindingIds": ["JLC-DFM-003"]
-    }
-  ],
-  "derivation": {
-    "method": "recorded-jlcpcb-class-report-parser",
-    "version": "0.1.0",
-    "inputHash": "sha256:2de754ec6a2a2a28a9c8a71a6cb3d6b2b192a5ec03718fef285934044566e8cf",
-    "outputHash": "sha256:2de754ec6a2a2a28a9c8a71a6cb3d6b2b192a5ec03718fef285934044566e8cf"
-  }
+  ]
 }

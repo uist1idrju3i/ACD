@@ -6,7 +6,7 @@
   "source": {
     "kind": "fixture",
     "locator": "fixtures/phase3/fab-report-negative.json",
-    "contentHash": "sha256:9f7f7cbf3ae00c4ee39fc64073c35e57ec0f82738ca636e2a40220757b96afb0",
+    "contentHash": "sha256:6003b233497a0b2eb5239f3bc7903b7cc00f861603a2590c0a63b2fd181f7618",
     "fixtureDerived": true,
     "fixtureId": "fixture:fab-report-negative"
   },
@@ -16,8 +16,8 @@
   },
   "rawReport": {
     "contentType": "text/plain",
-    "content": "Fixture negative cases: unknown reference, duplicate finding, and unstructurable text.",
-    "contentHash": "sha256:9f7f7cbf3ae00c4ee39fc64073c35e57ec0f82738ca636e2a40220757b96afb0"
+    "content": "JLCPCB DFM REPORT - FIXTURE NEGATIVE CASES ONLY\nProject: prototype-1\n\n[NEG-UNKNOWN-REF] HIGH  Unknown component reference Z99 cannot be located.\nReference: Z99\n\n[NEG-DUP-ID] MEDIUM  Pad geometry warning at R1.\nReference: R1 / rule pad-geometry\n[NEG-DUP-ID] MEDIUM  Pad geometry warning repeated with the same finding ID.\nReference: R1 / rule pad-geometry\n\n[NEG-UNKNOWN-TEXT] LOW  Manufacturing says please check this thing somehow.\nReference: R1\n\nThis recorded text reproduces failure inputs and is not real fab evidence.",
+    "contentHash": "sha256:6003b233497a0b2eb5239f3bc7903b7cc00f861603a2590c0a63b2fd181f7618"
   },
   "rawFindings": [
     {
@@ -27,13 +27,13 @@
       "references": { "partId": "part:z99" }
     },
     {
-      "findingId": "NEG-DUP-1",
+      "findingId": "NEG-DUP-ID",
       "originalText": "Pad geometry warning at R1.",
       "severityReported": "medium",
       "references": { "partId": "part:r1", "ruleId": "pad-geometry" }
     },
     {
-      "findingId": "NEG-DUP-2",
+      "findingId": "NEG-DUP-ID",
       "originalText": "Pad geometry warning at R1.",
       "severityReported": "medium",
       "references": { "partId": "part:r1", "ruleId": "pad-geometry" }
@@ -44,41 +44,5 @@
       "severityReported": "unknown",
       "references": { "partId": "part:r1" }
     }
-  ],
-  "structuredFindings": [
-    {
-      "findingId": "NEG-UNKNOWN-REF",
-      "classification": "spacing",
-      "confidence": 0.95,
-      "reproductionConditions": [],
-      "derivedFromFindingIds": ["NEG-UNKNOWN-REF"]
-    },
-    {
-      "findingId": "NEG-DUP-1",
-      "classification": "pad-geometry",
-      "confidence": 0.9,
-      "reproductionConditions": [],
-      "derivedFromFindingIds": ["NEG-DUP-1"]
-    },
-    {
-      "findingId": "NEG-DUP-2",
-      "classification": "pad-geometry",
-      "confidence": 0.9,
-      "reproductionConditions": [],
-      "derivedFromFindingIds": ["NEG-DUP-2"]
-    },
-    {
-      "findingId": "NEG-UNKNOWN-TEXT",
-      "classification": "unknown",
-      "confidence": 0.1,
-      "reproductionConditions": [],
-      "derivedFromFindingIds": ["NEG-UNKNOWN-TEXT"]
-    }
-  ],
-  "derivation": {
-    "method": "recorded-jlcpcb-class-report-parser",
-    "version": "0.1.0",
-    "inputHash": "sha256:9f7f7cbf3ae00c4ee39fc64073c35e57ec0f82738ca636e2a40220757b96afb0",
-    "outputHash": "sha256:9f7f7cbf3ae00c4ee39fc64073c35e57ec0f82738ca636e2a40220757b96afb0"
-  }
+  ]
 }

@@ -27,11 +27,7 @@ export interface ACDFabFeedbackReport {
    * @minItems 1
    */
   rawFindings: [RawFinding, ...RawFinding[]];
-  /**
-   * @minItems 1
-   */
-  structuredFindings: [StructuredFinding, ...StructuredFinding[]];
-  derivation: {
+  derivation?: {
     method: string;
     version: string;
     inputHash: string;
@@ -53,22 +49,4 @@ export interface Reference {
     yMm: number;
   };
   ruleId?: string;
-}
-export interface StructuredFinding {
-  findingId: string;
-  classification:
-    | "mask-clearance"
-    | "pad-geometry"
-    | "courtyard-clearance"
-    | "drill"
-    | "silkscreen"
-    | "spacing"
-    | "solderability"
-    | "unknown";
-  confidence: number;
-  reproductionConditions: string[];
-  /**
-   * @minItems 1
-   */
-  derivedFromFindingIds: [string, ...string[]];
 }

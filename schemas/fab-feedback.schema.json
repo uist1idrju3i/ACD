@@ -11,9 +11,7 @@
     "source",
     "target",
     "rawReport",
-    "rawFindings",
-    "structuredFindings",
-    "derivation"
+    "rawFindings"
   ],
   "additionalProperties": false,
   "properties": {
@@ -70,11 +68,6 @@
       "minItems": 1,
       "items": { "$ref": "#/$defs/rawFinding" }
     },
-    "structuredFindings": {
-      "type": "array",
-      "minItems": 1,
-      "items": { "$ref": "#/$defs/structuredFinding" }
-    },
     "derivation": {
       "type": "object",
       "required": ["method", "version", "inputHash", "outputHash"],
@@ -118,42 +111,6 @@
           "enum": ["info", "low", "medium", "high", "critical", "unknown"]
         },
         "references": { "$ref": "#/$defs/reference" }
-      }
-    },
-    "structuredFinding": {
-      "type": "object",
-      "required": [
-        "findingId",
-        "classification",
-        "confidence",
-        "reproductionConditions",
-        "derivedFromFindingIds"
-      ],
-      "additionalProperties": false,
-      "properties": {
-        "findingId": { "type": "string", "minLength": 1 },
-        "classification": {
-          "enum": [
-            "mask-clearance",
-            "pad-geometry",
-            "courtyard-clearance",
-            "drill",
-            "silkscreen",
-            "spacing",
-            "solderability",
-            "unknown"
-          ]
-        },
-        "confidence": { "type": "number", "minimum": 0, "maximum": 1 },
-        "reproductionConditions": {
-          "type": "array",
-          "items": { "type": "string" }
-        },
-        "derivedFromFindingIds": {
-          "type": "array",
-          "minItems": 1,
-          "items": { "type": "string", "minLength": 1 }
-        }
       }
     }
   }

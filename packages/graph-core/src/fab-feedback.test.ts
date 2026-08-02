@@ -8,7 +8,7 @@ const report = (overrides: Partial<FabFeedbackReport> = {}): FabFeedbackReport =
   schemaVersion: "0.1.0-draft",
   reportId: "fab-report:test",
   fabJobId: "job:test",
-  fabProfileId: "fab:test",
+  fabProfileId: "fab:jlcpcb-class-2layer",
   source: {
     kind: "fixture",
     locator: "fixture:test",
@@ -25,26 +25,15 @@ const report = (overrides: Partial<FabFeedbackReport> = {}): FabFeedbackReport =
   rawFindings: [
     {
       findingId: "F-1",
-      originalText: "mask sliver at R1",
+      originalText: "Solder mask sliver below minimum near R1 pad 1.",
       severityReported: "high",
-      references: { partId: "part:r1", footprintId: "footprint:r0603", ruleId: "mask" },
+      references: {
+        partId: "part:r1",
+        footprintId: "footprint:r0603",
+        ruleId: "mask-sliver-min",
+      },
     },
   ],
-  structuredFindings: [
-    {
-      findingId: "F-1",
-      classification: "mask-clearance",
-      confidence: 0.95,
-      reproductionConditions: ["2-layer"],
-      derivedFromFindingIds: ["F-1"],
-    },
-  ],
-  derivation: {
-    method: "test",
-    version: "1",
-    inputHash: "sha256:" + "a".repeat(64),
-    outputHash: "sha256:" + "b".repeat(64),
-  },
   ...overrides,
 });
 
@@ -68,19 +57,13 @@ describe("fab feedback intake", () => {
         ...report().rawFindings,
         {
           findingId: "F-2",
-          originalText: "MASK SLIVER AT R1",
+          originalText: "Solder mask sliver near R1 pad 1 has insufficient width.",
           severityReported: "medium",
-          references: { partId: "part:r1", footprintId: "footprint:r0603", ruleId: "mask" },
-        },
-      ],
-      structuredFindings: [
-        ...report().structuredFindings,
-        {
-          findingId: "F-2",
-          classification: "mask-clearance",
-          confidence: 0.9,
-          reproductionConditions: ["2-layer"],
-          derivedFromFindingIds: ["F-2"],
+          references: {
+            partId: "part:r1",
+            footprintId: "footprint:r0603",
+            ruleId: "mask-sliver-min",
+          },
         },
       ],
     });
@@ -106,13 +89,14 @@ describe("fab feedback intake", () => {
     ).toThrowError(/outside the target revision/);
   });
 
-  it("widens verification for low confidence and unknown classification", () => {
+  it("widens verification for unmatched free text", () => {
     const unknown = report({
-      structuredFindings: [
+      rawFindings: [
         {
-          ...report().structuredFindings[0]!,
-          classification: "unknown",
-          confidence: 0.2,
+          ...report().rawFindings[0]!,
+          originalText: "Manufacturing says please check this thing somehow.",
+          references: { partId: "part:r1" },
+          severityReported: "low",
         },
       ],
     });
@@ -120,6 +104,46 @@ describe("fab feedback intake", () => {
     expect(result.verdict).toBe("unknown");
     expect(result.findings[0]?.verdict).toBe("unknown");
     expect(result.evidence.value.unknownFindingIds).toEqual(["F-1"]);
+  });
+
+  it("stops on a target revision mismatch", () => {
+    expect(() =>
+      intakeFabFeedback(
+        report({
+          target: { projectId: "project:test", designRevision: "revision:2" },
+        }),
+        index,
+      ),
+    ).toThrowError(/does not match the design revision/);
+  });
+
+  it("stops on duplicate finding IDs", () => {
+    expect(() =>
+      intakeFabFeedback(
+        report({
+          rawFindings: [...report().rawFindings, { ...report().rawFindings[0]! }],
+        }),
+        index,
+      ),
+    ).toThrowError(/duplicate finding ID/);
+  });
+
+  it("verifies supplied derivation metadata instead of trusting it", () => {
+    const derived = intakeFabFeedback(report(), index);
+    expect(intakeFabFeedback(report({ derivation: derived.derivation }), index).derivation).toEqual(
+      derived.derivation,
+    );
+    expect(() =>
+      intakeFabFeedback(
+        report({
+          derivation: {
+            ...derived.derivation,
+            outputHash: "sha256:" + "f".repeat(64),
+          },
+        }),
+        index,
+      ),
+    ).toThrowError(/derivation metadata/);
   });
 
   it("records a payload-hashed fab feedback event", async () => {

@@ -1,0 +1,44 @@
+{
+  "schemaVersion": "0.1.0-draft",
+  "reportId": "fab-report:prototype-1-unification",
+  "fabJobId": "job:prototype-1-unification",
+  "fabProfileId": "fab:jlcpcb-class-2layer",
+  "source": {
+    "kind": "fixture",
+    "locator": "fixtures/phase3/fab-report-unification.json",
+    "contentHash": "sha256:a33958f181bf41706fe4b3b15a49125923c636461a9dbfed6a2fde7d78579fc4",
+    "fixtureDerived": true,
+    "fixtureId": "fixture:fab-report-unification"
+  },
+  "target": {
+    "projectId": "fixture:phase1-golden-esp32",
+    "designRevision": "phase1-golden-2"
+  },
+  "rawReport": {
+    "contentType": "text/plain",
+    "content": "JLCPCB DFM REPORT - DUPLICATE FINDING REPRODUCTION\n[UNIFY-1] Solder mask sliver below minimum near R1 pad 1.\n[UNIFY-2] R1 pad 1 mask web is too narrow for the selected profile.\nBoth findings refer to the same rule and target; this is fixture data only.",
+    "contentHash": "sha256:a33958f181bf41706fe4b3b15a49125923c636461a9dbfed6a2fde7d78579fc4"
+  },
+  "rawFindings": [
+    {
+      "findingId": "UNIFY-1",
+      "originalText": "Solder mask sliver below minimum near R1 pad 1.",
+      "severityReported": "high",
+      "references": {
+        "partId": "part:r1",
+        "footprintId": "footprint:Resistor_SMD:R_0603_1608Metric",
+        "ruleId": "mask-sliver-min"
+      }
+    },
+    {
+      "findingId": "UNIFY-2",
+      "originalText": "R1 pad 1 mask web is too narrow for the selected profile.",
+      "severityReported": "medium",
+      "references": {
+        "partId": "part:r1",
+        "footprintId": "footprint:Resistor_SMD:R_0603_1608Metric",
+        "ruleId": "mask-sliver-min"
+      }
+    }
+  ]
+}

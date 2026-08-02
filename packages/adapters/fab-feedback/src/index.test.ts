@@ -31,4 +31,29 @@ describe("fixture fab feedback adapter", () => {
     expect(index.entityIds.has("footprint:Resistor_SMD:R_0603_1608Metric")).toBe(true);
     expect(index.entityIds.has("net:3v3")).toBe(true);
   });
+
+  it("unifies genuine duplicate findings with different wording", async () => {
+    const reader = new FixtureFabFeedbackReader(
+      new URL("../../../../fixtures/phase3/fab-report-unification.json", import.meta.url).pathname,
+    );
+    const report = await reader.read();
+    const index = referenceIndexFromPhase1Fixture(
+      JSON.parse(
+        await readFile(
+          new URL("../../../../fixtures/phase1/golden-esp32.json", import.meta.url),
+          "utf8",
+        ),
+      ) as {
+        fixtureId: string;
+        requirement: { provenance: { version: string } };
+        parts: { id: string }[];
+        mappings: { partId: string; footprintLibraryId: string; footprintName: string }[];
+        nets: { id?: string; name?: string }[];
+      },
+    );
+    const result = (await import("@acd/graph-core")).intakeFabFeedback(report, index);
+    expect(result.evidence.value.countBefore).toBe(2);
+    expect(result.evidence.value.countAfter).toBe(1);
+    expect(result.findings[0]?.duplicateFindingIds).toEqual(["UNIFY-2"]);
+  });
 });

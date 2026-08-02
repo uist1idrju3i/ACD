@@ -2,10 +2,10 @@ import type {
   FabFeedbackReport as SchemaFabFeedbackReport,
   RawFinding,
   Reference,
-  StructuredFinding,
 } from "@acd/schema";
 import { GraphCoreError } from "./errors.js";
 import { createEvent, type EventEnvelope } from "./event-log.js";
+import { rulesForFabProfile, type FabProfileRules } from "./fab-profile-rules.js";
 import { sha256 } from "./hash.js";
 
 export type FabFeedbackReport = Omit<SchemaFabFeedbackReport, "source"> & {
@@ -31,7 +31,15 @@ export type FabFeedbackFinding = {
   originalText: string;
   severityReported: RawFinding["severityReported"];
   references: Reference;
-  classification: StructuredFinding["classification"];
+  classification:
+    | "mask-clearance"
+    | "pad-geometry"
+    | "courtyard-clearance"
+    | "drill"
+    | "silkscreen"
+    | "spacing"
+    | "solderability"
+    | "unknown";
   confidence: number;
   reproductionConditions: string[];
   duplicateFindingIds: string[];
@@ -48,6 +56,8 @@ export type FabFeedbackEvidence = {
     countAfter: number;
     unificationKey: string;
     unknownFindingIds: string[];
+    derivationInputHash: string;
+    derivationOutputHash: string;
   };
 };
 
@@ -56,6 +66,12 @@ export type FabFeedbackIntakeResult = {
   findings: FabFeedbackFinding[];
   evidence: FabFeedbackEvidence;
   derivationHash: string;
+  derivation: {
+    method: string;
+    version: string;
+    inputHash: string;
+    outputHash: string;
+  };
 };
 
 const referenceValues = (reference: Reference): string[] =>
@@ -68,18 +84,10 @@ const referenceValues = (reference: Reference): string[] =>
     reference.coordinate?.yMm,
   ].map((value) => String(value ?? ""));
 
-const unificationKey = (finding: FabFeedbackFinding, structured: StructuredFinding): string =>
-  [
-    structured.classification,
-    ...referenceValues(finding.references),
-    finding.originalText.trim().toLowerCase(),
-  ].join("|");
-
-const structuredById = (report: FabFeedbackReport): Map<string, StructuredFinding> =>
-  new Map(report.structuredFindings.map((finding) => [finding.findingId, finding]));
-
-const rawById = (report: FabFeedbackReport): Map<string, RawFinding> =>
-  new Map(report.rawFindings.map((finding) => [finding.findingId, finding]));
+const unificationKey = (
+  finding: RawFinding,
+  classification: FabFeedbackFinding["classification"],
+): string => [classification, ...referenceValues(finding.references)].join("|");
 
 const assertSourceProvenance = (report: FabFeedbackReport): void => {
   if (
@@ -96,6 +104,21 @@ const assertSourceProvenance = (report: FabFeedbackReport): void => {
       "schema-invalid",
       "live fab feedback must not be marked fixture-derived",
     );
+  }
+};
+
+const assertUniqueFindingIds = (report: FabFeedbackReport): void => {
+  const ids = new Set<string>();
+  for (const finding of report.rawFindings) {
+    if (ids.has(finding.findingId)) {
+      throw new GraphCoreError(
+        "schema-invalid",
+        `fab feedback report contains duplicate finding ID: ${finding.findingId}`,
+        "error",
+        { findingId: finding.findingId },
+      );
+    }
+    ids.add(finding.findingId);
   }
 };
 
@@ -131,26 +154,46 @@ const assertReferences = (finding: RawFinding, index: FabFeedbackReferenceIndex)
   }
 };
 
+const deriveFinding = (
+  finding: RawFinding,
+  profile: FabProfileRules,
+): Pick<FabFeedbackFinding, "classification" | "confidence" | "reproductionConditions"> => {
+  const normalizedText = finding.originalText.toLowerCase();
+  const rule = profile.rules.find(
+    (candidate) =>
+      candidate.ruleId === finding.references.ruleId ||
+      candidate.textPatterns.some((pattern) => normalizedText.includes(pattern)),
+  );
+  if (!rule) {
+    return {
+      classification: "unknown",
+      confidence: 0,
+      reproductionConditions: [],
+    };
+  }
+  return rule;
+};
+
 export const intakeFabFeedback = (
   report: FabFeedbackReport,
   index: FabFeedbackReferenceIndex,
-  confidenceFloor = 0.8,
+  profileRules = rulesForFabProfile(report.fabProfileId),
 ): FabFeedbackIntakeResult => {
   assertSourceProvenance(report);
   assertTarget(report, index);
-  const raw = rawById(report);
-  const structured = structuredById(report);
+  assertUniqueFindingIds(report);
+  const profile: FabProfileRules = profileRules ?? {
+    profileId: report.fabProfileId,
+    version: "unknown",
+    confidenceFloor: 1,
+    rules: [],
+  };
   const findingsByKey = new Map<string, FabFeedbackFinding>();
   for (const finding of report.rawFindings) {
     assertReferences(finding, index);
-    const derived = structured.get(finding.findingId);
-    if (!derived) {
-      throw new GraphCoreError(
-        "schema-invalid",
-        `fab feedback finding has no deterministic structured derivation: ${finding.findingId}`,
-      );
-    }
-    const isUnknown = derived.classification === "unknown" || derived.confidence < confidenceFloor;
+    const derived = deriveFinding(finding, profile);
+    const isUnknown =
+      derived.classification === "unknown" || derived.confidence < profile.confidenceFloor;
     const result: FabFeedbackFinding = {
       findingId: finding.findingId,
       originalText: finding.originalText,
@@ -162,7 +205,7 @@ export const intakeFabFeedback = (
       duplicateFindingIds: [],
       verdict: isUnknown ? "unknown" : "pass",
     };
-    const key = unificationKey(result, derived);
+    const key = unificationKey(finding, derived.classification);
     const existing = findingsByKey.get(key);
     if (existing) {
       existing.duplicateFindingIds.push(result.findingId);
@@ -177,6 +220,34 @@ export const intakeFabFeedback = (
   const unknownFindingIds = findings
     .filter((finding) => finding.verdict === "unknown")
     .flatMap((finding) => [finding.findingId, ...finding.duplicateFindingIds]);
+  const derivationInputHash = sha256({
+    fabProfileId: report.fabProfileId,
+    rawReport: report.rawReport,
+    rawFindings: report.rawFindings,
+  });
+  const derivationOutputHash = sha256({
+    fabProfileId: report.fabProfileId,
+    rulesVersion: profile.version,
+    findings,
+  });
+  if (report.derivation) {
+    if (
+      report.derivation.inputHash !== derivationInputHash ||
+      report.derivation.outputHash !== derivationOutputHash ||
+      report.derivation.version !== profile.version
+    ) {
+      throw new GraphCoreError(
+        "verification-failed",
+        "fab feedback derivation metadata does not match deterministic derivation",
+        "error",
+        {
+          expectedInputHash: derivationInputHash,
+          expectedOutputHash: derivationOutputHash,
+          actualDerivation: report.derivation,
+        },
+      );
+    }
+  }
   const evidence: FabFeedbackEvidence = {
     evidenceKind: "fab-feedback",
     claim:
@@ -184,22 +255,25 @@ export const intakeFabFeedback = (
     value: {
       reportId: report.reportId,
       fixtureDerived: report.source.fixtureDerived,
-      countBefore: raw.size,
+      countBefore: report.rawFindings.length,
       countAfter: findings.length,
-      unificationKey:
-        "classification|partId|netId|footprintId|ruleId|coordinate|normalizedOriginalText",
+      unificationKey: "classification|partId|netId|footprintId|ruleId|coordinate",
       unknownFindingIds,
+      derivationInputHash,
+      derivationOutputHash,
     },
   };
   return {
     verdict: findings.some((finding) => finding.verdict === "unknown") ? "unknown" : "pass",
     findings,
     evidence,
-    derivationHash: sha256({
-      reportId: report.reportId,
-      findings,
-      evidence,
-    }),
+    derivationHash: derivationOutputHash,
+    derivation: {
+      method: "fab-profile-rule-classifier",
+      version: profile.version,
+      inputHash: derivationInputHash,
+      outputHash: derivationOutputHash,
+    },
   };
 };
 

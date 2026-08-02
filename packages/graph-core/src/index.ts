@@ -4,6 +4,7 @@ export * from "./design-rationale.js";
 export * from "./electrical-lint.js";
 export * from "./findings.js";
 export * from "./fab-feedback.js";
+export * from "./fab-profile-rules.js";
 export * from "./errors.js";
 export * from "./event-log.js";
 export * from "./hash.js";
