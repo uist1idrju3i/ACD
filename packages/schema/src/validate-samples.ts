@@ -3,6 +3,7 @@ import { Ajv2020, type ErrorObject, type ValidateFunction } from "ajv/dist/2020.
 import * as formatsModule from "ajv-formats";
 import {
   designGraphSchemaPath,
+  errorTaxonomySchemaPath,
   eventSchemaPath,
   patchSchemaPath,
   repositoryRoot,
@@ -27,7 +28,12 @@ export const formatValidationErrors = (errors: ErrorObject[] | null | undefined)
     .map((error) => `${error.instancePath || "/"} ${error.message ?? "invalid"}`)
     .join("; ");
 
-const samplePaths = [designGraphSchemaPath, patchSchemaPath, eventSchemaPath];
+const samplePaths = [
+  designGraphSchemaPath,
+  patchSchemaPath,
+  eventSchemaPath,
+  errorTaxonomySchemaPath,
+];
 for (const schemaPath of samplePaths) {
   await loadValidator(schemaPath);
   process.stdout.write(`validated schema: ${schemaPath}\n`);

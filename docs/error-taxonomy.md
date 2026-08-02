@@ -8,6 +8,10 @@ Schema、graph-core、patch、外部tool、検証、承認、予算で発生す�
 code、severity、jidoka actionへ対応付けます。メッセージ本文を機械判定の契約に
 しません。
 
+機械可読なtaxonomy dataは[`../schemas/error-taxonomy.json`](../schemas/error-taxonomy.json)
+で管理し、構造は[`../schemas/error-taxonomy.schema.json`](../schemas/error-taxonomy.schema.json)
+で検証します。graph-coreが発生させるcodeはtaxonomy dataに含まれなければなりません。
+
 ## Code形式
 
 codeは小文字kebab-caseの`<class>-<condition>`形式とします。例：
