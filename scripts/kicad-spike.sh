@@ -25,13 +25,22 @@ await projectToKicad({
 }, directory);
 NODE
 
+docker_run() {
+  docker run --rm \
+    --user root \
+    -e HOME=/tmp \
+    -e KICAD_CONFIG_HOME=/tmp/kicad-config \
+    -v "$ROOT/$OUT:/work" \
+    "$IMAGE" "$@"
+}
+
 current_step="capability version"
-docker run --rm -v "$ROOT/$OUT:/work" "$IMAGE" kicad-cli --version | tee "$ROOT/$OUT/capability.txt"
+docker_run kicad-cli --version | tee "$ROOT/$OUT/capability.txt"
 current_step="capability help"
-docker run --rm -v "$ROOT/$OUT:/work" "$IMAGE" kicad-cli --help > "$ROOT/$OUT/kicad-cli-help.txt"
+docker_run kicad-cli --help > "$ROOT/$OUT/kicad-cli-help.txt"
 current_step="DRC"
 set +e
-docker run --rm -v "$ROOT/$OUT:/work" "$IMAGE" kicad-cli pcb drc \
+docker_run kicad-cli pcb drc \
   --output /work/reports/drc.rpt /work/project/design.kicad_pcb \
   2> "$ROOT/$OUT/reports/drc.stderr"
 drc_status=$?
@@ -46,17 +55,17 @@ if grep -Eq 'Found [1-9][0-9]* (DRC violations|unconnected items)' "$ROOT/$OUT/r
   exit 4
 fi
 current_step="Gerber export"
-docker run --rm -v "$ROOT/$OUT:/work" "$IMAGE" kicad-cli pcb export gerbers \
+docker_run kicad-cli pcb export gerbers \
   -o /work/gerbers/ /work/project/design.kicad_pcb
 current_step="drill export"
-docker run --rm -v "$ROOT/$OUT:/work" "$IMAGE" kicad-cli pcb export drill \
+docker_run kicad-cli pcb export drill \
   -o /work/drill/ /work/project/design.kicad_pcb
 current_step="STEP export"
-docker run --rm -v "$ROOT/$OUT:/work" "$IMAGE" kicad-cli pcb export step \
+docker_run kicad-cli pcb export step \
   -o /work/board.step /work/project/design.kicad_pcb
 current_step="ERC"
 set +e
-docker run --rm -v "$ROOT/$OUT:/work" "$IMAGE" kicad-cli sch erc \
+docker_run kicad-cli sch erc \
   --output /work/reports/erc.rpt /work/project/design.kicad_sch \
   2> "$ROOT/$OUT/reports/erc.stderr"
 erc_status=$?
