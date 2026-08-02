@@ -8,6 +8,7 @@ export const validatePhase1FixtureReferences = (fixture: Phase1Fixture): string[
     fixture.placementConstraints.components.map((placement) => [placement.partId, placement]),
   );
   const bom = new Map(fixture.bom.map((line) => [line.partId, line]));
+  const pinsByNet = new Map<string, string>();
 
   for (const part of fixture.parts) {
     if (!mappings.has(part.id)) {
@@ -41,6 +42,15 @@ export const validatePhase1FixtureReferences = (fixture: Phase1Fixture): string[
 
   for (const net of fixture.nets) {
     for (const pin of net.pins) {
+      const pinKey = `${pin.partId}:${pin.pin}`;
+      const previousNet = pinsByNet.get(pinKey);
+      if (previousNet) {
+        errors.push(
+          `reference-integrity: pin ${pinKey} appears on multiple nets ${previousNet}, ${net.id}`,
+        );
+      } else {
+        pinsByNet.set(pinKey, net.id ?? net.name);
+      }
       const part = parts.get(pin.partId);
       if (!part) {
         errors.push(`reference-integrity: net ${net.id} references unknown part ${pin.partId}`);
@@ -51,6 +61,19 @@ export const validatePhase1FixtureReferences = (fixture: Phase1Fixture): string[
         errors.push(
           `reference-integrity: net ${net.id} references unknown pin ${pin.partId}:${pin.pin}`,
         );
+      }
+    }
+  }
+
+  const validTargets = new Set([
+    ...(fixture.requirement?.id ? [fixture.requirement.id] : []),
+    ...(fixture.requirement?.functionalBlocks ?? []).map((block) => `block:${block}`),
+    ...fixture.parts.map((part) => part.id),
+  ]);
+  for (const rationale of fixture.rationales ?? []) {
+    for (const target of rationale.appliesTo) {
+      if (!validTargets.has(target)) {
+        errors.push(`reference-integrity: rationale ${rationale.id} references unknown target ${target}`);
       }
     }
   }
