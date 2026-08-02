@@ -1,12 +1,21 @@
 # Golden task fixture
 
-**ステータス：Draft**
+**ステータス：Draft（Phase 0の6 fixtureは`pnpm golden`でreplay済み）**
 
 ## 目的と権威範囲
 
 既知の入力と期待結果を固定し、Schema、graph-core、patch、KiCad adapter、
 deterministic gateの変更を回帰評価します。採点軸の意味は[`testing.md`](testing.md)
 を正とし、本書はfixtureと期待結果の粒度だけを定義します。
+
+## 実行方法
+
+`pnpm golden`（`scripts/golden-run.mts`）が`fixtures/golden/*.json`を順にreplayし、
+期待するoutcome、jidoka、error code、gate、patchの原子性を照合します。evidenceは
+`artifacts/golden/<task>/result.json`と`artifacts/golden/summary.json`へ出力し、
+KiCad report、netlist、Gerber/drillも同ディレクトリへ残します。入力は全fixture共通で
+`fixtures/design-graphs/normal-2layer.json`であり、故障注入はrunner内の型付き
+mutationとして適用します。
 
 ## 共通fixture形式
 
@@ -31,14 +40,17 @@ Schema、semantic validator、再オープン、ERC/DRC、Gerber/drillが合格�
 
 ### `intentional-erc-failure`
 
-ピン方向または電源定格の違反を注入する。ERCが不合格となり、設計を下流へ
-流さず、`verification-failed`または具体的なERC errorへ分類し、修正候補または
-停止条件をイベントへ残す。
+ピン方向または電源定格の違反を注入する（実装：`duplicate-power-output-driver`、
+`pin:flg2-1`を`net:gnd`から`net:vcc`へ移し、同一netを複数のpower outputが駆動
+する）。ERCが不合格となり、設計を下流へ流さず、`verification-failed`または具体的な
+ERC errorへ分類し、修正候補または停止条件をイベントへ残す。
 
 ### `intentional-drc-failure`
 
-幅、間隔、穴、outlineのいずれかの違反を注入する。DRCが不合格となり、Gerber
-発注準備へ進まず、findingの対象とseverityを保存する。
+幅、間隔、穴、outlineのいずれかの違反を注入する（実装：
+`overlapping-component-placement`、`component:d1`を`component:r1`に重ねて配置
+する）。DRCが不合格となり、Gerber発注準備へ進まず、findingの対象とseverityを
+保存する。
 
 ### `patch-conflict`
 
@@ -52,9 +64,10 @@ N+1を適用する。旧結果はstaleとなり、下流gateの合格証拠に�
 
 ### `reopen-failure`
 
-KiCad projectまたはlibraryを壊したfixtureを使う。別プロセス再オープンが失敗し、
-`tool-failure`または`reopen-failure`として停止する。exit codeだけで成功扱いに
-しない。
+KiCad projectまたはlibraryを壊したfixtureを使う（実装：
+`truncate-projected-board`、投影済み`design.kicad_pcb`を途中で切断する）。別プロセス
+再オープンが失敗し、`tool-failure`または`reopen-failure`として停止する。exit code
+だけで成功扱いにしない。
 
 ## 許容差と採点
 
