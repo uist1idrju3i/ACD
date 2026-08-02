@@ -1,0 +1,62 @@
+{
+  "schemaVersion": "phase2-repair-cases/1",
+  "cases": [
+    {
+      "caseId": "case:led-overcurrent",
+      "description": "Series resistor lowered to 47 ohm, driving the status LED past its rating",
+      "injection": [
+        {
+          "op": "replace",
+          "path": "/parts/7/parameters/resistanceOhm",
+          "value": 47
+        }
+      ],
+      "expectedRuleIds": ["led-series-current"],
+      "repairSequence": ["proposal:led-restore-series-resistance"]
+    },
+    {
+      "caseId": "case:i2c-pullup-out-of-range",
+      "description": "I2C pull-ups raised to 100 kohm, too weak for the declared bus",
+      "injection": [
+        {
+          "op": "replace",
+          "path": "/parts/19/parameters/resistanceOhm",
+          "value": 100000
+        },
+        {
+          "op": "replace",
+          "path": "/parts/20/parameters/resistanceOhm",
+          "value": 100000
+        }
+      ],
+      "expectedRuleIds": ["i2c-pullup"],
+      "repairSequence": ["proposal:i2c-restore-sda-pullup", "proposal:i2c-restore-scl-pullup"]
+    },
+    {
+      "caseId": "case:capacitor-underrated",
+      "description": "Input bulk capacitor rated below the derating requirement of its rail",
+      "injection": [
+        {
+          "op": "replace",
+          "path": "/parts/16/parameters/ratedVoltageV",
+          "value": 6.3
+        }
+      ],
+      "expectedRuleIds": ["capacitor-voltage-derating"],
+      "repairSequence": ["proposal:capacitor-restore-rating"]
+    },
+    {
+      "caseId": "case:usb-cc-termination",
+      "description": "USB-C CC pulldown changed to 10 kohm, breaking sink advertisement",
+      "injection": [
+        {
+          "op": "replace",
+          "path": "/parts/14/parameters/resistanceOhm",
+          "value": 10000
+        }
+      ],
+      "expectedRuleIds": ["usb-cc-termination"],
+      "repairSequence": ["proposal:usb-cc-restore-pulldown"]
+    }
+  ]
+}

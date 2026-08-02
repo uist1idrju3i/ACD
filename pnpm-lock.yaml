@@ -58,6 +58,25 @@ importers:
         specifier: 3.2.4
         version: 3.2.4(@types/node@22.15.21)(supports-color@7.2.0)(tsx@4.19.4)
 
+  packages/adapters/spice:
+    dependencies:
+      '@acd/graph-core':
+        specifier: workspace:*
+        version: link:../../graph-core
+      '@acd/schema':
+        specifier: workspace:*
+        version: link:../../schema
+    devDependencies:
+      '@types/node':
+        specifier: 22.15.21
+        version: 22.15.21
+      typescript:
+        specifier: 5.8.3
+        version: 5.8.3
+      vitest:
+        specifier: 3.2.4
+        version: 3.2.4(@types/node@22.15.21)(supports-color@7.2.0)(tsx@4.19.4)
+
   packages/adapters/storage-fs:
     dependencies:
       '@acd/graph-core':

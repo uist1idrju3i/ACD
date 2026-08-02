@@ -15,14 +15,15 @@
     "schema:generate": "pnpm --filter @acd/schema schema:generate",
     "schema:check": "pnpm --filter @acd/schema schema:check",
     "typegen-sync": "pnpm --filter @acd/schema schema:check",
-    "gates:generate": "tsx scripts/generate-gate-matrix-doc.mts && prettier --write docs/phase1-gates.md",
-    "gates:check": "pnpm gates:generate && git diff --exit-code -- docs/phase1-gates.md",
+    "gates:generate": "tsx scripts/generate-gate-matrix-doc.mts && prettier --write docs/phase1-gates.md docs/gates.md",
+    "gates:check": "pnpm gates:generate && git diff --exit-code -- docs/phase1-gates.md docs/gates.md",
     "golden": "tsx scripts/golden-run.mts",
     "golden:unit": "vitest run fixtures packages",
     "kicad:spike": "bash scripts/kicad-spike.sh",
     "kicad:library:verify": "tsx scripts/verify-kicad-library.mts",
     "phase1:smoke": "pnpm kicad:library:verify && pnpm --filter @acd/adapter-kicad build && tsx scripts/phase1-smoke.mts",
     "phase1:golden": "pnpm kicad:library:verify && pnpm --filter @acd/adapter-kicad build && tsx scripts/phase1-golden.mts",
+    "phase2:record-repairs": "tsx scripts/phase2-record-repairs.mts",
     "phase1:gate13": "tsx scripts/phase1-gate13.mts"
   },
   "devDependencies": {

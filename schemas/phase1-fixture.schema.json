@@ -26,9 +26,91 @@
     "nets": { "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/net" } },
     "placementConstraints": { "$ref": "#/$defs/placementConstraints" },
     "bom": { "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/bomLine" } },
-    "orderConstraints": { "$ref": "#/$defs/orderConstraints" }
+    "orderConstraints": { "$ref": "#/$defs/orderConstraints" },
+    "rationales": { "type": "array", "items": { "$ref": "#/$defs/rationale" } }
   },
   "$defs": {
+    "rationale": {
+      "description": "Structured design rationale. A rationale explains a decision; it is never pass evidence for a gate.",
+      "type": "object",
+      "required": [
+        "id",
+        "origin",
+        "decision",
+        "appliesTo",
+        "alternativesConsidered",
+        "assumptions",
+        "tuningNeeded",
+        "provenance"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "id": { "type": "string", "pattern": "^rationale:[a-z0-9]+(?:-[a-z0-9]+)*$" },
+        "origin": { "enum": ["human", "deterministic", "llm-proposed"] },
+        "decision": { "type": "string", "minLength": 1 },
+        "appliesTo": {
+          "description": "Subjects this rationale covers: the requirement id, block:<functional block>, or part ids.",
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": { "type": "string", "minLength": 1 }
+        },
+        "alternativesConsidered": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "object",
+            "required": ["option", "rejectedBecause"],
+            "additionalProperties": false,
+            "properties": {
+              "option": { "type": "string", "minLength": 1 },
+              "rejectedBecause": { "type": "string", "minLength": 1 }
+            }
+          }
+        },
+        "assumptions": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "object",
+            "required": ["statement", "status"],
+            "additionalProperties": false,
+            "properties": {
+              "statement": { "type": "string", "minLength": 1 },
+              "status": { "enum": ["confirmed", "unconfirmed"] },
+              "evidenceLink": { "type": "string", "minLength": 1 },
+              "testItemId": { "type": "string", "minLength": 1 }
+            }
+          }
+        },
+        "evidenceLinks": {
+          "description": "Gate or measurement evidence ids. Rationale ids are not evidence and are rejected here.",
+          "type": "array",
+          "uniqueItems": true,
+          "items": { "type": "string", "minLength": 1 }
+        },
+        "risks": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["description", "severity", "mitigation"],
+            "additionalProperties": false,
+            "properties": {
+              "description": { "type": "string", "minLength": 1 },
+              "severity": { "enum": ["low", "medium", "high"] },
+              "mitigation": { "type": "string", "minLength": 1 }
+            }
+          }
+        },
+        "tuningNeeded": { "type": "boolean" },
+        "generatedTestItemIds": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": { "type": "string", "minLength": 1 }
+        },
+        "provenance": { "$ref": "#/$defs/provenance" }
+      }
+    },
     "id": { "type": "string", "pattern": "^[A-Za-z][A-Za-z0-9._:-]*$" },
     "provenance": {
       "type": "object",
@@ -77,6 +159,11 @@
           "type": "array",
           "minItems": 1,
           "items": { "type": "string", "minLength": 1 }
+        },
+        "acceptanceVerifiedBy": {
+          "description": "Gate or test item deciding each acceptance criterion, aligned by index with acceptanceCriteria.",
+          "type": "array",
+          "items": { "type": "string", "pattern": "^(gate|test):[a-z0-9-]+$" }
         },
         "provenance": { "$ref": "#/$defs/provenance" }
       }
@@ -137,7 +224,26 @@
         "manufacturer": { "type": "string", "minLength": 1 },
         "quantity": { "type": "integer", "minimum": 1 },
         "package": { "type": "string", "minLength": 1 },
+        "parameters": { "$ref": "#/$defs/partParameters" },
         "provenance": { "$ref": "#/$defs/provenance" }
+      }
+    },
+    "partParameters": {
+      "description": "Electrical parameters used by the topology-level electrical lint. Absent values are evaluated as unknown, which widens verification instead of passing.",
+      "type": "object",
+      "required": ["source"],
+      "additionalProperties": false,
+      "properties": {
+        "source": { "type": "string", "minLength": 1 },
+        "resistanceOhm": { "type": "number", "exclusiveMinimum": 0 },
+        "capacitanceUf": { "type": "number", "exclusiveMinimum": 0 },
+        "ratedVoltageV": { "type": "number", "exclusiveMinimum": 0 },
+        "forwardVoltageV": { "type": "number", "exclusiveMinimum": 0 },
+        "forwardCurrentMinMa": { "type": "number", "exclusiveMinimum": 0 },
+        "forwardCurrentMaxMa": { "type": "number", "exclusiveMinimum": 0 },
+        "outputVoltageV": { "type": "number", "exclusiveMinimum": 0 },
+        "inputCapacitanceMinUf": { "type": "number", "exclusiveMinimum": 0 },
+        "outputCapacitanceMinUf": { "type": "number", "exclusiveMinimum": 0 }
       }
     },
     "mapping": {
@@ -192,6 +298,8 @@
         "id": { "$ref": "#/$defs/id" },
         "name": { "type": "string", "minLength": 1 },
         "class": { "enum": ["power", "ground", "signal", "clock", "differential", "other"] },
+        "role": { "enum": ["usb-cc", "i2c", "uart", "led", "bootstrap", "other"] },
+        "nominalVoltageV": { "type": "number", "exclusiveMinimum": 0 },
         "pins": { "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/netPin" } },
         "widthMm": { "type": "number", "exclusiveMinimum": 0 },
         "clearanceMm": { "type": "number", "minimum": 0 }

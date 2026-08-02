@@ -13,6 +13,7 @@ export const errorTaxonomyDataPath = resolve(repositoryRoot, "schemas/error-taxo
 export const gateMatrixSchemaPath = resolve(repositoryRoot, "schemas/gate-matrix.schema.json");
 export const gateMatrixDataPath = resolve(repositoryRoot, "schemas/gate-matrix.json");
 export const phase1GatesDocPath = resolve(repositoryRoot, "docs/phase1-gates.md");
+export const gatesDocPath = resolve(repositoryRoot, "docs/gates.md");
 export const phase1FixtureSchemaPath = resolve(
   repositoryRoot,
   "schemas/phase1-fixture.schema.json",

@@ -156,6 +156,71 @@
       "passCondition": "golden taskのTestItemが条件・基準付きでpass",
       "onFailure": "後続継続を停止／再設計",
       "errorCodes": ["verification-failed", "stale-result"]
+    },
+    {
+      "order": 14,
+      "id": "gate:electrical-lint",
+      "name": "Electrical topology lint",
+      "phase": 2,
+      "runsAfter": "gate:netlist-consistency",
+      "status": "implemented",
+      "appliesTo": ["golden"],
+      "inputs": "Typed fixture（part parameters、net role／nominal voltage）",
+      "passCondition": "全ruleがpass。failは0件、unknownも0件（unknownは検証を広げるためblocked扱い）",
+      "onFailure": "`verification-failed`で停止し、rule ID・対象・期待値・実測値・根拠を記録",
+      "errorCodes": ["verification-failed"]
+    },
+    {
+      "order": 15,
+      "id": "gate:design-rationale",
+      "name": "Design rationale coverage",
+      "phase": 2,
+      "runsAfter": "gate:electrical-lint",
+      "status": "implemented",
+      "appliesTo": ["golden"],
+      "inputs": "Typed fixtureのrationale（決定、代替案、仮定、リスク、出所）と要求・部品",
+      "passCondition": "要求・機能ブロック・全部品にrationaleが対応し、参照が解決し、仮定に検証手段があり、rationaleがEvidenceとして引用されていない",
+      "onFailure": "`verification-failed`で停止し、未記録の判断・未解決参照・未検証の仮定を記録",
+      "errorCodes": ["verification-failed"]
+    },
+    {
+      "order": 16,
+      "id": "gate:test-plan",
+      "name": "Test item generation",
+      "phase": 2,
+      "runsAfter": "gate:design-rationale",
+      "status": "implemented",
+      "appliesTo": ["golden"],
+      "inputs": "要求のacceptance criteria、電気parameter、net宣言、lint rule、rationaleの未確認仮定",
+      "passCondition": "全acceptance criteriaに検証方法が割り当たり、rationaleが宣言したTestItemが生成され、各TestItemの方法・条件・合格基準が解決している",
+      "onFailure": "`verification-failed`で停止し、未検証の要求・未生成のTestItem・未解決の合格基準を記録",
+      "errorCodes": ["verification-failed"]
+    },
+    {
+      "order": 17,
+      "id": "gate:repair-loop",
+      "name": "Fault injection and repair loop",
+      "phase": 2,
+      "runsAfter": "gate:test-plan",
+      "status": "implemented",
+      "appliesTo": ["golden"],
+      "inputs": "注入した設計欠陥のcase、記録済み修復提案（hash固定）、Gate 14〜16のrule",
+      "passCondition": "各caseで欠陥が期待rule IDで検出され、決定論的gateが受理したpatchだけで全findingが解消し、反復上限内で収束する",
+      "onFailure": "`verification-failed`で停止し、収束しないcase・未解消のfinding・却下理由を記録",
+      "errorCodes": ["verification-failed", "convergence-failure", "stale-result"]
+    },
+    {
+      "order": 18,
+      "id": "gate:spice",
+      "name": "Nominal SPICE analysis",
+      "phase": 2,
+      "runsAfter": "gate:repair-loop",
+      "status": "implemented",
+      "appliesTo": ["golden"],
+      "inputs": "typed fixtureから導出したnominal解析deck、固定digest containerのngspice",
+      "passCondition": "全解析が収束し、測定値が期待範囲に入り、モデルの出所とライセンスが記録されている（unknownはblocked）",
+      "onFailure": "`verification-failed`で停止。収束失敗は`convergence-failure`、tool異常終了は`tool-failure`として記録",
+      "errorCodes": ["verification-failed", "convergence-failure", "tool-failure", "tool-timeout"]
     }
   ]
 }

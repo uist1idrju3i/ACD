@@ -44,6 +44,7 @@ export interface ACDPhase1Fixture {
    */
   bom: [BomLine, ...BomLine[]];
   orderConstraints?: OrderConstraints;
+  rationales?: Rationale[];
 }
 export interface Requirement {
   id: Id;
@@ -58,6 +59,10 @@ export interface Requirement {
    * @minItems 1
    */
   acceptanceCriteria: [string, ...string[]];
+  /**
+   * Gate or test item deciding each acceptance criterion, aligned by index with acceptanceCriteria.
+   */
+  acceptanceVerifiedBy?: string[];
   provenance: Provenance;
 }
 export interface Board {
@@ -85,7 +90,23 @@ export interface Part {
   manufacturer: string;
   quantity: number;
   package: string;
+  parameters?: PartParameters;
   provenance: Provenance;
+}
+/**
+ * Electrical parameters used by the topology-level electrical lint. Absent values are evaluated as unknown, which widens verification instead of passing.
+ */
+export interface PartParameters {
+  source: string;
+  resistanceOhm?: number;
+  capacitanceUf?: number;
+  ratedVoltageV?: number;
+  forwardVoltageV?: number;
+  forwardCurrentMinMa?: number;
+  forwardCurrentMaxMa?: number;
+  outputVoltageV?: number;
+  inputCapacitanceMinUf?: number;
+  outputCapacitanceMinUf?: number;
 }
 export interface Mapping {
   partId: Id;
@@ -117,6 +138,8 @@ export interface Net {
   id: Id;
   name: string;
   class: "power" | "ground" | "signal" | "clock" | "differential" | "other";
+  role?: "usb-cc" | "i2c" | "uart" | "led" | "bootstrap" | "other";
+  nominalVoltageV?: number;
   /**
    * @minItems 1
    */
@@ -172,4 +195,60 @@ export interface OrderConstraints {
     currency: string;
     provenance: Provenance;
   };
+}
+/**
+ * Structured design rationale. A rationale explains a decision; it is never pass evidence for a gate.
+ */
+export interface Rationale {
+  id: string;
+  origin: "human" | "deterministic" | "llm-proposed";
+  decision: string;
+  /**
+   * Subjects this rationale covers: the requirement id, block:<functional block>, or part ids.
+   *
+   * @minItems 1
+   */
+  appliesTo: [string, ...string[]];
+  /**
+   * @minItems 1
+   */
+  alternativesConsidered: [
+    {
+      option: string;
+      rejectedBecause: string;
+    },
+    ...{
+      option: string;
+      rejectedBecause: string;
+    }[]
+  ];
+  /**
+   * @minItems 1
+   */
+  assumptions: [
+    {
+      statement: string;
+      status: "confirmed" | "unconfirmed";
+      evidenceLink?: string;
+      testItemId?: string;
+    },
+    ...{
+      statement: string;
+      status: "confirmed" | "unconfirmed";
+      evidenceLink?: string;
+      testItemId?: string;
+    }[]
+  ];
+  /**
+   * Gate or measurement evidence ids. Rationale ids are not evidence and are rejected here.
+   */
+  evidenceLinks?: string[];
+  risks?: {
+    description: string;
+    severity: "low" | "medium" | "high";
+    mitigation: string;
+  }[];
+  tuningNeeded: boolean;
+  generatedTestItemIds?: string[];
+  provenance: Provenance;
 }

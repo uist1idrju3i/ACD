@@ -1,4 +1,4 @@
-import { execFileSync } from "node:child_process";
+import { execFileSync, spawnSync } from "node:child_process";
 import { createHash } from "node:crypto";
 import { mkdir, readFile, readdir, rm, writeFile } from "node:fs/promises";
 import { join, resolve } from "node:path";
@@ -7,6 +7,29 @@ import {
   placeFixture,
   projectToKicad,
 } from "../packages/adapters/kicad/src/index.js";
+import {
+  buildSpiceAnalyses,
+  evaluateSpiceRuns,
+  measurementMargin,
+  parseMeasurement,
+  type SpiceRun,
+} from "../packages/adapters/spice/src/index.js";
+import {
+  applyFixturePatch,
+  buildTestPlan,
+  evaluateDesignRationale,
+  evaluateFixtureGates,
+  failedFindings,
+  lintElectricalTopology,
+  recordedProposer,
+  repairLoopEvidence,
+  runRepairLoop,
+  unresolvedFindings,
+  unresolvedRationaleFindings,
+  unresolvedTestPlanFindings,
+  type FixturePatchOperation,
+  type RecordedProposal,
+} from "../packages/graph-core/src/index.js";
 import {
   gateByOrder,
   loadGateMatrix,
@@ -35,6 +58,7 @@ type Result = {
 };
 
 const gateMatrix = await loadGateMatrix();
+const gateIds = gateMatrix.gates.map((gate) => gate.id);
 const results: Result[] = [];
 let currentGate = 0;
 let currentName = "golden";
@@ -42,21 +66,38 @@ const hash = (content: string): string =>
   `sha256:${createHash("sha256").update(content).digest("hex")}`;
 const run = (command: string, args: string[]): string =>
   execFileSync(command, args, { cwd: root, encoding: "utf8", stdio: ["ignore", "pipe", "pipe"] });
-const docker = (args: string[]): string =>
-  run("docker", [
-    "run",
-    "--rm",
-    "--user",
-    "root",
-    "-e",
-    "HOME=/tmp",
-    "-e",
-    "KICAD_CONFIG_HOME=/tmp/kicad-config",
-    "-v",
-    `${artifactRoot}:/work`,
-    image,
-    ...args,
-  ]);
+const dockerArgs = (args: string[]): string[] => [
+  "run",
+  "--rm",
+  "--user",
+  "root",
+  "-e",
+  "HOME=/tmp",
+  "-e",
+  "KICAD_CONFIG_HOME=/tmp/kicad-config",
+  "-v",
+  `${artifactRoot}:/work`,
+  image,
+  ...args,
+];
+const docker = (args: string[]): string => run("docker", dockerArgs(args));
+/** Keeps both streams: a tool may report a diagnostic on stderr and still exit cleanly. */
+const dockerOutput = (args: string[]): { stdout: string; stderr: string } => {
+  const result = spawnSync("docker", dockerArgs(args), {
+    cwd: root,
+    encoding: "utf8",
+    stdio: ["ignore", "pipe", "pipe"],
+  });
+  if (result.error) throw result.error;
+  if (result.status !== 0) {
+    throw Object.assign(new Error(`docker ${args.join(" ")} exited ${String(result.status)}`), {
+      stdout: result.stdout,
+      stderr: result.stderr,
+      status: result.status ?? 1,
+    });
+  }
+  return { stdout: result.stdout, stderr: result.stderr };
+};
 const freerouting = (args: string[]): string =>
   run("docker", [
     "run",
@@ -73,16 +114,20 @@ const freerouting = (args: string[]): string =>
     "/app/freerouting-executable.jar",
     ...args,
   ]);
-const pass = (gate: number, evidence: Record<string, unknown>): void => {
-  const { name } = gateByOrder(gateMatrix, gate);
+/** Names the gate being evaluated so a stop is recorded against it, not against the last pass. */
+const enter = (gate: number): void => {
   currentGate = gate;
-  currentName = name;
-  results.push({ gate, name, status: "passed", evidence });
+  currentName = gateByOrder(gateMatrix, gate).name;
+};
+const pass = (gate: number, evidence: Record<string, unknown>): void => {
+  enter(gate);
+  results.push({ gate, name: currentName, status: "passed", evidence });
 };
 await rm(artifactRoot, { recursive: true, force: true });
 await mkdir(projectRoot, { recursive: true });
 
 try {
+  enter(1);
   const referenceErrors = validatePhase1FixtureReferences(fixture);
   if (referenceErrors.length > 0) throw new Error(referenceErrors.join("; "));
   pass(1, { fixture: fixture.fixtureId, schemaVersion: fixture.schemaVersion });
@@ -91,11 +136,7 @@ try {
     status: "passed",
     note: "Phase 1 golden uses the typed fixture as the graph semantic boundary",
   });
-  pass(3, {
-    parts: fixture.parts.length,
-    bomLines: fixture.bom.length,
-    source: "fixture-provided AVL",
-  });
+  enter(3);
   for (const line of fixture.bom) {
     if (
       !line.mpn ||
@@ -112,6 +153,12 @@ try {
       throw new Error(`order-relevant BOM unknown for ${line.partId}`);
     }
   }
+  pass(3, {
+    parts: fixture.parts.length,
+    bomLines: fixture.bom.length,
+    source: "fixture-provided AVL",
+  });
+  enter(4);
   const placement = placeFixture(fixture);
   pass(4, {
     components: placement.length,
@@ -119,6 +166,7 @@ try {
     board: fixture.requirement.board,
   });
 
+  enter(5);
   const canonical = compareNetlists(fixture, "", "");
   const canonicalHash = hash(JSON.stringify(canonical.expected));
   pass(5, {
@@ -126,6 +174,163 @@ try {
     canonicalNetlistHash: canonicalHash,
   });
 
+  enter(14);
+  const lint = lintElectricalTopology(fixture);
+  if (lint.verdict !== "pass") {
+    throw new Error(
+      `verification-failed: electrical lint ${lint.verdict}: ${JSON.stringify(failedFindings(lint))}`,
+    );
+  }
+  pass(14, {
+    verdict: lint.verdict,
+    rulesEvaluated: lint.rulesEvaluated.length,
+    findings: lint.findings.length,
+    findingsHash: hash(JSON.stringify(lint.findings)),
+  });
+
+  enter(15);
+  const rationale = evaluateDesignRationale(fixture);
+  if (rationale.verdict !== "pass") {
+    throw new Error(
+      `verification-failed: design rationale ${rationale.verdict}: ${JSON.stringify(
+        unresolvedRationaleFindings(rationale),
+      )}`,
+    );
+  }
+  pass(15, {
+    verdict: rationale.verdict,
+    rulesEvaluated: rationale.rulesEvaluated.length,
+    subjects: rationale.coverage.length,
+    findings: rationale.findings.length,
+    findingsHash: hash(JSON.stringify(rationale.findings)),
+  });
+
+  enter(16);
+  const testPlan = buildTestPlan(fixture, lint.rulesEvaluated, gateIds);
+  if (testPlan.verdict !== "pass") {
+    throw new Error(
+      `verification-failed: test plan ${testPlan.verdict}: ${JSON.stringify(
+        unresolvedTestPlanFindings(testPlan),
+      )}`,
+    );
+  }
+  await writeFile(
+    join(artifactRoot, "test-plan.json"),
+    `${JSON.stringify(testPlan.items, null, 2)}\n`,
+  );
+  pass(16, {
+    verdict: testPlan.verdict,
+    rulesEvaluated: testPlan.rulesEvaluated.length,
+    testItems: testPlan.items.length,
+    measurementItems: testPlan.items.filter((item) => item.method === "measurement").length,
+    testPlanHash: hash(JSON.stringify(testPlan.items)),
+    artifact: "test-plan.json",
+  });
+
+  enter(17);
+  const repairCases = JSON.parse(
+    await readFile(join(root, "fixtures/phase2/repair-cases.json"), "utf8"),
+  ) as {
+    cases: { caseId: string; injection: FixturePatchOperation[]; expectedRuleIds: string[] }[];
+  };
+  const recordings = JSON.parse(
+    await readFile(join(root, "fixtures/phase2/repair-recordings.json"), "utf8"),
+  ) as { proposals: RecordedProposal[] };
+  const proposer = recordedProposer(recordings.proposals);
+  const repairs = repairCases.cases.map((entry) => {
+    const injected = applyFixturePatch(fixture, entry.injection);
+    const detected = unresolvedFindings(evaluateFixtureGates(injected, gateIds));
+    const missed = entry.expectedRuleIds.filter(
+      (ruleId) => !detected.some((finding) => finding.ruleId === ruleId),
+    );
+    if (missed.length > 0) {
+      throw new Error(
+        `verification-failed: ${entry.caseId} was not detected by ${missed.join(", ")}`,
+      );
+    }
+    const result = runRepairLoop({ fixture: injected, proposer, gateIds });
+    if (result.status !== "repaired") {
+      throw new Error(
+        `verification-failed: ${entry.caseId} ${result.status}: ${result.stopReason ?? ""}`,
+      );
+    }
+    if (unresolvedFindings(evaluateFixtureGates(result.fixture, gateIds)).length > 0) {
+      throw new Error(`verification-failed: ${entry.caseId} still has unresolved findings`);
+    }
+    return { caseId: entry.caseId, detected: detected.length, ...repairLoopEvidence(result) };
+  });
+  await writeFile(join(artifactRoot, "repair-loop.json"), `${JSON.stringify(repairs, null, 2)}\n`);
+  pass(17, {
+    cases: repairs.length,
+    repaired: repairs.filter((entry) => entry.status === "repaired").length,
+    rejectedProposals: repairs.reduce((total, entry) => total + Number(entry.rejected ?? 0), 0),
+    recordingsHash: hash(JSON.stringify(recordings.proposals)),
+    artifact: "repair-loop.json",
+  });
+
+  enter(18);
+  const spiceRoot = join(artifactRoot, "spice");
+  await mkdir(spiceRoot, { recursive: true });
+  const spicePlan = buildSpiceAnalyses(fixture);
+  const analyses = spicePlan.analyses;
+  if (analyses.length === 0) throw new Error("verification-failed: no SPICE analysis was derived");
+  const spiceRuns: SpiceRun[] = [];
+  for (const analysis of analyses) {
+    const deckName = `${analysis.id.replace(/[^a-z0-9]+/g, "-")}.cir`;
+    await writeFile(join(spiceRoot, deckName), analysis.deck);
+    let stdout = "";
+    let exitCode = 0;
+    try {
+      // ngspice prints its banner, version and most diagnostics on stderr even when the run
+      // succeeds, so the log keeps both streams.
+      const output = dockerOutput(["ngspice", "-b", `/work/spice/${deckName}`]);
+      stdout = `${output.stdout}${output.stderr}`;
+    } catch (error) {
+      const failure = error as { stdout?: string; stderr?: string; status?: number };
+      stdout = `${failure.stdout ?? ""}${failure.stderr ?? ""}`;
+      exitCode = failure.status ?? 1;
+    }
+    await writeFile(join(spiceRoot, `${deckName}.log`), stdout);
+    spiceRuns.push({ analysisId: analysis.id, stdout, exitCode });
+  }
+  const engineVersion = /ngspice-([0-9.]+)/.exec(spiceRuns[0]?.stdout ?? "")?.[1];
+  const spice = evaluateSpiceRuns(spicePlan, spiceRuns, engineVersion);
+  if (spice.verdict !== "pass") {
+    throw new Error(
+      `verification-failed: spice ${spice.verdict}: ${JSON.stringify(
+        spice.findings.filter((finding) => finding.status !== "pass"),
+      )}`,
+    );
+  }
+  const spiceEvidence = analyses.map((analysis) => {
+    const stdout = spiceRuns.find((run) => run.analysisId === analysis.id)?.stdout ?? "";
+    const value = parseMeasurement(stdout, analysis.measurement.name);
+    return {
+      analysisId: analysis.id,
+      subject: analysis.subject,
+      measurement: analysis.measurement,
+      observed: value,
+      margin: value === undefined ? undefined : measurementMargin(analysis, value),
+      models: analysis.models,
+      assumptions: analysis.assumptions,
+      testItemId: analysis.testItemId,
+      deckHash: hash(analysis.deck),
+      outputHash: hash(stdout),
+    };
+  });
+  await writeFile(join(spiceRoot, "results.json"), `${JSON.stringify(spiceEvidence, null, 2)}\n`);
+  pass(18, {
+    engine: "ngspice",
+    engineVersion,
+    image,
+    verdict: spice.verdict,
+    analyses: analyses.length,
+    rulesEvaluated: spice.rulesEvaluated.length,
+    resultsHash: hash(JSON.stringify(spiceEvidence)),
+    artifact: "spice/results.json",
+  });
+
+  enter(6);
   await projectToKicad(fixture, projectRoot);
   docker([
     "kicad-cli",
@@ -147,6 +352,7 @@ try {
   ]);
   pass(6, { toolVersion: "KiCad 10.0.5" });
 
+  enter(7);
   const schematicNetlist = await readFile(join(projectRoot, "design.net"), "utf8");
   const ipc356 = await readFile(join(projectRoot, "design.d356"), "utf8");
   const comparison = compareNetlists(fixture, schematicNetlist, ipc356);
@@ -158,6 +364,7 @@ try {
     canonicalNetlistHash: canonicalHash,
   });
 
+  enter(8);
   try {
     docker([
       "kicad-cli",
@@ -183,6 +390,7 @@ try {
     throw new Error(`golden ERC contains findings: ${JSON.stringify(counts)}`);
   pass(8, { ...counts, waiver: "none" });
 
+  enter(9);
   const u1Placement = fixture.placementConstraints.components.find(
     (candidate) => candidate.partId === "part:u1",
   );
@@ -244,6 +452,7 @@ try {
     antennaKeepout: { source: "U1 official courtyard", points: antennaPoints },
     freerouting: "2.2.4",
   });
+  enter(10);
   try {
     docker([
       "kicad-cli",
@@ -269,6 +478,7 @@ try {
   if (drcCounts.violations !== 0 || drcCounts.unconnected !== 0 || drcCounts.footprintErrors !== 0)
     throw new Error(`golden DRC contains findings: ${JSON.stringify(drcCounts)}`);
   pass(10, drcCounts);
+  enter(11);
   docker([
     "kicad-cli",
     "pcb",
@@ -326,6 +536,7 @@ try {
     manifest: true,
     deterministic: true,
   });
+  enter(12);
   const manufacturingManifest = JSON.parse(
     await readFile(join(projectRoot, "manufacturing-manifest.json"), "utf8"),
   ) as Record<string, unknown>;

@@ -41,3 +41,5 @@ ADRはACDの技術選定を、理由・代替案・前提・結果とともに�
 - [`0016-worst-case-analysis-fidelity.md`](0016-worst-case-analysis-fidelity.md)
 - [`0017-open-review-findings-queue.md`](0017-open-review-findings-queue.md)
 - [`0018-golden-routing-technology.md`](0018-golden-routing-technology.md)
+- [`0019-repair-loop-llm-proposal-with-deterministic-validation.md`](0019-repair-loop-llm-proposal-with-deterministic-validation.md)
+- [`0020-spice-engine-ngspice-external-process.md`](0020-spice-engine-ngspice-external-process.md)

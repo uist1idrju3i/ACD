@@ -31,6 +31,7 @@
       "Official symbol and footprint mappings are hash-pinned",
       "Golden placement and routing remain deferred to WP3/WP4"
     ],
+    "acceptanceVerifiedBy": ["gate:fixture-schema", "gate:component-selection", "gate:routing"],
     "provenance": {
       "source": "fixture",
       "version": "phase1-golden-2",
@@ -96,6 +97,12 @@
       "manufacturer": "Advanced Monolithic Systems",
       "quantity": 1,
       "package": "SOT-223-3",
+      "parameters": {
+        "source": "datasheet:AMS1117-3.3 (fixture-owned annotation)",
+        "outputVoltageV": 3.3,
+        "inputCapacitanceMinUf": 10,
+        "outputCapacitanceMinUf": 22
+      },
       "provenance": {
         "source": "fixture",
         "version": "phase1-golden-1",
@@ -128,6 +135,10 @@
       "manufacturer": "Yageo",
       "quantity": 1,
       "package": "0603",
+      "parameters": {
+        "source": "mpn:RC0603FR-0710KL",
+        "resistanceOhm": 10000
+      },
       "provenance": {
         "source": "fixture",
         "version": "phase1-golden-1",
@@ -144,6 +155,10 @@
       "manufacturer": "Yageo",
       "quantity": 1,
       "package": "0603",
+      "parameters": {
+        "source": "mpn:RC0603FR-0710KL",
+        "resistanceOhm": 10000
+      },
       "provenance": {
         "source": "fixture",
         "version": "phase1-golden-1",
@@ -160,6 +175,10 @@
       "manufacturer": "Yageo",
       "quantity": 1,
       "package": "0603",
+      "parameters": {
+        "source": "mpn:RC0603FR-07330RL",
+        "resistanceOhm": 330
+      },
       "provenance": {
         "source": "fixture",
         "version": "phase1-golden-1",
@@ -176,6 +195,11 @@
       "manufacturer": "Yageo",
       "quantity": 1,
       "package": "0603",
+      "parameters": {
+        "source": "mpn:CC0603ZRY5V8BB104",
+        "capacitanceUf": 0.1,
+        "ratedVoltageV": 50
+      },
       "provenance": {
         "source": "fixture",
         "version": "phase1-golden-1",
@@ -192,6 +216,11 @@
       "manufacturer": "Yageo",
       "quantity": 1,
       "package": "0603",
+      "parameters": {
+        "source": "mpn:CC0603ZRY5V8BB104",
+        "capacitanceUf": 0.1,
+        "ratedVoltageV": 50
+      },
       "provenance": {
         "source": "fixture",
         "version": "phase1-golden-1",
@@ -208,6 +237,11 @@
       "manufacturer": "Yageo",
       "quantity": 1,
       "package": "0603",
+      "parameters": {
+        "source": "mpn:CC0603ZRY5V8BB104",
+        "capacitanceUf": 0.1,
+        "ratedVoltageV": 50
+      },
       "provenance": {
         "source": "fixture",
         "version": "phase1-golden-1",
@@ -224,6 +258,12 @@
       "manufacturer": "Lite-On",
       "quantity": 1,
       "package": "0603",
+      "parameters": {
+        "source": "datasheet:LTST-C190KRKT (fixture-owned annotation)",
+        "forwardVoltageV": 2.0,
+        "forwardCurrentMinMa": 1,
+        "forwardCurrentMaxMa": 20
+      },
       "provenance": {
         "source": "fixture",
         "version": "phase1-golden-1",
@@ -272,6 +312,10 @@
       "manufacturer": "Yageo",
       "quantity": 1,
       "package": "0603",
+      "parameters": {
+        "source": "mpn:RC0603FR-075K1L",
+        "resistanceOhm": 5100
+      },
       "provenance": {
         "source": "fixture",
         "version": "phase1-golden-1",
@@ -288,6 +332,10 @@
       "manufacturer": "Yageo",
       "quantity": 1,
       "package": "0603",
+      "parameters": {
+        "source": "mpn:RC0603FR-075K1L",
+        "resistanceOhm": 5100
+      },
       "provenance": {
         "source": "fixture",
         "version": "phase1-golden-1",
@@ -304,6 +352,11 @@
       "manufacturer": "Samsung Electro-Mechanics",
       "quantity": 1,
       "package": "0805",
+      "parameters": {
+        "source": "mpn:CL21A106KOQNNNE",
+        "capacitanceUf": 10,
+        "ratedVoltageV": 16
+      },
       "provenance": {
         "source": "fixture",
         "version": "phase1-golden-1",
@@ -320,6 +373,11 @@
       "manufacturer": "Samsung Electro-Mechanics",
       "quantity": 1,
       "package": "0805",
+      "parameters": {
+        "source": "mpn:CL21A226MQQNNNE",
+        "capacitanceUf": 22,
+        "ratedVoltageV": 6.3
+      },
       "provenance": {
         "source": "fixture",
         "version": "phase1-golden-1",
@@ -336,6 +394,50 @@
       "manufacturer": "Yageo",
       "quantity": 1,
       "package": "0603",
+      "parameters": {
+        "source": "mpn:RC0603FR-0710KL",
+        "resistanceOhm": 10000
+      },
+      "provenance": {
+        "source": "fixture",
+        "version": "phase1-golden-1",
+        "license": "BSD-3-Clause",
+        "contentHash": null,
+        "pendingReason": "fixture-owned provenance snapshot is pending; source is controlled by this fixture"
+      }
+    },
+    {
+      "id": "part:r8",
+      "reference": "R8",
+      "kind": "resistor",
+      "mpn": "RC0603FR-074K7L",
+      "manufacturer": "Yageo",
+      "quantity": 1,
+      "package": "0603",
+      "parameters": {
+        "source": "mpn:RC0603FR-074K7L",
+        "resistanceOhm": 4700
+      },
+      "provenance": {
+        "source": "fixture",
+        "version": "phase1-golden-1",
+        "license": "BSD-3-Clause",
+        "contentHash": null,
+        "pendingReason": "fixture-owned provenance snapshot is pending; source is controlled by this fixture"
+      }
+    },
+    {
+      "id": "part:r9",
+      "reference": "R9",
+      "kind": "resistor",
+      "mpn": "RC0603FR-074K7L",
+      "manufacturer": "Yageo",
+      "quantity": 1,
+      "package": "0603",
+      "parameters": {
+        "source": "mpn:RC0603FR-074K7L",
+        "resistanceOhm": 4700
+      },
       "provenance": {
         "source": "fixture",
         "version": "phase1-golden-1",
@@ -1085,6 +1187,56 @@
         "license": "CC-BY-SA-4.0-with-exception",
         "contentHash": "sha256:7190ac4a00125b807e54129ef0d87d87f2a658eeb74d025a7028203419b09f23"
       }
+    },
+    {
+      "partId": "part:r8",
+      "symbolLibraryId": "Device",
+      "symbolName": "R",
+      "footprintLibraryId": "Resistor_SMD",
+      "footprintName": "R_0603_1608Metric",
+      "pinPads": [
+        {
+          "pin": "1",
+          "pad": "1",
+          "electricalType": "passive"
+        },
+        {
+          "pin": "2",
+          "pad": "2",
+          "electricalType": "passive"
+        }
+      ],
+      "provenance": {
+        "source": "KiCad official libraries",
+        "version": "10.0.5",
+        "license": "CC-BY-SA-4.0-with-exception",
+        "contentHash": "sha256:7190ac4a00125b807e54129ef0d87d87f2a658eeb74d025a7028203419b09f23"
+      }
+    },
+    {
+      "partId": "part:r9",
+      "symbolLibraryId": "Device",
+      "symbolName": "R",
+      "footprintLibraryId": "Resistor_SMD",
+      "footprintName": "R_0603_1608Metric",
+      "pinPads": [
+        {
+          "pin": "1",
+          "pad": "1",
+          "electricalType": "passive"
+        },
+        {
+          "pin": "2",
+          "pad": "2",
+          "electricalType": "passive"
+        }
+      ],
+      "provenance": {
+        "source": "KiCad official libraries",
+        "version": "10.0.5",
+        "license": "CC-BY-SA-4.0-with-exception",
+        "contentHash": "sha256:7190ac4a00125b807e54129ef0d87d87f2a658eeb74d025a7028203419b09f23"
+      }
     }
   ],
   "nets": [
@@ -1092,6 +1244,7 @@
       "id": "net:5v",
       "name": "+5V",
       "class": "power",
+      "nominalVoltageV": 5,
       "pins": [
         {
           "partId": "part:j1",
@@ -1119,6 +1272,7 @@
       "id": "net:3v3",
       "name": "3V3",
       "class": "power",
+      "nominalVoltageV": 3.3,
       "pins": [
         {
           "partId": "part:u1",
@@ -1163,6 +1317,14 @@
         {
           "partId": "part:c5",
           "pin": "1"
+        },
+        {
+          "partId": "part:r8",
+          "pin": "2"
+        },
+        {
+          "partId": "part:r9",
+          "pin": "2"
         }
       ]
     },
@@ -1242,6 +1404,10 @@
         {
           "partId": "part:c5",
           "pin": "2"
+        },
+        {
+          "partId": "part:r5",
+          "pin": "2"
         }
       ]
     },
@@ -1249,6 +1415,7 @@
       "id": "net:i2c-sda",
       "name": "I2C_SDA",
       "class": "signal",
+      "role": "i2c",
       "pins": [
         {
           "partId": "part:u1",
@@ -1261,6 +1428,10 @@
         {
           "partId": "part:j2",
           "pin": "5"
+        },
+        {
+          "partId": "part:r8",
+          "pin": "1"
         }
       ]
     },
@@ -1268,6 +1439,7 @@
       "id": "net:i2c-scl",
       "name": "I2C_SCL",
       "class": "clock",
+      "role": "i2c",
       "pins": [
         {
           "partId": "part:u1",
@@ -1280,6 +1452,10 @@
         {
           "partId": "part:j2",
           "pin": "6"
+        },
+        {
+          "partId": "part:r9",
+          "pin": "1"
         }
       ]
     },
@@ -1287,6 +1463,7 @@
       "id": "net:uart-rx",
       "name": "UART_RX",
       "class": "signal",
+      "role": "uart",
       "pins": [
         {
           "partId": "part:u1",
@@ -1302,6 +1479,7 @@
       "id": "net:uart-tx",
       "name": "UART_TX",
       "class": "signal",
+      "role": "uart",
       "pins": [
         {
           "partId": "part:u1",
@@ -1317,6 +1495,7 @@
       "id": "net:en",
       "name": "EN",
       "class": "signal",
+      "role": "bootstrap",
       "pins": [
         {
           "partId": "part:u1",
@@ -1336,6 +1515,7 @@
       "id": "net:io0",
       "name": "IO0",
       "class": "signal",
+      "role": "bootstrap",
       "pins": [
         {
           "partId": "part:u1",
@@ -1355,6 +1535,7 @@
       "id": "net:led-a",
       "name": "LED_A",
       "class": "signal",
+      "role": "led",
       "pins": [
         {
           "partId": "part:u1",
@@ -1370,6 +1551,7 @@
       "id": "net:led-k",
       "name": "LED_K",
       "class": "signal",
+      "role": "led",
       "pins": [
         {
           "partId": "part:r3",
@@ -1385,6 +1567,7 @@
       "id": "net:usb-cc1",
       "name": "USB_CC1",
       "class": "signal",
+      "role": "usb-cc",
       "pins": [
         {
           "partId": "part:j1",
@@ -1400,6 +1583,7 @@
       "id": "net:usb-cc2",
       "name": "USB_CC2",
       "class": "signal",
+      "role": "usb-cc",
       "pins": [
         {
           "partId": "part:j1",
@@ -1561,6 +1745,20 @@
         "allowedLayers": ["F.Cu"],
         "xMm": 52,
         "yMm": 14,
+        "rotationDeg": 0
+      },
+      {
+        "partId": "part:r8",
+        "allowedLayers": ["F.Cu"],
+        "xMm": 47,
+        "yMm": 21,
+        "rotationDeg": 0
+      },
+      {
+        "partId": "part:r9",
+        "allowedLayers": ["F.Cu"],
+        "xMm": 51,
+        "yMm": 21,
         "rotationDeg": 0
       }
     ]
@@ -1945,6 +2143,46 @@
       },
       "unitPrice": 0.35,
       "currency": "USD"
+    },
+    {
+      "partId": "part:r8",
+      "referenceDesignators": ["R8"],
+      "quantity": 1,
+      "mpn": "RC0603FR-074K7L",
+      "manufacturer": "Yageo",
+      "supplier": "Digi-Key",
+      "sku": "13-RC0603FR-074K7LCT-ND",
+      "availability": "in-stock",
+      "lifecycle": "active",
+      "provenance": {
+        "source": "fixture-provided AVL",
+        "version": "phase1-golden-1",
+        "license": "BSD-3-Clause",
+        "contentHash": null,
+        "pendingReason": "AVL source is fixture-provided; distributor availability must be rechecked before ordering"
+      },
+      "unitPrice": 0.35,
+      "currency": "USD"
+    },
+    {
+      "partId": "part:r9",
+      "referenceDesignators": ["R9"],
+      "quantity": 1,
+      "mpn": "RC0603FR-074K7L",
+      "manufacturer": "Yageo",
+      "supplier": "Digi-Key",
+      "sku": "13-RC0603FR-074K7LCT-ND",
+      "availability": "in-stock",
+      "lifecycle": "active",
+      "provenance": {
+        "source": "fixture-provided AVL",
+        "version": "phase1-golden-1",
+        "license": "BSD-3-Clause",
+        "contentHash": null,
+        "pendingReason": "AVL source is fixture-provided; distributor availability must be rechecked before ordering"
+      },
+      "unitPrice": 0.35,
+      "currency": "USD"
     }
   ],
   "orderConstraints": {
@@ -1962,5 +2200,274 @@
         "pendingReason": "placeholder quote is fixture-provided and must be refreshed before ordering"
       }
     }
-  }
+  },
+  "rationales": [
+    {
+      "id": "rationale:board-and-supply",
+      "origin": "human",
+      "decision": "60x45mm 2-layer board fed from a single 5V USB-C supply with a 500mA budget, so the golden task stays routable with the pinned Freerouting profile.",
+      "appliesTo": ["requirement:phase1-golden-esp32"],
+      "alternativesConsidered": [
+        {
+          "option": "50x40mm outline",
+          "rejectedBecause": "left no routing headroom around the ESP32 antenna keepout"
+        },
+        {
+          "option": "4-layer stackup",
+          "rejectedBecause": "raises fabrication cost above the order budget cap for a demo board"
+        }
+      ],
+      "assumptions": [
+        {
+          "statement": "Total load stays below the 500mA supplied by a USB-C sink with Rd termination.",
+          "status": "confirmed",
+          "evidenceLink": "gate:electrical-lint"
+        }
+      ],
+      "tuningNeeded": false,
+      "provenance": {
+        "source": "fixture-owned design rationale",
+        "version": "phase1-golden-3",
+        "license": "BSD-3-Clause",
+        "contentHash": null,
+        "pendingReason": "rationale is fixture-owned and is not verification evidence"
+      },
+      "risks": [
+        {
+          "description": "The ESP32 antenna courtyard overhangs the board edge.",
+          "severity": "medium",
+          "mitigation": "Antenna region is declared as a routing keepout and checked by DRC."
+        }
+      ]
+    },
+    {
+      "id": "rationale:usb-power-input",
+      "origin": "human",
+      "decision": "USB-C receptacle as a 5V sink with 5.1k Rd on both CC pins and a 10uF bulk capacitor.",
+      "appliesTo": ["block:usb-power-input", "part:j1", "part:r6", "part:r7", "part:c4"],
+      "alternativesConsidered": [
+        {
+          "option": "USB micro-B",
+          "rejectedBecause": "obsolete connector and no CC-based current negotiation"
+        },
+        {
+          "option": "Single CC resistor",
+          "rejectedBecause": "breaks reversible cable orientation"
+        }
+      ],
+      "assumptions": [
+        {
+          "statement": "A 5.1k Rd on each CC pin advertises the default USB Type-C sink current.",
+          "status": "confirmed",
+          "evidenceLink": "gate:electrical-lint"
+        }
+      ],
+      "tuningNeeded": false,
+      "provenance": {
+        "source": "fixture-owned design rationale",
+        "version": "phase1-golden-3",
+        "license": "BSD-3-Clause",
+        "contentHash": null,
+        "pendingReason": "rationale is fixture-owned and is not verification evidence"
+      }
+    },
+    {
+      "id": "rationale:3v3-regulation",
+      "origin": "human",
+      "decision": "AMS1117-3.3 linear regulator with 10uF input and 22uF output bulk capacitance.",
+      "appliesTo": ["block:3v3-regulation", "part:u3", "part:c5", "part:c3"],
+      "alternativesConsidered": [
+        {
+          "option": "Switching regulator",
+          "rejectedBecause": "adds SI and EMC verification beyond the Phase 2 boundary"
+        },
+        {
+          "option": "LDO without bulk output capacitor",
+          "rejectedBecause": "the datasheet requires output bulk capacitance for stability"
+        }
+      ],
+      "assumptions": [
+        {
+          "statement": "Regulator dropout is acceptable because the ESP32 peak current is supplied from bulk capacitance.",
+          "status": "unconfirmed",
+          "testItemId": "test:regulator-output-voltage"
+        }
+      ],
+      "tuningNeeded": false,
+      "provenance": {
+        "source": "fixture-owned design rationale",
+        "version": "phase1-golden-3",
+        "license": "BSD-3-Clause",
+        "contentHash": null,
+        "pendingReason": "rationale is fixture-owned and is not verification evidence"
+      },
+      "risks": [
+        {
+          "description": "Linear regulation dissipates the 5V to 3.3V difference as heat.",
+          "severity": "low",
+          "mitigation": "SOT-223 package with copper pour; thermal analysis is out of the Phase 2 scope."
+        }
+      ]
+    },
+    {
+      "id": "rationale:esp32-compute",
+      "origin": "human",
+      "decision": "ESP32-WROOM-32E module with 100nF decoupling on each supply pin, so RF and firmware qualification stay inside the module vendor's scope.",
+      "appliesTo": ["block:esp32-compute", "part:u1", "part:c1", "part:c2"],
+      "alternativesConsidered": [
+        {
+          "option": "Bare ESP32 chip",
+          "rejectedBecause": "requires RF matching and certification work outside Phase 2"
+        },
+        {
+          "option": "No local decoupling",
+          "rejectedBecause": "leaves supply transients unbounded at the module pins"
+        }
+      ],
+      "assumptions": [
+        {
+          "statement": "Module-level certification covers the RF section, so the board only supplies power and IO.",
+          "status": "confirmed",
+          "evidenceLink": "provenance:esp32-wroom-32e-datasheet"
+        }
+      ],
+      "tuningNeeded": false,
+      "provenance": {
+        "source": "fixture-owned design rationale",
+        "version": "phase1-golden-3",
+        "license": "BSD-3-Clause",
+        "contentHash": null,
+        "pendingReason": "rationale is fixture-owned and is not verification evidence"
+      }
+    },
+    {
+      "id": "rationale:i2c-sensor",
+      "origin": "human",
+      "decision": "BME280 on I2C with 4.7k pull-ups on SDA and SCL and SDO tied low through 10k to fix the address.",
+      "appliesTo": ["block:i2c-sensor", "part:u2", "part:r8", "part:r9", "part:r5"],
+      "alternativesConsidered": [
+        {
+          "option": "Rely on internal pull-ups",
+          "rejectedBecause": "ESP32 and BME280 do not provide I2C bus pull-ups, so the bus would not settle"
+        },
+        {
+          "option": "SPI interface",
+          "rejectedBecause": "uses more IO than the header budget allows"
+        }
+      ],
+      "assumptions": [
+        {
+          "statement": "4.7k pull-ups keep the bus inside the 1k-10k window at 100kHz standard mode.",
+          "status": "confirmed",
+          "evidenceLink": "gate:electrical-lint"
+        },
+        {
+          "statement": "Bus rise time meets the I2C specification with the assembled trace capacitance.",
+          "status": "unconfirmed",
+          "testItemId": "test:i2c-rise-time"
+        }
+      ],
+      "tuningNeeded": false,
+      "provenance": {
+        "source": "fixture-owned design rationale",
+        "version": "phase1-golden-3",
+        "license": "BSD-3-Clause",
+        "contentHash": null,
+        "pendingReason": "rationale is fixture-owned and is not verification evidence"
+      }
+    },
+    {
+      "id": "rationale:uart-header",
+      "origin": "human",
+      "decision": "2.54mm 1x06 header exposing UART, 3V3 and GND for bring-up and flashing.",
+      "appliesTo": ["block:uart-header", "part:j2"],
+      "alternativesConsidered": [
+        {
+          "option": "On-board USB-UART bridge",
+          "rejectedBecause": "adds a component and firmware dependency not needed for the golden task"
+        },
+        {
+          "option": "Test pads only",
+          "rejectedBecause": "cannot be probed with a standard serial cable during bring-up"
+        }
+      ],
+      "assumptions": [
+        {
+          "statement": "An external USB-UART adapter supplies the flashing signals.",
+          "status": "confirmed",
+          "evidenceLink": "requirement:phase1-golden-esp32"
+        }
+      ],
+      "tuningNeeded": false,
+      "provenance": {
+        "source": "fixture-owned design rationale",
+        "version": "phase1-golden-3",
+        "license": "BSD-3-Clause",
+        "contentHash": null,
+        "pendingReason": "rationale is fixture-owned and is not verification evidence"
+      }
+    },
+    {
+      "id": "rationale:status-led",
+      "origin": "human",
+      "decision": "Single red status LED driven from 3V3 through a 330 ohm series resistor, about 3.9mA.",
+      "appliesTo": ["block:status-led", "part:d1", "part:r3"],
+      "alternativesConsidered": [
+        {
+          "option": "No series resistor",
+          "rejectedBecause": "exceeds the LED forward current rating"
+        },
+        {
+          "option": "22 ohm series resistor",
+          "rejectedBecause": "drives about 59mA and destroys the LED"
+        }
+      ],
+      "assumptions": [
+        {
+          "statement": "3.9mA is visible enough for a status indicator in indoor light.",
+          "status": "unconfirmed",
+          "testItemId": "test:status-led-visibility"
+        }
+      ],
+      "tuningNeeded": true,
+      "provenance": {
+        "source": "fixture-owned design rationale",
+        "version": "phase1-golden-3",
+        "license": "BSD-3-Clause",
+        "contentHash": null,
+        "pendingReason": "rationale is fixture-owned and is not verification evidence"
+      }
+    },
+    {
+      "id": "rationale:boot-strapping",
+      "origin": "human",
+      "decision": "EN and IO0 pulled up through 10k with tactile switches to ground for reset and download mode.",
+      "appliesTo": ["block:boot-strapping", "part:r1", "part:r2", "part:sw1", "part:sw2"],
+      "alternativesConsidered": [
+        {
+          "option": "Auto-reset transistor circuit",
+          "rejectedBecause": "requires the USB-UART bridge that this board does not carry"
+        },
+        {
+          "option": "No pull-ups",
+          "rejectedBecause": "leaves the strapping pins floating and the boot mode undefined"
+        }
+      ],
+      "assumptions": [
+        {
+          "statement": "10k pull-ups hold the strapping pins high while the switches pull them low.",
+          "status": "confirmed",
+          "evidenceLink": "gate:electrical-lint"
+        }
+      ],
+      "tuningNeeded": false,
+      "provenance": {
+        "source": "fixture-owned design rationale",
+        "version": "phase1-golden-3",
+        "license": "BSD-3-Clause",
+        "contentHash": null,
+        "pendingReason": "rationale is fixture-owned and is not verification evidence"
+      }
+    }
+  ]
 }

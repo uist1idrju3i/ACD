@@ -1,6 +1,6 @@
 # Phase 2実装計画
 
-**ステータス：Draft（WP1実装中、WP2以降は未着手）**
+**ステータス：Draft（WP1〜WP7実装済み）**
 
 ## 目的と権威範囲
 
@@ -26,7 +26,7 @@ READMEの「やらないこと」により、Phase 2では高忠実度SI／熱�
 
 ### WP1：gate matrixのmachine-readable single source
 
-**状態：本PRで実装。**
+**状態：実装済み。**
 
 **作業**
 
@@ -49,7 +49,8 @@ READMEの「やらないこと」により、Phase 2では高忠実度SI／熱�
 
 ### WP2：topology-level electrical lint gate
 
-**状態：未着手。**
+**状態：実装済み。** rule定義と受入結果は[`electrical-lint.md`](electrical-lint.md)、
+gate契約はgate 14（`gate:electrical-lint`、gate 5の直後に実行）。
 
 Phase 1レビューでUSB-C CC終端欠落、LED電流不足、レギュレータbulk容量欠落、
 footprint／MPN不整合が後段で発見されました。KiCad ERCはこれらを検出しません。
@@ -70,9 +71,18 @@ footprint／MPN不整合が後段で発見されました。KiCad ERCはこれ�
   それぞれ固有のrule IDで停止する。
 - 各findingがrule ID、対象entity、期待値、実測値、根拠（datasheet／要求／規格）を持つ。
 
+**実装で判明した事項**
+
+- golden fixtureにI2C pull-up（SDA/SCL）が存在せず、BME280のSDO_SEL抵抗R5のpin 2が
+  どのnetにも接続されていませんでした。いずれもgate 1〜12を通過していた実在の欠陥のため、
+  lintを緩めずfixture側を修正しました（R8/R9=4.7 kΩ追加、R5 pin 2をGNDへ接続）。
+- gate番号の振り直しを避けるため、gate matrixへ`runsAfter`を追加し、後続Phaseのgateが
+  既存番号を保ったまま実行位置だけを宣言できるようにしました。
+
 ### WP3：設計根拠（Design Rationale）の構造化記録
 
-**状態：未着手。**
+**状態：実装済み。** 契約とルールは[`design-rationale-gate.md`](design-rationale-gate.md)、
+実行はgate 15（`gate:design-rationale`、`runsAfter: gate:electrical-lint`）。
 
 **作業**
 
@@ -84,9 +94,18 @@ footprint／MPN不整合が後段で発見されました。KiCad ERCはこれ�
 - 設計判断がrationale無しに下流へ流れないことをgateで検査できる。
 - rationaleがLLM生成テキストであっても、合否判定の証拠として使われない。
 
+**実装で判明した事項**
+
+- coverage対象を「要求・機能ブロック・全部品」と定義しました。曖昧な対象集合では
+  coverage gate自体が形骸化するため、subjectを決定論的に列挙できる集合に限定しています。
+- 未確認の仮定は`unknown`とし、TestItem参照または`tuningNeeded`を宣言するまでgateを
+  通しません。これがWP4のTestItem自動生成の入力になります。
+- 三値評価の型（`RuleFinding`／`RuleVerdict`）を`findings.ts`へ切り出し、gate 14と共有しました。
+
 ### WP4：テスト項目の自動生成
 
-**状態：未着手。**
+**状態：実装済み。** 契約と生成元は[`test-plan-generation.md`](test-plan-generation.md)、
+実行はgate 16（`gate:test-plan`、`runsAfter: gate:design-rationale`）。
 
 **作業**
 
@@ -99,9 +118,17 @@ footprint／MPN不整合が後段で発見されました。KiCad ERCはこれ�
 - golden fixtureから生成したTestItemリストが決定論的（同一入力で同一hash）である。
 - 各要求・制約に検証方法が割り当てられ、未割当は未検証として報告される。
 
+**実装で判明した事項**
+
+- LED電流の期待値はGate 14と同じtopology trace（`ledBranchCurrents`）から導出します。
+  生成側で同じ計算を再実装すると、lintの判定とテスト項目の期待値が黙って乖離します。
+- 合格基準を導出できないitemは`unknown`とし、blockedで停止します。「測ることは決まったが
+  合格範囲は不明」という項目を成果物として出さないためです。
+
 ### WP5：故障注入と自動検出・自動修復ループ
 
-**状態：未着手。READMEの完了条件そのもの。**
+**状態：実装済み。** 契約は[`repair-loop.md`](repair-loop.md)、
+実行はgate 17（`gate:repair-loop`、`runsAfter: gate:test-plan`）。
 
 **作業**
 
@@ -116,14 +143,24 @@ footprint／MPN不整合が後段で発見されました。KiCad ERCはこれ�
 - 修復できない場合はjidoka停止し、停止理由と再開条件を記録する。
 - 修復ループが無限ループにならず、試行上限と収束条件を持つ。
 
-**未決定**
+**決定済み**
 
-- 修復候補の生成方式（決定論的ルールベースか、LLM提案＋決定論的検証か）はADRで決める。
-  いずれの場合も合否判定は決定論的gateが行い、LLM出力を合格証拠にしない。
+- 修復候補の生成方式はB案（LLM提案＋決定論的gate判定）。
+  [ADR-0019](adr/0019-repair-loop-llm-proposal-with-deterministic-validation.md)。
+  CIはoffline再現可能な記録済み提案（hash固定）で回し、live LLM呼び出しはopt-in。
+
+**実装で判明した事項**
+
+- gateの合否だけでは修復を受理できません。LED過電流に対して「LEDの順電圧を高く主張する」
+  候補は電流計算を合格範囲へ入れてしまいます。基板は何も直っていないため、datasheet由来parameter、
+  part provenance、order-relevantなBOM状態の書き換えを受理前に却下します。
+- proposerのルックアップキーは未解決findingのhashです。case名やfixture名で引くと、修復側に
+  正解を先に渡すことになります。
 
 ### WP6：SPICEゲート（忠実度ラダー レベル2〜3）
 
-**状態：未着手。**
+**状態：実装済み。** 契約は[`spice-gate.md`](spice-gate.md)、
+実行はgate 18（`gate:spice`、`runsAfter: gate:repair-loop`）。
 
 **作業**
 
@@ -135,16 +172,45 @@ footprint／MPN不整合が後段で発見されました。KiCad ERCはこれ�
 - golden fixtureの電源・LED回路について、nominal解析が収束し、結果がEvidenceになる。
 - 収束失敗は`convergence-failure`で停止する。
 
-**未決定**
+**決定済み**
 
-- engine選定（ngspice共有ライブラリ／WASM、Xyce等）とライセンス境界はADRで決める。
-  高忠実度SI／熱解析はPhase 2の対象外。
+- engineはngspiceを固定digest containerの外部processで実行するA案
+  （[ADR-0020](adr/0020-spice-engine-ngspice-external-process.md)）。KiCad containerが
+  ngspice 44.2を同梱するため、image digestを増やさずに同じprocess境界で実行します。
+  高忠実度SI／熱解析はPhase 2の対象外です。
+
+**実装で判明した事項**
+
+- 解析は理想電源と線形受動素子だけで構成し、vendorモデルを使いません。vendorモデルを
+  含む解析は`spice-model-provenance`が`unknown`となり、Evidenceになりません。
+- LED分岐の解析はGate 14／16と同じtopologyトレースから導出し、電流計算の二重実装を
+  避けています。
 
 ### WP7：schematic readability（Phase 1 WP6の繰延分）
 
-**状態：未着手・低優先。**
+**状態：実装済み。** 契約は[`schematic-readability.md`](schematic-readability.md)。
 
-net label中心の投影を、electrical semantics、netlist、ERC結果を変えずに読みやすくします。
+net label中心の投影を、electrical semantics、netlist、ERC結果を変えずに読みやすくしました。
+
+**作業**
+
+- WP3の設計根拠（`rationale.appliesTo`）からpart→functional blockの割当を導き、
+  基板placement順ではなく機能ブロック単位でsymbolを配置する。
+- symbol snapshotのpin座標から実寸の外形を求め、重なりのない間隔で積み上げる。
+- ブロック見出しとtitle blockという非電気的な注記を追加する。
+
+**受入基準**
+
+- Gate 7（netlist readback）とGate 8（ERC 0/0）が変更前と同じ結果で合格する。
+- 同じfixtureから同じ座標が決定論的に得られる。
+
+**実装で判明した事項**
+
+- eeschemaは同一座標のpinを接続するため、読みやすさのための再配置が意図しない接続を
+  作り得ます。異なるsymbol間のpin重なりを検出して停止する検査を入れました
+  （実際に初回実装でJ1とR7のpin重なりを検出しました）。
+- 機能ブロックはfixtureのpartには宣言されておらず、WP3のrationaleにしかありません。
+  読みやすさが設計根拠の副産物として得られる形になりました。
 
 ## リスク登録簿
 

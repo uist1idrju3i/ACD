@@ -8,6 +8,14 @@ import { snapshotFiles, snapshotManifest } from "./library-snapshot.js";
 import { goldenLibrarySymbols, smokeLibrarySymbols } from "./symbol-library.js";
 import { KicadProjectionError } from "./errors.js";
 import { placeFixture } from "./placement.js";
+import {
+  assertNoPinOverlap,
+  labelJustification,
+  renderSheetText,
+  renderTitleBlock,
+  schematicLayout,
+  type SymbolExtent,
+} from "./schematic-layout.js";
 
 export { KicadProjectionError } from "./errors.js";
 
@@ -343,11 +351,17 @@ ${pinLines}
 	)`;
 };
 
-const label = (name: string, x: number, y: number, id: string): string => `	(label "${name}"
+const label = (
+  name: string,
+  x: number,
+  y: number,
+  id: string,
+  justify: "left" | "right" = "left",
+): string => `	(label "${name}"
 		(at ${x} ${y} 0)
 		(effects
 			(font (size 1.27 1.27))
-			(justify left bottom)
+			(justify ${justify} bottom)
 		)
 		(uuid "${id}")
 	)`;
@@ -392,15 +406,27 @@ const renderGoldenSchematic = (fixture: Phase1Fixture): string => {
   const part = new Map(fixture.parts.map((item) => [item.id, item]));
   const mapping = new Map(fixture.mappings.map((item) => [item.partId, item]));
   const placements = placeFixture(fixture);
-  const schematicOrigins = new Map(
-    placements.map((placement, index) => [
-      placement.partId,
-      [schematicGrid(80 + (index % 3) * 70), schematicGrid(60 + Math.floor(index / 3) * 60)] as [
-        number,
-        number,
-      ],
-    ]),
-  );
+  const symbolExtent = (partId: string): SymbolExtent => {
+    const currentMapping = mapping.get(partId);
+    if (!currentMapping) throw new KicadProjectionError(`missing mapping for ${partId}`);
+    const positions = symbolPinPositions(
+      `${currentMapping.symbolLibraryId}:${currentMapping.symbolName}`,
+    );
+    // Sheet space: the renderer places a pin at (origin + x, origin - y).
+    const points = currentMapping.pinPads
+      .map((pinPad) => positions.get(pinPad.pin))
+      .filter((position): position is [number, number] => position !== undefined)
+      .map(([x, y]) => [x, -y] as [number, number]);
+    if (points.length === 0) throw new KicadProjectionError(`no symbol pin geometry for ${partId}`);
+    return {
+      minXMm: Math.min(...points.map(([x]) => x)),
+      maxXMm: Math.max(...points.map(([x]) => x)),
+      minYMm: Math.min(...points.map(([, y]) => y)),
+      maxYMm: Math.max(...points.map(([, y]) => y)),
+    };
+  };
+  const layout = schematicLayout(fixture, symbolExtent);
+  const schematicOrigins = layout.origins;
   const symbols = placements.map((placement, index) => {
     const currentPart = part.get(placement.partId);
     const currentMapping = mapping.get(placement.partId);
@@ -445,6 +471,7 @@ const renderGoldenSchematic = (fixture: Phase1Fixture): string => {
         sx,
         sy,
         `00000000-0000-4000-8000-${String(netIndex * 100 + pinIndex + 1).padStart(12, "0")}`,
+        labelJustification(x),
       );
     }),
   );
@@ -504,6 +531,38 @@ const renderGoldenSchematic = (fixture: Phase1Fixture): string => {
       instancePath: `/00000000-0000-4000-8000-00000000010${index + 1}`,
     }),
   );
+  const blockAnnotations = layout.annotations.map((annotation, index) =>
+    renderSheetText(
+      annotation.text,
+      annotation.xMm,
+      annotation.yMm,
+      // Disjoint band: symbols use 1-999, flags 101+, no-connects 3000+, labels 100*net.
+      `00000000-0000-4000-8000-${String(800000 + index).padStart(12, "0")}`,
+    ),
+  );
+  assertNoPinOverlap(
+    placements.flatMap((placement) => {
+      const currentMapping = mapping.get(placement.partId);
+      const currentPart = part.get(placement.partId);
+      if (!currentMapping || !currentPart) return [];
+      const positions = symbolPinPositions(
+        `${currentMapping.symbolLibraryId}:${currentMapping.symbolName}`,
+      );
+      const origin = schematicOrigins.get(placement.partId)!;
+      return currentMapping.pinPads.flatMap((pinPad) => {
+        const position = positions.get(pinPad.pin);
+        if (!position) return [];
+        return [
+          {
+            partId: placement.partId,
+            entity: `${currentPart.reference}:${pinPad.pin}`,
+            xMm: origin[0] + position[0],
+            yMm: origin[1] - position[1],
+          },
+        ];
+      });
+    }),
+  );
   const flagLabels = flagNets.map((netName, index) =>
     label(
       netName,
@@ -518,9 +577,11 @@ const renderGoldenSchematic = (fixture: Phase1Fixture): string => {
 	(generator_version "10.0")
 	(uuid "${uuid}")
 	(paper "A4")
+${renderTitleBlock(fixture)}
 	(lib_symbols
 ${goldenLibrarySymbols}
 	)
+${blockAnnotations.join("\n")}
 ${symbols.concat(flags).join("\n")}
 ${labels.join("\n")}
 ${flagLabels.join("\n")}
