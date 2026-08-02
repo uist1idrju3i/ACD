@@ -1,0 +1,92 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://acd.local/schemas/component-library.schema.json",
+  "title": "ACD component library records",
+  "type": "object",
+  "required": ["schemaVersion", "sourcePolicy", "components"],
+  "additionalProperties": false,
+  "properties": {
+    "schemaVersion": { "const": "1.0.0" },
+    "sourcePolicy": {
+      "type": "object",
+      "required": ["liveSourcing", "unknownPolicy"],
+      "additionalProperties": false,
+      "properties": {
+        "liveSourcing": { "const": "not-permitted" },
+        "unknownPolicy": { "const": "unknown-widens-verification" }
+      }
+    },
+    "components": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": ["id", "footprintCandidates", "datasheetReferences", "implementationNotes"],
+        "additionalProperties": false,
+        "properties": {
+          "id": { "type": "string", "pattern": "^[A-Za-z0-9_:-]+$" },
+          "footprintCandidates": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": ["id", "source"],
+              "additionalProperties": false,
+              "properties": {
+                "id": { "type": "string", "minLength": 1 },
+                "source": { "$ref": "#/$defs/provenance" }
+              }
+            }
+          },
+          "datasheetReferences": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": ["url", "status", "provenance"],
+              "additionalProperties": false,
+              "properties": {
+                "url": { "type": "string", "format": "uri" },
+                "status": { "enum": ["verified", "unknown"] },
+                "provenance": { "$ref": "#/$defs/provenance" }
+              }
+            }
+          },
+          "implementationNotes": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": ["text", "status", "provenance"],
+              "additionalProperties": false,
+              "properties": {
+                "text": { "type": "string", "minLength": 1 },
+                "status": { "enum": ["verified", "unknown"] },
+                "provenance": { "$ref": "#/$defs/provenance" }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "$defs": {
+    "provenance": {
+      "type": "object",
+      "required": ["source", "retrievalBasis", "license", "contentHash"],
+      "additionalProperties": false,
+      "properties": {
+        "source": { "type": "string", "format": "uri" },
+        "retrievalBasis": { "type": "string", "minLength": 1 },
+        "license": { "type": "string", "minLength": 1 },
+        "contentHash": {
+          "anyOf": [{ "type": "string", "pattern": "^sha256:[0-9a-f]{64}$" }, { "const": null }]
+        },
+        "pendingReason": { "type": "string", "minLength": 1 }
+      },
+      "allOf": [
+        {
+          "if": { "properties": { "contentHash": { "const": null } } },
+          "then": { "required": ["pendingReason"] }
+        }
+      ]
+    }
+  }
+}

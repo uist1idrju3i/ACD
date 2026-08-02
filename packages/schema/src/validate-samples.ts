@@ -3,6 +3,7 @@ import { Ajv2020, type ErrorObject, type ValidateFunction } from "ajv/dist/2020.
 import * as formatsModule from "ajv-formats";
 import {
   designGraphSchemaPath,
+  componentLibrarySchemaPath,
   errorTaxonomyDataPath,
   errorTaxonomySchemaPath,
   eventSchemaPath,
@@ -53,6 +54,7 @@ const samplePaths = [
   physicalEvidenceSchemaPath,
   gateMatrixSchemaPath,
   libraryPatchSchemaPath,
+  componentLibrarySchemaPath,
 ];
 for (const schemaPath of samplePaths) {
   await loadValidator(schemaPath);
@@ -105,6 +107,17 @@ for (const doc of gateMatrixDocs) {
   }
 }
 process.stdout.write("validated data: schemas/gate-matrix.json\n");
+
+const componentLibraryValidator = await loadValidator(componentLibrarySchemaPath);
+const componentLibrary = JSON.parse(
+  await readFile(`${repositoryRoot}/fixtures/phase3/component-library.json`, "utf8"),
+) as unknown;
+if (!componentLibraryValidator(componentLibrary)) {
+  throw new Error(
+    `component library is invalid: ${formatValidationErrors(componentLibraryValidator.errors)}`,
+  );
+}
+process.stdout.write("validated component library: fixtures/phase3/component-library.json\n");
 
 const physicalEvidenceValidator = await loadValidator(physicalEvidenceSchemaPath);
 const physicalEvidenceSample = JSON.parse(
