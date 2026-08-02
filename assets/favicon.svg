@@ -1,0 +1,41 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64" role="img" aria-label="ACD">
+  <defs>
+    <linearGradient id="fBoard" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#11835a"/>
+      <stop offset="1" stop-color="#0a5e3b"/>
+    </linearGradient>
+    <linearGradient id="fCopper" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#f0a44e"/>
+      <stop offset="1" stop-color="#c87533"/>
+    </linearGradient>
+  </defs>
+
+  <!-- board tile -->
+  <rect x="2" y="2" width="60" height="60" rx="14" fill="url(#fBoard)"/>
+
+  <!-- traces with vias -->
+  <g stroke="#9fe0c0" stroke-width="2.5" fill="none" stroke-linecap="round">
+    <path d="M12 52 v-10 l8 -8"/>
+    <path d="M52 12 v10 l-8 8"/>
+    <path d="M12 12 h8 l4 4"/>
+    <path d="M52 52 h-8 l-4 -4"/>
+  </g>
+  <g fill="#9fe0c0">
+    <circle cx="12" cy="52" r="2.8"/>
+    <circle cx="52" cy="12" r="2.8"/>
+    <circle cx="12" cy="12" r="2.8"/>
+    <circle cx="52" cy="52" r="2.8"/>
+  </g>
+
+  <!-- chip pins -->
+  <g stroke="#9fe0c0" stroke-width="3" stroke-linecap="round">
+    <path d="M24 16 v-3"/><path d="M32 16 v-3"/><path d="M40 16 v-3"/>
+    <path d="M24 48 v3"/><path d="M32 48 v3"/><path d="M40 48 v3"/>
+  </g>
+
+  <!-- chip body -->
+  <rect x="17" y="17" width="30" height="30" rx="6" fill="#0c2b1d" stroke="#9fe0c0" stroke-width="2.5"/>
+
+  <!-- letter A (the AI, moved to the front of CAD) -->
+  <path d="M32 22.5 L41.5 41.5 H36.7 L34.9 37.6 H29.1 L27.3 41.5 H22.5 Z M32 30.2 L30.4 33.9 H33.6 Z" fill="url(#fCopper)"/>
+</svg>
