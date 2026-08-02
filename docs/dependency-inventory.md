@@ -10,7 +10,6 @@ transitive dependencyもレビュー対象とし、CIでSBOM／ライセンス�
 | --------------------------- | -------- | ---------- | ----------------------------------------------------------- |
 | `ajv`                       | 8.17.1   | MIT        | JSON Schema 2020-12 runtime validation                      |
 | `ajv-formats`               | 3.0.1    | MIT        | date-time等のformat validation                              |
-| `fast-json-patch`           | 3.1.1    | MIT        | RFC 6902互換性調査用（Phase 0 engineはID addressingを実装） |
 | `json-schema-to-typescript` | 15.0.4   | MIT        | Schemaからの型生成                                          |
 | `tsx`                       | 4.19.4   | MIT        | TypeScript script実行                                       |
 | `typescript`                | 5.8.3    | Apache-2.0 | strict compile/typecheck                                    |
