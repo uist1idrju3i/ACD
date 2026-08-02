@@ -124,12 +124,6 @@ const measuredMaskSliver = (board: string, footprintName: string): number => {
   if (pads.length < 2) {
     throw new Error(`verification-failed: insufficient pads for ${footprintName}`);
   }
-  if (pads.length < 2) {
-    throw new Error(`verification-failed: insufficient pads for ${footprintName}`);
-  }
-  if (pads.length < 2) {
-    throw new Error(`verification-failed: insufficient pads for ${footprintName}`);
-  }
   let minimum = Number.POSITIVE_INFINITY;
   for (const left of pads) {
     for (const right of pads) {
@@ -153,12 +147,6 @@ const measuredMaskSliver = (board: string, footprintName: string): number => {
         );
       }
     }
-  }
-  if (!Number.isFinite(minimum)) {
-    throw new Error(`verification-failed: no measurable pad pair for ${footprintName}`);
-  }
-  if (!Number.isFinite(minimum)) {
-    throw new Error(`verification-failed: no measurable pad pair for ${footprintName}`);
   }
   if (!Number.isFinite(minimum)) {
     throw new Error(`verification-failed: no measurable pad pair for ${footprintName}`);
