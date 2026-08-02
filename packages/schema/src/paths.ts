@@ -30,6 +30,10 @@ export const phase1Prototype2FixturePath = resolve(
   repositoryRoot,
   "fixtures/phase1/prototype-2.json",
 );
+export const componentLibraryFixturePath = resolve(
+  repositoryRoot,
+  "fixtures/phase3/component-library.json",
+);
 export const physicalEvidenceSchemaPath = resolve(
   repositoryRoot,
   "schemas/physical-evidence.schema.json",
