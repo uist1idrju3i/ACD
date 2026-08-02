@@ -1019,8 +1019,9 @@ try {
   ) {
     throw new Error("verification-failed: projected board lacks the library correction");
   }
-  const patchedPads = parseFootprintSource(libraryPatch.footprintId, patchedBoardContent)
-    .filter((pad) => pad.solderMaskMargin !== undefined);
+  const patchedPads = parseFootprintSource(libraryPatch.footprintId, patchedBoardContent).filter(
+    (pad) => pad.solderMaskMargin !== undefined,
+  );
   if (
     patchedPads.length === 0 ||
     patchedPads.some((pad) => pad.solderMaskMargin !== libraryPatch.operations[0]?.requiredValueMm)
@@ -1194,21 +1195,21 @@ try {
     const baseRevision = eventRevision;
     eventRevision += 1;
     const appliedEvent = createKnowledgeAppliedEvent({
-        eventId: `event:knowledge:applied:prototype-2:${decision.knowledgeId}`,
-        occurredAt: "2026-01-02T00:00:00.000Z",
-        actor: "fixture:knowledge-application",
-        projectId: fixture.fixtureId,
-        baseRevision,
-        resultRevision: eventRevision,
-        payload: {
-          knowledgeItemId: decision.knowledgeItemId,
-          targetProjectId: fixture.fixtureId,
-          targetRevision,
-          appliedAt: "2026-01-02T00:00:00.000Z",
-          ...(decision.libraryRevision ? { libraryRevision: decision.libraryRevision } : {}),
-          projectionArtifactId,
-        },
-      });
+      eventId: `event:knowledge:applied:prototype-2:${decision.knowledgeId}`,
+      occurredAt: "2026-01-02T00:00:00.000Z",
+      actor: "fixture:knowledge-application",
+      projectId: fixture.fixtureId,
+      baseRevision,
+      resultRevision: eventRevision,
+      payload: {
+        knowledgeItemId: decision.knowledgeItemId,
+        targetProjectId: fixture.fixtureId,
+        targetRevision,
+        appliedAt: "2026-01-02T00:00:00.000Z",
+        ...(decision.libraryRevision ? { libraryRevision: decision.libraryRevision } : {}),
+        projectionArtifactId,
+      },
+    });
     await fabFeedbackEventLog.append(appliedEvent);
     appliedEvents.push(appliedEvent);
   }
