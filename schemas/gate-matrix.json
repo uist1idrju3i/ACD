@@ -232,8 +232,13 @@
       "appliesTo": ["golden"],
       "inputs": "記録済みfab report fixture、対象設計revision、fab profile",
       "passCondition": "source provenance、対象参照、重複統合、構造化結果とderivation hashが一致し、unknownは合格扱いにしない",
-      "onFailure": "`verification-failed`で停止し、unknownは検証範囲を広げる",
-      "errorCodes": ["verification-failed", "fab-feedback-unknown"]
+      "onFailure": "`verification-failed`、`schema-invalid`、または`reference-integrity`で停止し、unknownはfab-feedback.jsonへ記録した後に`fab-feedback-unknown`で停止する（後続検証範囲は広げる）",
+      "errorCodes": [
+        "verification-failed",
+        "fab-feedback-unknown",
+        "schema-invalid",
+        "reference-integrity"
+      ]
     },
     {
       "order": 20,

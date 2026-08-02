@@ -164,7 +164,7 @@ sliverを拡大し、同findingが0件になることを検証する。
 
 ### WP6：電子部品ライブラリの本格整備
 
-**状態：実装中（provenance-backed component records、coverage test、抽出時subset assertionを追加済み）。**
+**状態：実装済み。** provenance-backed component records、coverage test、抽出時subset assertionを追加済み。prototype-2が追加snapshotを必要としないことも検証済み。
 
 **作業**
 
@@ -194,7 +194,7 @@ sliverを拡大し、同findingが0件になることを検証する。
 
 ### WP7：docsとschemaの同期、振り返り
 
-**状態：未着手。**
+**状態：実装済み。** gate 19–22、schema、fixtures、ADR cross-reference、docsの同期監査とPhase 3 retrospectiveを追加済み。
 
 **作業**
 
@@ -227,5 +227,6 @@ sliverを拡大し、同findingが0件になることを検証する。
 - [`gates.md`](gates.md)
 - [`phase2-plan.md`](phase2-plan.md)
 - [`phase2-retrospective.md`](phase2-retrospective.md)
+- [`phase3-retrospective.md`](phase3-retrospective.md)
 - [`golden-tasks.md`](golden-tasks.md)
 - [`../schemas/gate-matrix.schema.json`](../schemas/gate-matrix.schema.json)
