@@ -24,6 +24,7 @@ export type FabProfileRule = {
   confidence: number;
   minimumSliverMm?: number;
   reproductionConditions: string[];
+  minimumSliverMm?: number;
   appliesWhen: ApplicabilityCondition[];
   excludesWhen: ApplicabilityCondition[];
   applicationExemption?: "no-correction-required";
