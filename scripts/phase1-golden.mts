@@ -347,6 +347,10 @@ try {
     fabFeedbackReport,
     referenceIndexFromPhase1Fixture(fixture),
   );
+  const fabFeedbackUnknown =
+    fabFeedback.verdict === "unknown"
+      ? fabFeedbackUnknownError(fabFeedback.evidence.value.unknownFindingIds)
+      : undefined;
   const fabFeedbackEventLog = new InMemoryEventLog();
   await fabFeedbackEventLog.append(
     createFabFeedbackReceivedEvent({
