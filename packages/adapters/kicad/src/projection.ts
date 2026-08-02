@@ -145,12 +145,18 @@ export const renderSmokeBoard = (fixture: Phase1Fixture): string => {
       });
       const routedPoints =
         net.class === "ground"
-          ? [
-              points[0],
-              [4, 13] as [number, number],
-              [14, 13] as [number, number],
-              ...points.slice(1),
-            ]
+          ? (() => {
+              const width = fixture.requirement.board.widthMm;
+              const height = fixture.requirement.board.heightMm;
+              const detour: [number, number][] = [
+                [2, height - 2],
+                [width - 2, height - 2],
+              ];
+              if (width <= 4 || height <= 4) {
+                throw new KicadProjectionError("ground detour does not fit board outline");
+              }
+              return [points[0], ...detour, ...points.slice(1)];
+            })()
           : points;
       return routedPoints.slice(1).map((end, pointIndex) => {
         if (!end) throw new KicadProjectionError(`missing route endpoint for ${net.id}`);
@@ -214,7 +220,7 @@ const rootSymbol = ({
   const pinLines = pins
     .map(
       (pin, index) =>
-        `\t\t(pin "${pin}"\n\t\t\t(uuid "00000000-0000-0000-0000-${symbolUuid.slice(-12)}${String(index + 1).padStart(2, "0")}")\n\t\t)`,
+        `\t\t(pin "${pin}"\n\t\t\t(uuid "00000000-0000-0000-0000-${symbolUuid.slice(-10)}${String(index + 1).padStart(2, "0")}")\n\t\t)`,
     )
     .join("\n");
   return `\t(symbol

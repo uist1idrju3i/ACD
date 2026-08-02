@@ -11,6 +11,11 @@ BOM、manifest、pre-order checklistを`artifacts/phase1-smoke/`へ出力しま�
 ESP32級golden fixture、実部品library geometryの完全な置換、自動発注、実機Evidence
 は本PRの対象外です。
 
+Routingの例外範囲はsmoke fixtureだけです。smokeでは決定論的なtrack/via
+projectionを使用できますが、non-smoke fixtureへ適用する場合はjidoka停止します。
+ESP32級goldenではFreeroutingのDSN/SES境界、または将来承認されるADRの外部routing
+toolを使用します。Phase 1で一般用途routerを実装することは許可しません。
+
 ## 目的と範囲
 
 Phase 1は、事前変換済みの`Requirement` fixtureから、決定論的な検証を通過した

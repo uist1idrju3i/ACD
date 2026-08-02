@@ -139,41 +139,45 @@ try {
     };
   });
 
-  const canonical = compareNetlists(fixture, "", "");
-  const canonicalHash = hash(JSON.stringify(canonical.expected));
-  await runGate(5, "Netlist consistency", () => ({
-    canonicalNetlistHash: canonicalHash,
-    pins: canonical.expected.length,
-  }));
-
-  await projectToKicad(fixture, projectRoot);
-  await cp(join(projectRoot, "design.kicad_pcb"), join(boardOnlyRoot, "design.kicad_pcb"));
-  await runGate(6, "KiCad projection/reopen", () => {
-    docker([
-      "kicad-cli",
-      "sch",
-      "export",
-      "netlist",
-      "-o",
-      "/work/project/design.net",
-      "/work/project/design.kicad_sch",
-    ]);
-    docker([
-      "kicad-cli",
-      "pcb",
-      "export",
-      "ipcd356",
-      "-o",
-      "/work/project/design.d356",
-      "/work/project/design.kicad_pcb",
-    ]);
-    return { project: "reopened by kicad-cli", toolVersion };
+  let canonicalHash = "";
+  await runGate(5, "Netlist consistency", () => {
+    const canonical = compareNetlists(fixture, "", "");
+    canonicalHash = hash(JSON.stringify(canonical.expected));
+    return {
+      canonicalNetlistHash: canonicalHash,
+      pins: canonical.expected.length,
+    };
   });
 
-  const schematicNetlist = await readFile(join(projectRoot, "design.net"), "utf8");
-  const ipc356 = await readFile(join(projectRoot, "design.d356"), "utf8");
-  const comparison = compareNetlists(fixture, schematicNetlist, ipc356);
-  await runGate(7, "Netlist readback", () => {
+  await runGate(6, "KiCad projection/reopen", () => {
+    return projectToKicad(fixture, projectRoot).then(async () => {
+      await cp(join(projectRoot, "design.kicad_pcb"), join(boardOnlyRoot, "design.kicad_pcb"));
+      docker([
+        "kicad-cli",
+        "sch",
+        "export",
+        "netlist",
+        "-o",
+        "/work/project/design.net",
+        "/work/project/design.kicad_sch",
+      ]);
+      docker([
+        "kicad-cli",
+        "pcb",
+        "export",
+        "ipcd356",
+        "-o",
+        "/work/project/design.d356",
+        "/work/project/design.kicad_pcb",
+      ]);
+      return { project: "reopened by kicad-cli", toolVersion };
+    });
+  });
+
+  await runGate(7, "Netlist readback", async () => {
+    const schematicNetlist = await readFile(join(projectRoot, "design.net"), "utf8");
+    const ipc356 = await readFile(join(projectRoot, "design.d356"), "utf8");
+    const comparison = compareNetlists(fixture, schematicNetlist, ipc356);
     if (!comparison.overall) {
       throw new GraphCoreError(
         "verification-failed",
@@ -189,16 +193,39 @@ try {
     };
   });
 
-  await runGate(8, "ERC/topology", () => {
-    docker([
-      "kicad-cli",
-      "sch",
-      "erc",
-      "--output",
-      "/work/reports-erc.rpt",
-      "/work/project/design.kicad_sch",
-    ]);
-    return { findings: 0, report: "reports-erc.rpt", waiver: "none" };
+  await runGate(8, "ERC/topology", async () => {
+    try {
+      docker([
+        "kicad-cli",
+        "sch",
+        "erc",
+        "--exit-code-violations",
+        "--output",
+        "/work/reports-erc.rpt",
+        "/work/project/design.kicad_sch",
+      ]);
+    } catch {
+      // The report is authoritative; --exit-code-violations intentionally returns non-zero.
+    }
+    const reportPath = join(artifactRoot, "reports-erc.rpt");
+    const report = await readFile(reportPath, "utf8").catch(() => "");
+    const match = report.match(/ERC messages:\s+(\d+)\s+Errors\s+(\d+)\s+Warnings\s+(\d+)/);
+    if (!match) throw new GraphCoreError("verification-failed", "ERC summary is missing");
+    const [, messages, errors, warnings] = match;
+    const counts = {
+      messages: Number(messages),
+      errors: Number(errors),
+      warnings: Number(warnings),
+    };
+    if (counts.messages !== 0) {
+      throw new GraphCoreError(
+        "verification-failed",
+        "ERC contains unwaived findings",
+        "error",
+        counts,
+      );
+    }
+    return { ...counts, report: "reports-erc.rpt", waiver: "none" };
   });
 
   await runGate(9, "Routing", () => {
@@ -210,21 +237,31 @@ try {
       "/work/drc-board/drc.rpt",
       "/work/drc-board/design.kicad_pcb",
     ]);
-    const report = readFile(join(boardOnlyRoot, "drc.rpt"), "utf8");
-    return report.then((text) => {
+    return readFile(join(boardOnlyRoot, "drc.rpt"), "utf8").then((text) => {
       const unconnected = text.match(/Found ([0-9]+) unconnected (?:items|pads)/);
-      if (!unconnected || unconnected[1] !== "0") throw new Error("unrouted=0 was not achieved");
+      if (!unconnected) throw new Error("unconnected summary is missing");
+      if (unconnected[1] !== "0") throw new Error("unrouted=0 was not achieved");
       return { path: "deterministic fixture-topology heuristic router", unrouted: 0 };
     });
   });
 
   await runGate(10, "DRC/DFM", () => {
-    const report = readFile(join(boardOnlyRoot, "drc.rpt"), "utf8");
-    return report.then((text) => {
-      const errors = [...text.matchAll(/^\[([^\]]+)\].*;\s+error$/gm)].map((match) => match[1]);
-      const waived = [...text.matchAll(/^\[([^\]]+)\].*;\s+warning$/gm)].map((match) => match[1]);
-      if (errors.length > 0) throw new Error(`DRC errors: ${errors.join(", ")}`);
-      return { violations: 0, unconnected: 0, waivedWarnings: waived };
+    return readFile(join(boardOnlyRoot, "drc.rpt"), "utf8").then((text) => {
+      const violations = text.match(/Found ([0-9]+) DRC violations/);
+      const unconnected = text.match(/Found ([0-9]+) unconnected (?:items|pads)/);
+      const footprintErrors = text.match(/Found ([0-9]+) Footprint errors/);
+      if (!violations || !unconnected || !footprintErrors) {
+        throw new Error("DRC summary is missing");
+      }
+      const counts = {
+        violations: Number(violations[1]),
+        unconnected: Number(unconnected[1]),
+        footprintErrors: Number(footprintErrors[1]),
+      };
+      if (counts.violations || counts.unconnected || counts.footprintErrors) {
+        throw new GraphCoreError("verification-failed", "DRC contains findings", "error", counts);
+      }
+      return counts;
     });
   });
 
@@ -268,7 +305,17 @@ try {
     await writeFile(join(artifactRoot, "BOM.csv"), `${bom}\n`);
     await writeFile(
       join(artifactRoot, "pre-order-checklist.json"),
-      `${JSON.stringify({ unresolvedUnknowns: [], automaticOrdering: false }, null, 2)}\n`,
+      `${JSON.stringify(
+        {
+          unresolvedUnknowns: [],
+          knownLimitations: [
+            "PCB reference designators are hidden on F.Fab because visible F.SilkS references caused silk-over-copper DRC findings in the smoke geometry.",
+          ],
+          automaticOrdering: false,
+        },
+        null,
+        2,
+      )}\n`,
     );
     const repeatRoot = join(artifactRoot, "repeat");
     await mkdir(join(repeatRoot, "project"), { recursive: true });

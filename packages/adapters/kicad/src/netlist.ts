@@ -9,6 +9,7 @@ export type CanonicalPin = {
 
 export type NetlistComparison = {
   expected: CanonicalPin[];
+  expectedPcb: CanonicalPin[];
   schematic: CanonicalPin[];
   pcb: CanonicalPin[];
   graphVsSchematic: boolean;
@@ -33,6 +34,26 @@ export const canonicalFixtureNetlist = (fixture: Phase1Fixture): CanonicalPin[] 
           throw new GraphCoreError("reference-integrity", `unknown part ${pin.partId}`);
         }
         return { net: net.name, reference, pin: pin.pin };
+      }),
+    ),
+  );
+};
+
+export const canonicalFixturePcbNetlist = (fixture: Phase1Fixture): CanonicalPin[] => {
+  const references = new Map(fixture.parts.map((part) => [part.id, part.reference]));
+  const mappings = new Map(fixture.mappings.map((mapping) => [mapping.partId, mapping.pinPads]));
+  return sorted(
+    fixture.nets.flatMap((net) =>
+      net.pins.map((pin) => {
+        const reference = references.get(pin.partId);
+        const pad = mappings.get(pin.partId)?.find((candidate) => candidate.pin === pin.pin)?.pad;
+        if (!reference || !pad) {
+          throw new GraphCoreError(
+            "reference-integrity",
+            `missing PCB mapping for ${pin.partId}:${pin.pin}`,
+          );
+        }
+        return { net: net.name, reference, pin: pad };
       }),
     ),
   );
@@ -75,7 +96,7 @@ export const parseIpc356 = (ipc: string): CanonicalPin[] => {
   const pins: CanonicalPin[] = [];
   for (const line of ipc.split(/\r?\n/)) {
     if (!line.startsWith("327")) continue;
-    const match = line.match(/^327(.+?)\s{2,}(\S+)\s+-([0-9]+)/);
+    const match = line.match(/^327(.+?)\s{2,}(\S+)\s+-([A-Za-z0-9]+)/);
     if (match) {
       const [, net, reference, pin] = match;
       if (net && reference && pin) pins.push({ net: net.trim(), reference, pin });
@@ -93,14 +114,16 @@ export const compareNetlists = (
   ipc356: string,
 ): NetlistComparison => {
   const expected = canonicalFixtureNetlist(fixture);
+  const expectedPcb = canonicalFixturePcbNetlist(fixture);
   const schematic = parseKicadNetlist(schematicNetlist);
   const pcb = parseIpc356(ipc356);
   return {
     expected,
+    expectedPcb,
     schematic,
     pcb,
     graphVsSchematic: equal(expected, schematic),
-    graphVsPcb: equal(expected, pcb),
-    overall: equal(expected, schematic) && equal(expected, pcb),
+    graphVsPcb: equal(expectedPcb, pcb),
+    overall: equal(expected, schematic) && equal(expectedPcb, pcb),
   };
 };
