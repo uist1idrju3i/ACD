@@ -28,19 +28,37 @@ export const evaluatePreOrderReadiness = (input: PreOrderInput) => {
         line.availability === "unknown" || line.lifecycle === "unknown" || line.lifecycle === "eol",
     )
     .map((line) => `${line.partId}.availability/lifecycle`);
+  const pricingUnknowns = input.bom.flatMap((line) => {
+    const issues: string[] = [];
+    if (typeof line.unitPrice !== "number" || !line.currency) {
+      issues.push(`${line.partId}.unitPrice/currency`);
+    } else if (line.currency !== input.fabQuote.currency) {
+      issues.push(`${line.partId}.currency`);
+    }
+    return issues;
+  });
   const components = input.bom.reduce(
     (sum, line) => sum + (line.unitPrice ?? 0) * line.quantity,
     0,
   );
   const total = components + input.fabQuote.unitPrice;
-  const unknowns = [...missing, ...lifecycleIssues, ...input.unresolvedUnknowns];
+  const unknowns = [
+    ...missing,
+    ...lifecycleIssues,
+    ...pricingUnknowns,
+    ...input.unresolvedUnknowns,
+  ];
   const reasons = [
     ...(missing.length ? [`missing BOM fields: ${missing.join(", ")}`] : []),
     ...(lifecycleIssues.length
       ? [`unorderable lifecycle/availability: ${lifecycleIssues.join(", ")}`]
       : []),
+    ...(pricingUnknowns.length
+      ? [`order pricing unknown or currency mismatch: ${pricingUnknowns.join(", ")}`]
+      : []),
     ...(total > input.budgetCap ? [`budget exceeded: ${total} > ${input.budgetCap}`] : []),
-    ...(Object.values(input.artifactManifest).some((value) => !/^sha256:[0-9a-f]{64}$/.test(value))
+    ...(!Object.keys(input.artifactManifest).length ||
+    Object.values(input.artifactManifest).some((value) => !/^sha256:[0-9a-f]{64}$/.test(value))
       ? ["manufacturing artifact hash missing or invalid"]
       : []),
     ...(unknowns.length ? [`unresolved unknowns: ${unknowns.join(", ")}`] : []),

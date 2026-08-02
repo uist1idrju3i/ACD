@@ -1862,7 +1862,9 @@
         "license": "BSD-3-Clause",
         "contentHash": null,
         "pendingReason": "fixture-owned provenance snapshot is pending; source is controlled by this fixture"
-      }
+      },
+      "unitPrice": 0.35,
+      "currency": "USD"
     },
     {
       "partId": "part:r7",
@@ -1880,7 +1882,9 @@
         "license": "BSD-3-Clause",
         "contentHash": null,
         "pendingReason": "fixture-owned provenance snapshot is pending; source is controlled by this fixture"
-      }
+      },
+      "unitPrice": 0.35,
+      "currency": "USD"
     },
     {
       "partId": "part:c4",
@@ -1898,7 +1902,9 @@
         "license": "BSD-3-Clause",
         "contentHash": null,
         "pendingReason": "fixture-owned provenance snapshot is pending; source is controlled by this fixture"
-      }
+      },
+      "unitPrice": 0.35,
+      "currency": "USD"
     },
     {
       "partId": "part:c5",
@@ -1916,7 +1922,9 @@
         "license": "BSD-3-Clause",
         "contentHash": null,
         "pendingReason": "fixture-owned provenance snapshot is pending; source is controlled by this fixture"
-      }
+      },
+      "unitPrice": 0.35,
+      "currency": "USD"
     },
     {
       "partId": "part:r5",

@@ -32,8 +32,17 @@ export const evaluatePhysicalEvidence = async (
   }
   if (
     typed.assembly.status !== "assembled" ||
+    typed.instruments.length === 0 ||
+    Object.keys(typed.conditions ?? {}).length === 0 ||
     typed.instruments.some((instrument) => instrument.calibrationStatus !== "valid") ||
-    typed.testItems.some((item) => !item.pass)
+    typed.testItems.some(
+      (item) =>
+        !item.pass ||
+        item.observed === null ||
+        item.observed === undefined ||
+        item.expected === null ||
+        item.expected === undefined,
+    )
   ) {
     return {
       valid: true,

@@ -20,7 +20,11 @@ describe("physical evidence contract", () => {
     sample.provenance.mode = "real";
     sample.assembly.status = "assembled";
     sample.instruments[0]!.calibrationStatus = "valid";
-    for (const test of sample.testItems) test.pass = true;
+    sample.conditions = { ambient: "23 C", supply: "USB 5 V" };
+    for (const test of sample.testItems) {
+      test.observed = test.expected;
+      test.pass = true;
+    }
     const verdict = await evaluatePhysicalEvidence(sample);
     expect(verdict.passed).toBe(true);
   });

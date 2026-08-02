@@ -1,6 +1,6 @@
-# ADR-0010：Golden routing technology
+# ADR-0018：Golden routing technology
 
-**ステータス：Proposed**
+**ステータス：Accepted（暫定）**
 
 ## 背景
 

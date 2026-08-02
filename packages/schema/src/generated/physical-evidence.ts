@@ -24,13 +24,25 @@ export interface ACDPhase1PhysicalEvidence {
     status: "assembled" | "not-assembled" | "unknown";
     operator?: string;
   };
-  instruments: {
-    id: string;
-    model: string;
-    serial?: string;
-    calibrationStatus: "valid" | "expired" | "unknown";
-    calibrationDue?: string;
-  }[];
+  /**
+   * @minItems 1
+   */
+  instruments: [
+    {
+      id: string;
+      model: string;
+      serial?: string;
+      calibrationStatus: "valid" | "expired" | "unknown";
+      calibrationDue?: string;
+    },
+    ...{
+      id: string;
+      model: string;
+      serial?: string;
+      calibrationStatus: "valid" | "expired" | "unknown";
+      calibrationDue?: string;
+    }[]
+  ];
   conditions?: {
     [k: string]: unknown;
   };

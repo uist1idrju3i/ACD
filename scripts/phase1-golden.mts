@@ -176,10 +176,30 @@ try {
     throw new Error(`golden ERC contains findings: ${JSON.stringify(counts)}`);
   pass(8, "ERC/topology", { ...counts, waiver: "none" });
 
+  const u1Placement = fixture.placementConstraints.components.find(
+    (candidate) => candidate.partId === "part:u1",
+  );
+  if (!u1Placement) throw new Error("missing U1 placement for antenna keepout");
+  const radians = (u1Placement.rotationDeg * Math.PI) / 180;
+  const localAntenna = [
+    [-24.25, -28],
+    [24.25, -28],
+    [24.25, -6.31],
+    [-24.25, -6.31],
+  ];
+  const antennaPoints = localAntenna
+    .map(([x, y]) => [
+      u1Placement.xMm + x * Math.cos(radians) + y * Math.sin(radians),
+      u1Placement.yMm - x * Math.sin(radians) + y * Math.cos(radians),
+    ])
+    .map(([x, y]) => [
+      Math.max(0, Math.min(fixture.requirement.board.widthMm, x)),
+      Math.max(0, Math.min(fixture.requirement.board.heightMm, y)),
+    ]);
   const routePython = [
     "import pcbnew",
     "b=pcbnew.LoadBoard('/work/project/design.kicad_pcb')",
-    "pts=[(5.75,0),(54.25,0),(54.25,1.69),(5.75,1.69)]",
+    `pts=${JSON.stringify(antennaPoints).replaceAll("[", "(").replaceAll("]", ")")}`,
     "[(lambda z: (z.SetIsRuleArea(True),z.SetDoNotAllowTracks(True),z.SetDoNotAllowVias(True),z.SetDoNotAllowPads(True),z.SetLayer(layer),z.Outline().NewOutline(),[z.Outline().Append(pcbnew.VECTOR2I(pcbnew.FromMM(x),pcbnew.FromMM(y))) for x,y in pts],b.Add(z)))(pcbnew.ZONE(b)) for layer in (pcbnew.F_Cu,pcbnew.B_Cu)]",
     "pcbnew.ExportSpecctraDSN(b,'/work/project/golden.dsn')",
   ].join("; ");
@@ -214,6 +234,7 @@ try {
     dsnHash: hash((await readFile(join(projectRoot, "golden.dsn"))).toString()),
     sesHash: sesHashA,
     deterministicSes: true,
+    antennaKeepout: { source: "U1 official courtyard", points: antennaPoints },
     freerouting: "2.2.4",
   });
   try {
@@ -259,6 +280,10 @@ try {
     "/work/project/manufacturing/",
     "/work/project/routed.kicad_pcb",
   ]);
+  const dsn = await readFile(join(projectRoot, "golden.dsn"), "utf8");
+  if (!dsn.includes("(width 250)") || !dsn.includes("(clearance 127")) {
+    throw new Error("golden DSN does not carry the 0.25 mm / 0.127 mm routing rules");
+  }
   await writeFile(
     join(projectRoot, "manufacturing-manifest.json"),
     JSON.stringify(
@@ -267,14 +292,19 @@ try {
         dsnHash: hash((await readFile(join(projectRoot, "golden.dsn"))).toString()),
         sesHash: sesHashA,
         pcbHash: hash((await readFile(join(projectRoot, "routed.kicad_pcb"))).toString()),
+        dsnRules: { trackWidthMm: 0.25, clearanceMm: 0.127 },
+        bom: fixture.bom,
+        layerVerification: { reopened: true, layers: ["F.Cu", "B.Cu"] },
         artifactHashes: Object.fromEntries(
           await Promise.all(
             (await readdir(join(projectRoot, "manufacturing"), { withFileTypes: true }))
               .filter((entry) => entry.isFile())
-              .map(async (entry) => [
-                entry.name,
-                hash((await readFile(join(projectRoot, "manufacturing", entry.name))).toString()),
-              ]),
+              .map((entry) => entry.name)
+              .sort()
+              .map(async (name) => {
+                const content = await readFile(join(projectRoot, "manufacturing", name));
+                return [name, { sha256: hash(content.toString()), bytes: content.byteLength }];
+              }),
           ),
         ),
         graphRevision: fixture.requirement.provenance.version,
@@ -300,12 +330,14 @@ try {
       currency: "USD",
     },
     artifactManifest: {
+      dsnHash: manufacturingManifest.dsnHash as string,
+      sesHash: manufacturingManifest.sesHash as string,
+      pcbHash: manufacturingManifest.pcbHash as string,
       ...Object.fromEntries(
-        Object.entries(manufacturingManifest).filter(
-          ([, value]) => typeof value === "string" && /^sha256:[0-9a-f]{64}$/.test(value),
-        ),
+        Object.entries(
+          (manufacturingManifest.artifactHashes ?? {}) as Record<string, { sha256: string }>,
+        ).map(([name, value]) => [name, value.sha256]),
       ),
-      ...((manufacturingManifest.artifactHashes as Record<string, string> | undefined) ?? {}),
     } as Record<string, string>,
     unresolvedUnknowns: [],
   });
