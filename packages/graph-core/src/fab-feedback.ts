@@ -162,16 +162,23 @@ const assertReferences = (finding: RawFinding, index: FabFeedbackReferenceIndex)
   }
 };
 
-const deriveFinding = (
-  finding: RawFinding,
+export const resolveFabProfileRule = (
+  finding: Pick<RawFinding, "originalText" | "references">,
   profile: FabProfileRules,
-): Pick<FabFeedbackFinding, "classification" | "confidence" | "reproductionConditions"> => {
+): FabProfileRules["rules"][number] | undefined => {
   const normalizedText = finding.originalText.toLowerCase();
-  const rule = finding.references.ruleId
+  return finding.references.ruleId
     ? profile.rules.find((candidate) => candidate.ruleId === finding.references.ruleId)
     : profile.rules.find((candidate) =>
         candidate.textPatterns.some((pattern) => normalizedText.includes(pattern)),
       );
+};
+
+const deriveFinding = (
+  finding: RawFinding,
+  profile: FabProfileRules,
+): Pick<FabFeedbackFinding, "classification" | "confidence" | "reproductionConditions"> => {
+  const rule = resolveFabProfileRule(finding, profile);
   if (!rule) {
     return {
       classification: "unknown",
