@@ -156,6 +156,51 @@ const main = async (): Promise<void> => {
       fixture: JSON.parse(await readFile(path, "utf8")) as Fixture,
     })),
   );
+  const fixtureByName = new Map(
+    fixtures.map(({ path, fixture }) => [
+      path.endsWith("smoke.json")
+        ? "smoke"
+        : path.endsWith("prototype-2.json")
+          ? "prototype2"
+          : "golden",
+      fixture,
+    ]),
+  );
+  const mappingSet = (
+    fixture: Fixture,
+    selector: (mapping: Fixture["mappings"][number]) => string,
+  ): Set<string> => new Set(fixture.mappings.map(selector));
+  const golden = fixtureByName.get("golden");
+  const prototype2 = fixtureByName.get("prototype2");
+  if (!golden || !prototype2) {
+    throw new Error("golden and prototype-2 fixtures are required for library extraction");
+  }
+  for (const [kind, values] of [
+    [
+      "symbol",
+      [...mappingSet(prototype2, (mapping) => `${mapping.symbolLibraryId}:${mapping.symbolName}`)],
+    ],
+    [
+      "footprint",
+      [
+        ...mappingSet(
+          prototype2,
+          (mapping) => `${mapping.footprintLibraryId}:${mapping.footprintName}`,
+        ),
+      ],
+    ],
+  ] as const) {
+    const goldenValues = mappingSet(
+      golden,
+      kind === "symbol"
+        ? (mapping) => `${mapping.symbolLibraryId}:${mapping.symbolName}`
+        : (mapping) => `${mapping.footprintLibraryId}:${mapping.footprintName}`,
+    );
+    const missing = values.filter((value) => !goldenValues.has(value));
+    if (missing.length > 0) {
+      throw new Error(`prototype-2 ${kind} set is not a subset of golden: ${missing.join(", ")}`);
+    }
+  }
   const mappings = fixtures.flatMap(({ fixture }) => fixture.mappings);
   const uniqueSymbols = [
     ...new Map(
@@ -284,51 +329,6 @@ const main = async (): Promise<void> => {
       .filter((block): block is string => Boolean(block))
       .join("\n");
   };
-  const fixtureByName = new Map(
-    fixtures.map(({ path, fixture }) => [
-      path.endsWith("smoke.json")
-        ? "smoke"
-        : path.endsWith("prototype-2.json")
-          ? "prototype2"
-          : "golden",
-      fixture,
-    ]),
-  );
-  const mappingSet = (
-    fixture: Fixture,
-    selector: (mapping: Fixture["mappings"][number]) => string,
-  ): Set<string> => new Set(fixture.mappings.map(selector));
-  const golden = fixtureByName.get("golden");
-  const prototype2 = fixtureByName.get("prototype2");
-  if (!golden || !prototype2) {
-    throw new Error("golden and prototype-2 fixtures are required for library extraction");
-  }
-  for (const [kind, values] of [
-    [
-      "symbol",
-      [...mappingSet(prototype2, (mapping) => `${mapping.symbolLibraryId}:${mapping.symbolName}`)],
-    ],
-    [
-      "footprint",
-      [
-        ...mappingSet(
-          prototype2,
-          (mapping) => `${mapping.footprintLibraryId}:${mapping.footprintName}`,
-        ),
-      ],
-    ],
-  ] as const) {
-    const goldenValues = mappingSet(
-      golden,
-      kind === "symbol"
-        ? (mapping) => `${mapping.symbolLibraryId}:${mapping.symbolName}`
-        : (mapping) => `${mapping.footprintLibraryId}:${mapping.footprintName}`,
-    );
-    const missing = values.filter((value) => !goldenValues.has(value));
-    if (missing.length > 0) {
-      throw new Error(`prototype-2 ${kind} set is not a subset of golden: ${missing.join(", ")}`);
-    }
-  }
   const symbolsByFixture = {
     smoke: symbolsForFixture(fixtureByName.get("smoke") ?? { mappings: [] }),
     golden: symbolsForFixture(golden),
