@@ -3,6 +3,7 @@ import { join } from "node:path";
 import type { DesignGraph } from "@acd/graph-core";
 import type { Phase1Fixture } from "@acd/schema";
 import { projectGraphToKicad } from "./graph-projection.js";
+import { parseFootprintPads, verifyLibrarySnapshot } from "./library.js";
 import {
   renderFootprintLibraryTable,
   renderProject,
@@ -21,17 +22,20 @@ export class KicadProjectionError extends Error {
   readonly name = "KicadProjectionError";
 }
 
-const padGeometry: Record<string, Record<string, [number, number]>> = {
-  "part:j1": { "1": [0, -1], "2": [0, 1] },
-  "part:r1": { "1": [-0.75, 0], "2": [0.75, 0] },
-  "part:d1": { "1": [-0.75, 0], "2": [0.75, 0] },
-  "part:c1": { "1": [-0.75, 0], "2": [0.75, 0] },
-};
-
-const padOffset = (partId: string, pad: string): [number, number] => {
-  const geometry = padGeometry[partId]?.[pad];
+const padGeometry = (
+  fixture: Phase1Fixture,
+  partId: string,
+  pad: string,
+): ReturnType<typeof parseFootprintPads>[number] => {
+  const mapping = fixture.mappings.find((candidate) => candidate.partId === partId);
+  if (!mapping) throw new KicadProjectionError(`missing mapping for ${partId}`);
+  const geometry = parseFootprintPads(mapping.footprintName).find(
+    (candidate) => candidate.number === pad,
+  );
   if (!geometry) {
-    throw new KicadProjectionError(`unsupported spike geometry for ${partId} pad ${pad}`);
+    throw new KicadProjectionError(
+      `official footprint has no geometry for ${mapping.footprintName} pad ${pad}`,
+    );
   }
   return geometry;
 };
@@ -51,13 +55,10 @@ const renderSmokeFootprint = (
     .map((pinPad) => {
       const net = netByPin.get(`${partId}:${pinPad.pin}`);
       if (!net) throw new Error(`unresolved net for ${partId} pin ${pinPad.pin}`);
-      const offset = padOffset(partId, pinPad.pad);
-      if (!offset)
-        throw new KicadProjectionError(
-          `unsupported spike geometry for ${partId} pad ${pinPad.pad}`,
-        );
-      const [offsetX, offsetY] = offset;
-      return `    (pad "${pinPad.pad}" smd roundrect (at ${offsetX} ${offsetY}) (size 1.2 1.2) (layers "F.Cu" "F.Paste" "F.Mask") (roundrect_rratio 0.2) (net ${net.code} "${net.name}"))`;
+      const geometry = padGeometry(fixture, partId, pinPad.pad);
+      const layers = geometry.layers.map((layer) => `"${layer}"`).join(" ");
+      const drill = geometry.drill ? ` (drill ${geometry.drill})` : "";
+      return `    (pad "${pinPad.pad}" ${geometry.type} ${geometry.shape} (at ${geometry.x} ${geometry.y}) (size ${geometry.width} ${geometry.height})${drill} (layers ${layers}) (net ${net.code} "${net.name}"))`;
     })
     .join("\n");
   return `  (footprint "${mapping.footprintName}"
@@ -74,10 +75,8 @@ const padPosition = (fixture: Phase1Fixture, partId: string, pad: string): [numb
     (candidate) => candidate.partId === partId,
   );
   if (!placement) throw new KicadProjectionError(`missing placement for ${partId}`);
-  const offset = padOffset(partId, pad);
-  if (!offset)
-    throw new KicadProjectionError(`unsupported spike geometry for ${partId} pad ${pad}`);
-  const [localX, localY] = offset;
+  const geometry = padGeometry(fixture, partId, pad);
+  const [localX, localY] = [geometry.x, geometry.y];
   const radians = (placement.rotationDeg * Math.PI) / 180;
   return [
     placement.xMm + localX * Math.cos(radians) + localY * Math.sin(radians),
@@ -91,6 +90,7 @@ export const renderSmokeBoard = (fixture: Phase1Fixture): string => {
       `Phase 1 board projection currently supports fixtureKind=smoke, received ${fixture.fixtureKind}`,
     );
   }
+  verifyLibrarySnapshot();
   const netByPin = new Map<string, { code: number; name: string }>();
   const netLines = fixture.nets.map((net, index) => {
     const code = index + 1;
@@ -117,6 +117,8 @@ export const renderSmokeBoard = (fixture: Phase1Fixture): string => {
           const pinPad = mapping?.pinPads.find((candidate) => candidate.pin === pin.pin);
           if (!pinPad) throw new KicadProjectionError(`missing pad for ${pin.partId}:${pin.pin}`);
           const [x, y] = padPosition(fixture, pin.partId, pinPad.pad);
+          const geometry = padGeometry(fixture, pin.partId, pinPad.pad);
+          if (geometry.type === "thru_hole") return "";
           return `  (via (at ${x} ${y}) (size 0.8) (drill 0.4) (layers "F.Cu" "B.Cu") (net ${index + 1}))`;
         }),
   );
@@ -133,11 +135,23 @@ export const renderSmokeBoard = (fixture: Phase1Fixture): string => {
           ? (() => {
               const width = fixture.requirement.board.widthMm;
               const height = fixture.requirement.board.heightMm;
+              const firstPoint = points[0];
+              if (!firstPoint) throw new KicadProjectionError("ground net has no route points");
               const detour: [number, number][] = [
-                [2, height - 2],
+                [0.75, firstPoint[1]],
+                [0.75, height - 2],
                 [width - 2, height - 2],
               ];
-              if (width <= 4 || height <= 4) {
+              const firstDetour = detour[0];
+              const lastDetour = detour[detour.length - 1];
+              if (
+                !firstDetour ||
+                !lastDetour ||
+                width <= 4 ||
+                height <= 4 ||
+                firstDetour[0] <= 0 ||
+                lastDetour[0] >= width
+              ) {
                 throw new KicadProjectionError("ground detour does not fit board outline");
               }
               return [points[0], ...detour, ...points.slice(1)];

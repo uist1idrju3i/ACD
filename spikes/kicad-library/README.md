@@ -11,8 +11,42 @@ libraryを固定します。
   `CC-BY-SA-4.0-with-exception`として扱います。再配布前にはupstreamの
   正確なnoticeを確認し、必要なnoticeを保持します。
 
-`manifest.json`はmachine-readableなdraftです。明示的なlibrary snapshotの
-export方式を決めるまでは`contentHash`は`null`とし、container digestを
-再現性のanchorとします。smoke projectionは固定container内のlibrary pathを
-指すlocal library tableを書き出します。board reopenとDRC capabilityは
-container内で確認済みですが、schematic symbol projectionは未完了です。
+## 固定snapshot
+
+`packages/adapters/kicad/library-snapshot/`に、smoke fixtureで使用する
+次の9ファイルを固定しています。
+
+- symbol: `Device:R`、`Device:LED`、`Device:C`
+- symbol: `Connector_Generic:Conn_01x02`
+- symbol: `power:PWR_FLAG`
+- footprint: `JST_PH_B2B-PH-K_1x02_P2.00mm_Vertical`
+- footprint: `R_0603_1608Metric`
+- footprint: `LED_0603_1608Metric`
+- footprint: `C_0603_1608Metric`
+
+正本manifestは
+`packages/adapters/kicad/library-snapshot/manifest.json`です。
+`spikes/kicad-library/manifest.json`にも同じ生成manifestを保持しています。
+各entryにはsource path、KiCad version、container digest、license、
+`sha256:` content hashを記録し、pending hashは残していません。
+
+再抽出はリポジトリrootで次を実行します。
+
+```sh
+pnpm exec tsx scripts/extract-kicad-library.mts
+```
+
+このscriptは固定digestのcontainerから必要な公式sourceだけを読み出し、
+footprint `.kicad_mod`とsymbol block、manifest、生成symbol moduleを再生成します。
+生成された`library-snapshot.ts`はprojectionが使用する公式symbol／footprint
+snapshotの埋め込み表現です。公式sourceの帰属情報は
+`CC-BY-SA-4.0-with-exception`として保持しています。
+
+projection前にmanifest entryと各snapshot content hashを検証します。
+snapshotの欠落、entryの欠落、改変、未知pad type／unsupported pad constructは
+typed `verification-failed`で停止し、hand-written geometryへのfallbackは
+行いません。SMDとTHTを扱い、THTではdrillと`*.Cu` layerを保持します。
+
+現在の制限は、snapshot対象がsmoke fixtureの使用部品に限定されること、
+symbol／footprint全ライブラリの同期ではないこと、ESP32-class golden向けの
+追加library抽出はWP2以降で行うことです。
