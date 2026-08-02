@@ -1,5 +1,6 @@
 import { readFile, writeFile } from "node:fs/promises";
 import { resolve } from "node:path";
+import process from "node:process";
 
 const [fixtureFile, netlistFile, ipcFile, outputFile] = process.argv.slice(2);
 if (!fixtureFile || !netlistFile || !ipcFile) {

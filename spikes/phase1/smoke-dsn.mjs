@@ -1,5 +1,6 @@
 import { readFile, mkdir, writeFile } from "node:fs/promises";
 import { dirname, resolve } from "node:path";
+import process from "node:process";
 
 const fixturePath = resolve(process.argv[2] ?? "fixtures/phase1/smoke.json");
 const outputPath = resolve(process.argv[3] ?? "artifacts/phase1-smoke/smoke.dsn");
@@ -84,4 +85,4 @@ ${network}
 `;
 await mkdir(dirname(outputPath), { recursive: true });
 await writeFile(outputPath, dsn, "utf8");
-console.log(`wrote ${outputPath}`);
+process.stdout.write(`wrote ${outputPath}\n`);
