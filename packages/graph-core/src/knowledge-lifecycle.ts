@@ -165,7 +165,9 @@ const conditionsForFinding = (
     ...rule.reproductionConditions.map((value) =>
       condition("reproductionCondition", "equals", value),
     ),
-    ...rule.appliesWhen,
+    ...rule.appliesWhen.filter(
+      (entry) => entry.field !== "ruleId" && entry.field !== "classification",
+    ),
   ];
   const unique = (conditions: ApplicabilityCondition[]): ApplicabilityCondition[] =>
     conditions.filter(

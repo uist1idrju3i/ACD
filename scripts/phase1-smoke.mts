@@ -10,7 +10,7 @@ import {
   missingExecutedGates,
   validatePhase1FixtureReferences,
 } from "../packages/schema/src/index.js";
-import type { Phase1Fixture } from "../packages/schema/src/generated/phase1-fixture.js";
+import type { ACDPhase1Fixture } from "../packages/schema/src/generated/phase1-fixture.js";
 
 const root = resolve(import.meta.dirname, "..");
 const fixturePath = join(root, "fixtures/phase1/smoke.json");
@@ -30,7 +30,7 @@ type GateResult = {
   error?: string;
 };
 
-const fixture = JSON.parse(await readFile(fixturePath, "utf8")) as Phase1Fixture;
+const fixture = JSON.parse(await readFile(fixturePath, "utf8")) as ACDPhase1Fixture;
 const gateMatrix = await loadGateMatrix();
 const results: GateResult[] = [];
 
