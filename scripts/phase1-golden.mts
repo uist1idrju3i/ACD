@@ -173,7 +173,11 @@ try {
   });
 
   enter(16);
-  const testPlan = buildTestPlan(fixture, lint.rulesEvaluated);
+  const testPlan = buildTestPlan(
+    fixture,
+    lint.rulesEvaluated,
+    gateMatrix.gates.map((gate) => gate.id),
+  );
   if (testPlan.verdict !== "pass") {
     throw new Error(
       `verification-failed: test plan ${testPlan.verdict}: ${JSON.stringify(
