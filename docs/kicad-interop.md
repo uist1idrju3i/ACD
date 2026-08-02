@@ -42,6 +42,28 @@ KiCadの回路図エディタはngspiceを統合し、SPICE解析と波形確認
 
 生成後は`kicad-cli`でERC、DRC、各種エクスポートを実行し、ACD側のグラフ検証と結果を突き合わせます。ACDの軽量検査だけ、またはKiCadの終了コードだけを信頼しません。入力、コマンド、ツールバージョン、stdout/stderr、レポート、成果物ハッシュを保存します。
 
+## Netlist-driven projection contract（Phase 1）
+
+Phase 1では、設計グラフの`Component`、`Pin`、`Net`を正規入力とし、KiCad回路図と
+PCBを同じnetlist projectionから生成します。自然言語やKiCad回路図をnetlistの
+source of truthにはしません。
+
+- 各`Component`と`Pin`は安定ID、reference、pin number、電気的属性を保持し、
+  KiCad symbol pinおよびPCB footprint padへ一意に対応付ける。
+- 各`Net`は安定ID、名称、接続pin集合を持ち、回路図のwire/labelとPCBのpad
+  net assignmentへ同じnet IDで投影する。
+- 未解決pin、重複pad、net名だけによる曖昧な接続、回路図とPCBの接続集合差分は
+  `reference-integrity`または`verification-failed`としてjidoka停止する。
+- 投影後に、グラフのnetlistとKiCadから読み戻したsymbol pin／PCB padの接続集合を
+  canonical化して比較する。順序や表示名だけの差分は除外するが、接続集合、
+  component/pin identity、pad番号の差分は許容しない。
+- このnet-consistency gateは、ERC/DRC、再オープン、artifact hash gateより前に
+  成功しなければならない。結果には入力revision、netlist hash、tool version、
+  読み戻し結果、差分を記録する。
+
+Phase 0の最小投影はこの契約のfixtureと再オープン基盤を準備するが、完全な
+netlist-driven回路図・PCB投影とnet-consistency gateの実装はPhase 1作業とする。
+
 ## IPC API
 
 稼働中のPCBエディタに対する検査とガード付きの可逆変更にはKiCad IPC APIを使います。変更前後のグラフリビジョン、対象、差分、検証結果を記録し、直接の無監査編集を禁止します。
