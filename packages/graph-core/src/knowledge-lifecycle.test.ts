@@ -164,7 +164,7 @@ describe("knowledge lifecycle", () => {
         footprintId: "footprint:r0603",
         ruleId: "mask-sliver-min",
         classification: "mask-clearance",
-        reproductionCondition: ["2-layer", "HASL", "0.30mm minimum mask sliver"],
+        reproductionCondition: ["2-layer", "HASL", "0.1mm minimum mask sliver"],
         designRevision: "prototype-2",
       }),
     ).toBe("pass");
