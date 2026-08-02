@@ -19,25 +19,25 @@ codeは小文字kebab-caseの`<class>-<condition>`形式とします。例：
 
 ## 基本分類
 
-| code                   | 意味                                 | severity      | jidoka action                  |
-| ---------------------- | ------------------------------------ | ------------- | ------------------------------ |
-| `schema-invalid`       | JSON Schema違反                      | error         | 即時停止、pathを表示           |
-| `reference-integrity`  | ID重複、未解決参照、循環など         | error         | snapshotを確定せず停止         |
-| `patch-conflict`       | base revision、test、ID競合          | error         | 自動mergeせず停止              |
-| `revision-invalid`     | 欠番、逆行、result revision不一致    | error         | replay停止、監査通知           |
-| `event-replay-failure` | event/hash/replay不一致              | critical      | 再開を止め、snapshotを保全     |
-| `tool-timeout`         | deterministic toolの期限超過         | error         | cancel、再試行上限後停止       |
-| `tool-failure`         | 外部toolの非ゼロ終了または起動失敗   | error         | stdout/stderrを保存し停止      |
-| `reopen-failure`       | KiCad等の再オープン失敗              | critical      | downstreamをブロック           |
-| `convergence-failure`  | simulationが収束しない               | error         | Evidenceを未検証として停止     |
-| `verification-failed`  | ERC/DRC/DFM等の不合格                | error         | downstreamへ流さない           |
-| `stale-result`         | 入力revision/hashが現行と不一致      | error         | 結果を合格証拠から除外         |
-| `license-restriction`  | 実行・再配布・モデル利用が許諾範囲外 | critical      | 実行・配布を止めてエスカレート |
-| `approval-required`    | 承認IDが必要                         | warning/error | 不可逆操作を保留               |
-| `budget-exceeded`      | 予算上限超過                         | error         | 発注を停止し承認を要求         |
-| `unknown-impact`       | 影響伝播が未定義                     | warning/error | 広い再検証へフォールバック     |
-| `fab-feedback-unknown` | fab指摘の分類または信頼度が未確定    | warning/error | 検証を広げ、合格扱いにしない   |
-| `patent-concern`       | 特許リスクの credible concern        | critical      | 実装を停止し法務判断へ         |
+| code                   | 意味                                 | severity      | jidoka action                                                                       |
+| ---------------------- | ------------------------------------ | ------------- | ----------------------------------------------------------------------------------- |
+| `schema-invalid`       | JSON Schema違反                      | error         | 即時停止、pathを表示                                                                |
+| `reference-integrity`  | ID重複、未解決参照、循環など         | error         | snapshotを確定せず停止                                                              |
+| `patch-conflict`       | base revision、test、ID競合          | error         | 自動mergeせず停止                                                                   |
+| `revision-invalid`     | 欠番、逆行、result revision不一致    | error         | replay停止、監査通知                                                                |
+| `event-replay-failure` | event/hash/replay不一致              | critical      | 再開を止め、snapshotを保全                                                          |
+| `tool-timeout`         | deterministic toolの期限超過         | error         | cancel、再試行上限後停止                                                            |
+| `tool-failure`         | 外部toolの非ゼロ終了または起動失敗   | error         | stdout/stderrを保存し停止                                                           |
+| `reopen-failure`       | KiCad等の再オープン失敗              | critical      | downstreamをブロック                                                                |
+| `convergence-failure`  | simulationが収束しない               | error         | Evidenceを未検証として停止                                                          |
+| `verification-failed`  | ERC/DRC/DFM等の不合格                | error         | downstreamへ流さない                                                                |
+| `stale-result`         | 入力revision/hashが現行と不一致      | error         | 結果を合格証拠から除外                                                              |
+| `license-restriction`  | 実行・再配布・モデル利用が許諾範囲外 | critical      | 実行・配布を止めてエスカレート                                                      |
+| `approval-required`    | 承認IDが必要                         | warning/error | 不可逆操作を保留                                                                    |
+| `budget-exceeded`      | 予算上限超過                         | error         | 発注を停止し承認を要求                                                              |
+| `unknown-impact`       | 影響伝播が未定義                     | warning/error | 広い再検証へフォールバック                                                          |
+| `fab-feedback-unknown` | fab指摘の分類または信頼度が未確定    | warning/error | Evidenceを保存して当該runを停止し、人手検証へ回す。検証範囲は広げ、合格扱いにしない |
+| `patent-concern`       | 特許リスクの credible concern        | critical      | 実装を停止し法務判断へ                                                              |
 
 ## Error envelope
 
