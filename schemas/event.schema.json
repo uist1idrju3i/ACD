@@ -1,0 +1,41 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://acd.example.invalid/schemas/event.schema.json",
+  "title": "ACD Event Envelope",
+  "type": "object",
+  "required": [
+    "eventId",
+    "type",
+    "occurredAt",
+    "actor",
+    "projectId",
+    "baseRevision",
+    "resultRevision",
+    "payloadHash"
+  ],
+  "properties": {
+    "eventId": { "type": "string", "pattern": "^[A-Za-z][A-Za-z0-9._:-]*$" },
+    "type": {
+      "type": "string",
+      "enum": [
+        "snapshot.created",
+        "patch.accepted",
+        "patch.rejected",
+        "verification.started",
+        "verification.completed",
+        "verification.stale",
+        "checkpoint.created",
+        "run.stopped",
+        "run.resumed"
+      ]
+    },
+    "occurredAt": { "type": "string", "format": "date-time" },
+    "actor": { "type": "string", "minLength": 1 },
+    "projectId": { "type": "string", "pattern": "^[A-Za-z][A-Za-z0-9._:-]*$" },
+    "baseRevision": { "type": "integer", "minimum": 0 },
+    "resultRevision": { "type": "integer", "minimum": 0 },
+    "payloadHash": { "type": "string", "pattern": "^sha256:[0-9a-f]{64}$" },
+    "payload": {}
+  },
+  "additionalProperties": false
+}

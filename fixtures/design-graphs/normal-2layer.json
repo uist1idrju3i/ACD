@@ -1,0 +1,19 @@
+{
+  "schemaVersion": "0.1.0-draft",
+  "project": {
+    "id": "project:normal-2layer",
+    "type": "Project",
+    "revision": 0,
+    "name": "Normal two-layer fixture",
+    "status": "draft"
+  },
+  "entities": [
+    {
+      "id": "project:normal-2layer",
+      "type": "Project",
+      "revision": 0,
+      "name": "Normal two-layer fixture",
+      "status": "draft"
+    }
+  ]
+}
