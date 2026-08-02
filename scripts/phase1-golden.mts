@@ -63,13 +63,13 @@ import {
   validatePhase1FixtureReferences,
 } from "../packages/schema/src/index.js";
 
-import type { Phase1Fixture } from "../packages/schema/src/generated/phase1-fixture.js";
+import type { ACDPhase1Fixture } from "../packages/schema/src/generated/phase1-fixture.js";
 import preOrder from "./pre-order.ts";
 
 const root = resolve(import.meta.dirname, "..");
 const fixture = JSON.parse(
   await readFile(join(root, "fixtures/phase1/golden-esp32.json"), "utf8"),
-) as Phase1Fixture;
+) as ACDPhase1Fixture;
 const artifactRoot = join(root, "artifacts/phase1-golden");
 const projectRoot = join(artifactRoot, "project");
 const digest =
@@ -178,7 +178,7 @@ try {
       !line.lifecycle ||
       line.availability === "unknown" ||
       line.lifecycle === "unknown" ||
-      line.lifecycle === "EOL"
+      line.lifecycle === "eol"
     ) {
       throw new Error(`order-relevant BOM unknown for ${line.partId}`);
     }
@@ -292,8 +292,12 @@ try {
   await writeFile(join(artifactRoot, "repair-loop.json"), `${JSON.stringify(repairs, null, 2)}\n`);
   pass(17, {
     cases: repairs.length,
-    repaired: repairs.filter((entry) => entry.status === "repaired").length,
-    rejectedProposals: repairs.reduce((total, entry) => total + Number(entry.rejected ?? 0), 0),
+    repaired: repairs.filter((entry) => (entry as { status?: string }).status === "repaired")
+      .length,
+    rejectedProposals: repairs.reduce(
+      (total, entry) => total + Number((entry as { rejected?: number }).rejected ?? 0),
+      0,
+    ),
     recordingsHash: hash(JSON.stringify(recordings.proposals)),
     artifact: "repair-loop.json",
   });
@@ -976,7 +980,9 @@ try {
           (mapping) => `footprint:${mapping.footprintLibraryId}:${mapping.footprintName}`,
         ),
       ),
-    ].sort(),
+    ]
+      .map(String)
+      .sort(),
     reproductionConditions: fixture.manufacturingProfile.processConditions,
   });
   const applicationResult = evaluateKnowledgeApplications(
@@ -1000,10 +1006,12 @@ try {
           decisions: appliedResult.decisions,
           libraryRevisions: appliedResult.libraryRevisions,
           failureReason: error instanceof Error ? error.message : String(error),
-          inputHash: hash({
-            targetContext: targetKnowledgeContext,
-            decisions: appliedResult.decisions,
-          }),
+          inputHash: hash(
+            JSON.stringify({
+              targetContext: targetKnowledgeContext,
+              decisions: appliedResult.decisions,
+            }),
+          ),
         },
         null,
         2,
@@ -1069,7 +1077,12 @@ try {
   );
   pass(22, {
     decisions: appliedResult.decisions.length,
-    appliedKnowledge: appliedResult.applicableKnowledgeIds,
+    appliedKnowledge: appliedResult.decisions
+      .filter((decision) => decision.applied)
+      .map((decision) => decision.knowledgeId),
+    exemptedKnowledge: appliedResult.decisions
+      .filter((decision) => decision.applicationExemption)
+      .map((decision) => decision.knowledgeId),
     libraryRevision: adoptedLibraryPatch.libraryRevision,
     projectionArtifactId,
     artifact: "knowledge-application.json",
