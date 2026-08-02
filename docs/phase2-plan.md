@@ -1,6 +1,6 @@
 # Phase 2実装計画
 
-**ステータス：Draft（WP1・WP2実装済み、WP3以降は未着手）**
+**ステータス：Draft（WP1〜WP3実装済み、WP4以降は未着手）**
 
 ## 目的と権威範囲
 
@@ -81,7 +81,8 @@ footprint／MPN不整合が後段で発見されました。KiCad ERCはこれ�
 
 ### WP3：設計根拠（Design Rationale）の構造化記録
 
-**状態：未着手。**
+**状態：実装済み。** 契約とルールは[`design-rationale-gate.md`](design-rationale-gate.md)、
+実行はgate 15（`gate:design-rationale`、`runsAfter: gate:electrical-lint`）。
 
 **作業**
 
@@ -92,6 +93,14 @@ footprint／MPN不整合が後段で発見されました。KiCad ERCはこれ�
 
 - 設計判断がrationale無しに下流へ流れないことをgateで検査できる。
 - rationaleがLLM生成テキストであっても、合否判定の証拠として使われない。
+
+**実装で判明した事項**
+
+- coverage対象を「要求・機能ブロック・全部品」と定義しました。曖昧な対象集合では
+  coverage gate自体が形骸化するため、subjectを決定論的に列挙できる集合に限定しています。
+- 未確認の仮定は`unknown`とし、TestItem参照または`tuningNeeded`を宣言するまでgateを
+  通しません。これがWP4のTestItem自動生成の入力になります。
+- 三値評価の型（`RuleFinding`／`RuleVerdict`）を`findings.ts`へ切り出し、gate 14と共有しました。
 
 ### WP4：テスト項目の自動生成
 

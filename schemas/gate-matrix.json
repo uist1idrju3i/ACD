@@ -169,6 +169,19 @@
       "passCondition": "全ruleがpass。failは0件、unknownも0件（unknownは検証を広げるためblocked扱い）",
       "onFailure": "`verification-failed`で停止し、rule ID・対象・期待値・実測値・根拠を記録",
       "errorCodes": ["verification-failed"]
+    },
+    {
+      "order": 15,
+      "id": "gate:design-rationale",
+      "name": "Design rationale coverage",
+      "phase": 2,
+      "runsAfter": "gate:electrical-lint",
+      "status": "implemented",
+      "appliesTo": ["golden"],
+      "inputs": "Typed fixtureのrationale（決定、代替案、仮定、リスク、出所）と要求・部品",
+      "passCondition": "要求・機能ブロック・全部品にrationaleが対応し、参照が解決し、仮定に検証手段があり、rationaleがEvidenceとして引用されていない",
+      "onFailure": "`verification-failed`で停止し、未記録の判断・未解決参照・未検証の仮定を記録",
+      "errorCodes": ["verification-failed"]
     }
   ]
 }

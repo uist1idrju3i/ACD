@@ -1,16 +1,16 @@
 import type { Phase1Fixture } from "@acd/schema";
+import {
+  aggregateVerdict,
+  sortFindings,
+  unresolvedFindings,
+  type RuleFinding,
+  type RuleStatus,
+  type RuleVerdict,
+} from "./findings.js";
 
-export type LintStatus = "pass" | "fail" | "unknown";
-export type LintVerdict = "pass" | "fail" | "blocked";
-
-export type LintFinding = {
-  ruleId: string;
-  status: LintStatus;
-  entity: string;
-  expected: string;
-  observed: string;
-  basis: string;
-};
+export type LintStatus = RuleStatus;
+export type LintVerdict = RuleVerdict;
+export type LintFinding = RuleFinding;
 
 export type ElectricalLintReport = {
   verdict: LintVerdict;
@@ -574,19 +574,13 @@ export const lintElectricalTopology = (
   profile: ElectricalLintProfile = defaultElectricalLintProfile,
 ): ElectricalLintReport => {
   const context = buildContext(fixture, profile);
-  const findings = rules
-    .flatMap((rule) => rule.evaluate(context))
-    .sort(
-      (left, right) =>
-        left.ruleId.localeCompare(right.ruleId) || left.entity.localeCompare(right.entity),
-    );
-  const verdict: LintVerdict = findings.some((finding) => finding.status === "fail")
-    ? "fail"
-    : findings.some((finding) => finding.status === "unknown")
-      ? "blocked"
-      : "pass";
-  return { verdict, rulesEvaluated: [...electricalLintRuleIds], findings };
+  const findings = sortFindings(rules.flatMap((rule) => rule.evaluate(context)));
+  return {
+    verdict: aggregateVerdict(findings),
+    rulesEvaluated: [...electricalLintRuleIds],
+    findings,
+  };
 };
 
 export const failedFindings = (report: ElectricalLintReport): LintFinding[] =>
-  report.findings.filter((finding) => finding.status !== "pass");
+  unresolvedFindings(report.findings);

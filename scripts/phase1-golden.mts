@@ -7,7 +7,12 @@ import {
   placeFixture,
   projectToKicad,
 } from "../packages/adapters/kicad/src/index.js";
-import { failedFindings, lintElectricalTopology } from "../packages/graph-core/src/index.js";
+import {
+  evaluateDesignRationale,
+  failedFindings,
+  lintElectricalTopology,
+  unresolvedRationaleFindings,
+} from "../packages/graph-core/src/index.js";
 import {
   gateByOrder,
   loadGateMatrix,
@@ -138,6 +143,22 @@ try {
     rulesEvaluated: lint.rulesEvaluated.length,
     findings: lint.findings.length,
     findingsHash: hash(JSON.stringify(lint.findings)),
+  });
+
+  const rationale = evaluateDesignRationale(fixture);
+  if (rationale.verdict !== "pass") {
+    throw new Error(
+      `verification-failed: design rationale ${rationale.verdict}: ${JSON.stringify(
+        unresolvedRationaleFindings(rationale),
+      )}`,
+    );
+  }
+  pass(15, {
+    verdict: rationale.verdict,
+    rulesEvaluated: rationale.rulesEvaluated.length,
+    subjects: rationale.coverage.length,
+    findings: rationale.findings.length,
+    findingsHash: hash(JSON.stringify(rationale.findings)),
   });
 
   await projectToKicad(fixture, projectRoot);

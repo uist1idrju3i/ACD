@@ -44,6 +44,7 @@ export interface ACDPhase1Fixture {
    */
   bom: [BomLine, ...BomLine[]];
   orderConstraints?: OrderConstraints;
+  rationales?: Rationale[];
 }
 export interface Requirement {
   id: Id;
@@ -190,4 +191,60 @@ export interface OrderConstraints {
     currency: string;
     provenance: Provenance;
   };
+}
+/**
+ * Structured design rationale. A rationale explains a decision; it is never pass evidence for a gate.
+ */
+export interface Rationale {
+  id: string;
+  origin: "human" | "deterministic" | "llm-proposed";
+  decision: string;
+  /**
+   * Subjects this rationale covers: the requirement id, block:<functional block>, or part ids.
+   *
+   * @minItems 1
+   */
+  appliesTo: [string, ...string[]];
+  /**
+   * @minItems 1
+   */
+  alternativesConsidered: [
+    {
+      option: string;
+      rejectedBecause: string;
+    },
+    ...{
+      option: string;
+      rejectedBecause: string;
+    }[]
+  ];
+  /**
+   * @minItems 1
+   */
+  assumptions: [
+    {
+      statement: string;
+      status: "confirmed" | "unconfirmed";
+      evidenceLink?: string;
+      testItemId?: string;
+    },
+    ...{
+      statement: string;
+      status: "confirmed" | "unconfirmed";
+      evidenceLink?: string;
+      testItemId?: string;
+    }[]
+  ];
+  /**
+   * Gate or measurement evidence ids. Rationale ids are not evidence and are rejected here.
+   */
+  evidenceLinks?: string[];
+  risks?: {
+    description: string;
+    severity: "low" | "medium" | "high";
+    mitigation: string;
+  }[];
+  tuningNeeded: boolean;
+  generatedTestItemIds?: string[];
+  provenance: Provenance;
 }

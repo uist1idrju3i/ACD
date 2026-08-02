@@ -2199,5 +2199,274 @@
         "pendingReason": "placeholder quote is fixture-provided and must be refreshed before ordering"
       }
     }
-  }
+  },
+  "rationales": [
+    {
+      "id": "rationale:board-and-supply",
+      "origin": "human",
+      "decision": "60x45mm 2-layer board fed from a single 5V USB-C supply with a 500mA budget, so the golden task stays routable with the pinned Freerouting profile.",
+      "appliesTo": ["requirement:phase1-golden-esp32"],
+      "alternativesConsidered": [
+        {
+          "option": "50x40mm outline",
+          "rejectedBecause": "left no routing headroom around the ESP32 antenna keepout"
+        },
+        {
+          "option": "4-layer stackup",
+          "rejectedBecause": "raises fabrication cost above the order budget cap for a demo board"
+        }
+      ],
+      "assumptions": [
+        {
+          "statement": "Total load stays below the 500mA supplied by a USB-C sink with Rd termination.",
+          "status": "confirmed",
+          "evidenceLink": "gate:electrical-lint"
+        }
+      ],
+      "tuningNeeded": false,
+      "provenance": {
+        "source": "fixture-owned design rationale",
+        "version": "phase1-golden-3",
+        "license": "BSD-3-Clause",
+        "contentHash": null,
+        "pendingReason": "rationale is fixture-owned and is not verification evidence"
+      },
+      "risks": [
+        {
+          "description": "The ESP32 antenna courtyard overhangs the board edge.",
+          "severity": "medium",
+          "mitigation": "Antenna region is declared as a routing keepout and checked by DRC."
+        }
+      ]
+    },
+    {
+      "id": "rationale:usb-power-input",
+      "origin": "human",
+      "decision": "USB-C receptacle as a 5V sink with 5.1k Rd on both CC pins and a 10uF bulk capacitor.",
+      "appliesTo": ["block:usb-power-input", "part:j1", "part:r6", "part:r7", "part:c4"],
+      "alternativesConsidered": [
+        {
+          "option": "USB micro-B",
+          "rejectedBecause": "obsolete connector and no CC-based current negotiation"
+        },
+        {
+          "option": "Single CC resistor",
+          "rejectedBecause": "breaks reversible cable orientation"
+        }
+      ],
+      "assumptions": [
+        {
+          "statement": "A 5.1k Rd on each CC pin advertises the default USB Type-C sink current.",
+          "status": "confirmed",
+          "evidenceLink": "gate:electrical-lint"
+        }
+      ],
+      "tuningNeeded": false,
+      "provenance": {
+        "source": "fixture-owned design rationale",
+        "version": "phase1-golden-3",
+        "license": "BSD-3-Clause",
+        "contentHash": null,
+        "pendingReason": "rationale is fixture-owned and is not verification evidence"
+      }
+    },
+    {
+      "id": "rationale:3v3-regulation",
+      "origin": "human",
+      "decision": "AMS1117-3.3 linear regulator with 10uF input and 22uF output bulk capacitance.",
+      "appliesTo": ["block:3v3-regulation", "part:u3", "part:c5", "part:c3"],
+      "alternativesConsidered": [
+        {
+          "option": "Switching regulator",
+          "rejectedBecause": "adds SI and EMC verification beyond the Phase 2 boundary"
+        },
+        {
+          "option": "LDO without bulk output capacitor",
+          "rejectedBecause": "the datasheet requires output bulk capacitance for stability"
+        }
+      ],
+      "assumptions": [
+        {
+          "statement": "Regulator dropout is acceptable because the ESP32 peak current is supplied from bulk capacitance.",
+          "status": "unconfirmed",
+          "testItemId": "test:regulator-output-voltage"
+        }
+      ],
+      "tuningNeeded": false,
+      "provenance": {
+        "source": "fixture-owned design rationale",
+        "version": "phase1-golden-3",
+        "license": "BSD-3-Clause",
+        "contentHash": null,
+        "pendingReason": "rationale is fixture-owned and is not verification evidence"
+      },
+      "risks": [
+        {
+          "description": "Linear regulation dissipates the 5V to 3.3V difference as heat.",
+          "severity": "low",
+          "mitigation": "SOT-223 package with copper pour; thermal analysis is out of the Phase 2 scope."
+        }
+      ]
+    },
+    {
+      "id": "rationale:esp32-compute",
+      "origin": "human",
+      "decision": "ESP32-WROOM-32E module with 100nF decoupling on each supply pin, so RF and firmware qualification stay inside the module vendor's scope.",
+      "appliesTo": ["block:esp32-compute", "part:u1", "part:c1", "part:c2"],
+      "alternativesConsidered": [
+        {
+          "option": "Bare ESP32 chip",
+          "rejectedBecause": "requires RF matching and certification work outside Phase 2"
+        },
+        {
+          "option": "No local decoupling",
+          "rejectedBecause": "leaves supply transients unbounded at the module pins"
+        }
+      ],
+      "assumptions": [
+        {
+          "statement": "Module-level certification covers the RF section, so the board only supplies power and IO.",
+          "status": "confirmed",
+          "evidenceLink": "provenance:esp32-wroom-32e-datasheet"
+        }
+      ],
+      "tuningNeeded": false,
+      "provenance": {
+        "source": "fixture-owned design rationale",
+        "version": "phase1-golden-3",
+        "license": "BSD-3-Clause",
+        "contentHash": null,
+        "pendingReason": "rationale is fixture-owned and is not verification evidence"
+      }
+    },
+    {
+      "id": "rationale:i2c-sensor",
+      "origin": "human",
+      "decision": "BME280 on I2C with 4.7k pull-ups on SDA and SCL and SDO tied low through 10k to fix the address.",
+      "appliesTo": ["block:i2c-sensor", "part:u2", "part:r8", "part:r9", "part:r5"],
+      "alternativesConsidered": [
+        {
+          "option": "Rely on internal pull-ups",
+          "rejectedBecause": "ESP32 and BME280 do not provide I2C bus pull-ups, so the bus would not settle"
+        },
+        {
+          "option": "SPI interface",
+          "rejectedBecause": "uses more IO than the header budget allows"
+        }
+      ],
+      "assumptions": [
+        {
+          "statement": "4.7k pull-ups keep the bus inside the 1k-10k window at 100kHz standard mode.",
+          "status": "confirmed",
+          "evidenceLink": "gate:electrical-lint"
+        },
+        {
+          "statement": "Bus rise time meets the I2C specification with the assembled trace capacitance.",
+          "status": "unconfirmed",
+          "testItemId": "test:i2c-rise-time"
+        }
+      ],
+      "tuningNeeded": false,
+      "provenance": {
+        "source": "fixture-owned design rationale",
+        "version": "phase1-golden-3",
+        "license": "BSD-3-Clause",
+        "contentHash": null,
+        "pendingReason": "rationale is fixture-owned and is not verification evidence"
+      }
+    },
+    {
+      "id": "rationale:uart-header",
+      "origin": "human",
+      "decision": "2.54mm 1x06 header exposing UART, 3V3 and GND for bring-up and flashing.",
+      "appliesTo": ["block:uart-header", "part:j2"],
+      "alternativesConsidered": [
+        {
+          "option": "On-board USB-UART bridge",
+          "rejectedBecause": "adds a component and firmware dependency not needed for the golden task"
+        },
+        {
+          "option": "Test pads only",
+          "rejectedBecause": "cannot be probed with a standard serial cable during bring-up"
+        }
+      ],
+      "assumptions": [
+        {
+          "statement": "An external USB-UART adapter supplies the flashing signals.",
+          "status": "confirmed",
+          "evidenceLink": "requirement:phase1-golden-esp32"
+        }
+      ],
+      "tuningNeeded": false,
+      "provenance": {
+        "source": "fixture-owned design rationale",
+        "version": "phase1-golden-3",
+        "license": "BSD-3-Clause",
+        "contentHash": null,
+        "pendingReason": "rationale is fixture-owned and is not verification evidence"
+      }
+    },
+    {
+      "id": "rationale:status-led",
+      "origin": "human",
+      "decision": "Single red status LED driven from 3V3 through a 330 ohm series resistor, about 3.9mA.",
+      "appliesTo": ["block:status-led", "part:d1", "part:r3"],
+      "alternativesConsidered": [
+        {
+          "option": "No series resistor",
+          "rejectedBecause": "exceeds the LED forward current rating"
+        },
+        {
+          "option": "22 ohm series resistor",
+          "rejectedBecause": "drives about 59mA and destroys the LED"
+        }
+      ],
+      "assumptions": [
+        {
+          "statement": "3.9mA is visible enough for a status indicator in indoor light.",
+          "status": "unconfirmed",
+          "testItemId": "test:status-led-visibility"
+        }
+      ],
+      "tuningNeeded": true,
+      "provenance": {
+        "source": "fixture-owned design rationale",
+        "version": "phase1-golden-3",
+        "license": "BSD-3-Clause",
+        "contentHash": null,
+        "pendingReason": "rationale is fixture-owned and is not verification evidence"
+      }
+    },
+    {
+      "id": "rationale:boot-strapping",
+      "origin": "human",
+      "decision": "EN and IO0 pulled up through 10k with tactile switches to ground for reset and download mode.",
+      "appliesTo": ["block:boot-strapping", "part:r1", "part:r2", "part:sw1", "part:sw2"],
+      "alternativesConsidered": [
+        {
+          "option": "Auto-reset transistor circuit",
+          "rejectedBecause": "requires the USB-UART bridge that this board does not carry"
+        },
+        {
+          "option": "No pull-ups",
+          "rejectedBecause": "leaves the strapping pins floating and the boot mode undefined"
+        }
+      ],
+      "assumptions": [
+        {
+          "statement": "10k pull-ups hold the strapping pins high while the switches pull them low.",
+          "status": "confirmed",
+          "evidenceLink": "gate:electrical-lint"
+        }
+      ],
+      "tuningNeeded": false,
+      "provenance": {
+        "source": "fixture-owned design rationale",
+        "version": "phase1-golden-3",
+        "license": "BSD-3-Clause",
+        "contentHash": null,
+        "pendingReason": "rationale is fixture-owned and is not verification evidence"
+      }
+    }
+  ]
 }

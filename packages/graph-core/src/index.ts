@@ -1,6 +1,8 @@
 export const graphCorePackageVersion = "0.1.0";
 export * from "./board.js";
+export * from "./design-rationale.js";
 export * from "./electrical-lint.js";
+export * from "./findings.js";
 export * from "./errors.js";
 export * from "./event-log.js";
 export * from "./hash.js";
