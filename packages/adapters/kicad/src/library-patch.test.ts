@@ -56,12 +56,12 @@ describe("KiCad library overlay patches", () => {
       {
         kind: "set-pad-mask-clearance",
         target: "pad-mask-clearance",
-        requiredValueMm: 0,
+        requiredValueMm: 0.1,
       },
     ]);
     expect(first.contentHash).toMatch(/^sha256:[a-f0-9]{64}$/);
     expect(first.libraryRevision).toMatch(/^library:overlay:[a-f0-9]{64}$/);
-    expect(first.content).toContain("(solder_mask_margin 0)");
+    expect(first.content).toContain("(solder_mask_margin 0.1)");
     expect(first.patchId).toBe(first.id);
     expect(first.revision).toBe(0);
     expect(verifyLibraryPatchGeometry(first)?.geometry).toBe("passed");
@@ -134,7 +134,7 @@ describe("KiCad library overlay patches", () => {
 
   it("creates superseding patch revisions without changing the stable patch id", () => {
     const patch = createLibraryPatchCandidate(adoptedKnowledge());
-    const revised = reviseLibraryPatch(patch, patch.content.replace("margin 0", "margin 0.01"));
+    const revised = reviseLibraryPatch(patch, patch.content.replace("margin 0.1", "margin 0.11"));
     expect(revised.patchId).toBe(patch.patchId);
     expect(revised.id).toBe(`${patch.patchId}:r1`);
     expect(revised.previousRevisionId).toBe(patch.id);
