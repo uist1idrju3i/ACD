@@ -34,6 +34,6 @@ Schema、ゴールデンタスク、小さな実験の結果を比較してか�
 
 ## 参照
 
-- [`../../README.md`](../../README.md#10-開発の進め方-aiと共に作るacd)
+- [`../../README.md`](../../README.md#10-開発の進め方--aiと共に作るacd)
 - [`../architecture.md`](../architecture.md)
 - [`0008-phase0-provisional-implementation-profile.md`](0008-phase0-provisional-implementation-profile.md)
