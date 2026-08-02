@@ -26,21 +26,30 @@ READMEの「やらないこと」により、Phase 2では**高忠実度SI／熱
 
 ## 解析
 
-| analysis                     | 種別 | 導出元                                   | 判定                                  |
-| ---------------------------- | ---- | ---------------------------------------- | ------------------------------------- |
-| `spice:led-branch-d1`        | op   | LED分岐（Gate 14と同じtopologyトレース） | `i(vled)`が宣言された電流窓に入ること |
-| `spice:i2c-rise-i2c-sda/scl` | tran | pull-up抵抗と電源netのnominal電圧        | `trise`（0.3→0.7 Vdd）が1 µs以下      |
+| analysis                     | 種別 | 導出元                                                        | 判定                                  |
+| ---------------------------- | ---- | ------------------------------------------------------------- | ------------------------------------- |
+| `spice:led-branch-d1`        | op   | LED分岐（Gate 14と同じtopologyトレース）                      | `i(vled)`が宣言された電流窓に入ること |
+| `spice:i2c-rise-i2c-sda/scl` | tran | pull-up抵抗と、その抵抗が実際に接続された電源netのnominal電圧 | `trise`（0.3→0.7 Vdd）が1 µs以下      |
 
 LED分岐はGate 14／16と同じ`ledBranchCurrents`を使い、電流計算が二重実装にならないように
-しています。I2Cのrise timeは`test:i2c-rise-time`（Gate 16のTestItem）に対応する解析です。
+しています。pull-upは「busと電源netの両方に足を持つ抵抗」というtopologyで同定し、rail電圧は
+その電源net自身から取ります。net上で最小の抵抗を選ぶと直列・シャント抵抗をpull-upと
+取り違え、無関係なnetの電圧をrailとして使ってしまいます。導出できない場合は解析を
+省略せず`spice-analysis-derivation`の`unknown`として記録します。
+
+`ngspice`はbannerやversion、診断の多くを正常終了時もstderrへ出すため、logはstdoutと
+stderrの両方を残します。engine versionが読み取れない場合は`unknown`で停止します。
+I2Cのrise timeは`test:i2c-rise-time`（Gate 16のTestItem）に対応する解析です。
 
 ## rule（三値）
 
-| rule                     | 内容                                                                  |
-| ------------------------ | --------------------------------------------------------------------- |
-| `spice-convergence`      | 解析が収束し正常終了したか。未収束・異常終了・run欠落は`unknown`      |
-| `spice-margin`           | 測定値が期待範囲に入るか。範囲外は`fail`、測定値欠落は`unknown`       |
-| `spice-model-provenance` | 全モデルに出所とライセンスが記録されているか。vendorモデルは`unknown` |
+| rule                        | 内容                                                                  |
+| --------------------------- | --------------------------------------------------------------------- |
+| `spice-analysis-derivation` | 宣言不足で導出できなかった解析。skipせず`unknown`として記録する       |
+| `spice-convergence`         | 解析が収束し正常終了したか。未収束・異常終了・run欠落は`unknown`      |
+| `spice-engine-version`      | engineが自身のversionを報告したか。不明なら`unknown`                  |
+| `spice-margin`              | 測定値が期待範囲に入るか。範囲外は`fail`、測定値欠落は`unknown`       |
+| `spice-model-provenance`    | 全モデルに出所とライセンスが記録されているか。vendorモデルは`unknown` |
 
 `unknown`は`blocked`へ集約され、合格になりません。**使えないシミュレーションは検証を
 縮小せず広げます。**
