@@ -155,12 +155,12 @@ Phase 5、自働発注はPhase 6の範囲であり、本フェーズでは扱い
 - 知識ループありのrunでは人手介入なしに回避され、回避根拠が知識版へ辿れる。
 - 両runが決定論的である。
 
-Gate 22のtarget placeholderをこの2次試作fixtureへ置き換え、controlとknowledge-enabledの
-両runを`knowledge-loop.json`へ記録する。controlでは公式library revisionを使用し、target
-boardから同じfab-profile rule pathでmask-sliver findingを導出する。profileの最小値は
+Gate 22では1次試作設計へのKnowledgeItem適用とlibrary revisionの追跡可能性を記録する。
+2次試作のcontrolとknowledge-enabledの対照測定は独立した
+`scripts/phase3-knowledge-loop.mts`が担当する。controlでは公式library revisionを使用し、
+target boardから同じfab-profile rule pathでmask-sliver findingを導出する。profileの最小値は
 0.30mmで、USB-C fine-pitch pad間の実測値を使用する。knowledge-enabledではadopted
-KnowledgeItemとWP3 overlay revisionを適用し、負のmask marginでmask openingを縮小して
-sliverを拡大し、同findingが0件になることを検証する。
+KnowledgeItemとWP3 overlay revisionを適用し、同findingが0件になることを検証する。
 
 ### WP6：電子部品ライブラリの本格整備
 

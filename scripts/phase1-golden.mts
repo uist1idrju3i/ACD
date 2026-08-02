@@ -49,6 +49,7 @@ import {
   type FixturePatchOperation,
   type RecordedProposal,
 } from "../packages/graph-core/src/index.js";
+import { compareIds } from "../packages/graph-core/src/hash.js";
 import {
   FixtureFabFeedbackReader,
   fabFeedbackUnknownError,
