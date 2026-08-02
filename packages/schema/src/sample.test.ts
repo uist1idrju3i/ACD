@@ -18,4 +18,20 @@ describe("design graph schema", () => {
 
     expect(validate(fixture), JSON.stringify(validator.errors)).toBe(true);
   });
+
+  it("validates the typed Phase 1 smoke fixture", async () => {
+    const validator = createSchemaValidator();
+    const schema = JSON.parse(
+      await readFile(
+        new URL("../../../schemas/phase1-fixture.schema.json", import.meta.url),
+        "utf8",
+      ),
+    ) as object;
+    const validate = validator.compile(schema);
+    const fixture = JSON.parse(
+      await readFile(new URL("../../../fixtures/phase1/smoke.json", import.meta.url), "utf8"),
+    ) as unknown;
+
+    expect(validate(fixture), JSON.stringify(validator.errors)).toBe(true);
+  });
 });

@@ -26,21 +26,43 @@ KiCadの回路図エディタはngspiceを統合し、SPICE解析と波形確認
 
 ## 能力マトリクス
 
-| 経路 | KiCad 10基準 | KiCad 11以降 | ACDでの用途・境界 |
-|---|---|---|---|
-| `kicad-cli` | バッチERC/DRC、再読込、Gerber等のエクスポート | 同じ責務を継続 | CI・ゲート・再現可能な出力。稼働中エディタの編集経路ではない |
-| IPC API（PCB） | 稼働中PCBエディタの取得・検査・ガード付き可逆変更 | 継続利用 | リアルタイム編集、対象・差分・Undo/Redoを監査 |
-| IPC API（回路図） | 対応範囲は未決定（ADR-0007で決定）。利用可能な場合も能力検出する | `kicad-python`文書で回路図取得APIがKiCad 11追加と記載 | 生成グラフを正とし、回路図投影の補助経路として利用 |
-| ACD生成S式 | ACDが生成した`.kicad_sch`/`.kicad_pcb`をatomic write | 同じ再オープン検証を実行 | KiCad APIが不足する場合の生成経路。直接編集ではなく、ハッシュ・リビジョン付き |
-| 既存KiCadプロジェクト取込 | ファイル解析と変換損失を記録 | IPC取得が使える場合は二重検証 | KiCadを正に昇格させず、設計グラフへのimport投影とする |
-| STEP/glTF/DXF/IDF | KiCad/ACDからMCAD向け形状・外形を出力 | 同じ形状を再読込し、単位・座標系・外形・穴・高さを照合 | MCADレビューと機械ゲートの交換境界。意味論・所有権は別途グラフで保持 |
-| IDX | 初期対応は未決定 | 対応する場合はbaseline、accept/reject、変更所有権、コメントを保持 | 増分ECAD↔MCAD同期の将来候補。完全なround-tripを現時点で保証しない |
+| 経路                      | KiCad 10基準                                                     | KiCad 11以降                                                      | ACDでの用途・境界                                                             |
+| ------------------------- | ---------------------------------------------------------------- | ----------------------------------------------------------------- | ----------------------------------------------------------------------------- |
+| `kicad-cli`               | バッチERC/DRC、再読込、Gerber等のエクスポート                    | 同じ責務を継続                                                    | CI・ゲート・再現可能な出力。稼働中エディタの編集経路ではない                  |
+| IPC API（PCB）            | 稼働中PCBエディタの取得・検査・ガード付き可逆変更                | 継続利用                                                          | リアルタイム編集、対象・差分・Undo/Redoを監査                                 |
+| IPC API（回路図）         | 対応範囲は未決定（ADR-0007で決定）。利用可能な場合も能力検出する | `kicad-python`文書で回路図取得APIがKiCad 11追加と記載             | 生成グラフを正とし、回路図投影の補助経路として利用                            |
+| ACD生成S式                | ACDが生成した`.kicad_sch`/`.kicad_pcb`をatomic write             | 同じ再オープン検証を実行                                          | KiCad APIが不足する場合の生成経路。直接編集ではなく、ハッシュ・リビジョン付き |
+| 既存KiCadプロジェクト取込 | ファイル解析と変換損失を記録                                     | IPC取得が使える場合は二重検証                                     | KiCadを正に昇格させず、設計グラフへのimport投影とする                         |
+| STEP/glTF/DXF/IDF         | KiCad/ACDからMCAD向け形状・外形を出力                            | 同じ形状を再読込し、単位・座標系・外形・穴・高さを照合            | MCADレビューと機械ゲートの交換境界。意味論・所有権は別途グラフで保持          |
+| IDX                       | 初期対応は未決定                                                 | 対応する場合はbaseline、accept/reject、変更所有権、コメントを保持 | 増分ECAD↔MCAD同期の将来候補。完全なround-tripを現時点で保証しない            |
 
 `kicad-cli`はバッチ検証・エクスポート、IPC APIは稼働中エディタの検査・ガード付き変更、ACD生成S式は投影ファイルの生成に限定します。いずれの経路でも再オープン、ERC/DRC、成果物ハッシュを検証します。
 
 ## 二重検証
 
 生成後は`kicad-cli`でERC、DRC、各種エクスポートを実行し、ACD側のグラフ検証と結果を突き合わせます。ACDの軽量検査だけ、またはKiCadの終了コードだけを信頼しません。入力、コマンド、ツールバージョン、stdout/stderr、レポート、成果物ハッシュを保存します。
+
+## Netlist-driven projection contract（Phase 1）
+
+Phase 1では、設計グラフの`Component`、`Pin`、`Net`を正規入力とし、KiCad回路図と
+PCBを同じnetlist projectionから生成します。自然言語やKiCad回路図をnetlistの
+source of truthにはしません。
+
+- 各`Component`と`Pin`は安定ID、reference、pin number、電気的属性を保持し、
+  KiCad symbol pinおよびPCB footprint padへ一意に対応付ける。
+- 各`Net`は安定ID、名称、接続pin集合を持ち、回路図のwire/labelとPCBのpad
+  net assignmentへ同じnet IDで投影する。
+- 未解決pin、重複pad、net名だけによる曖昧な接続、回路図とPCBの接続集合差分は
+  `reference-integrity`または`verification-failed`としてjidoka停止する。
+- 投影後に、グラフのnetlistとKiCadから読み戻したsymbol pin／PCB padの接続集合を
+  canonical化して比較する。順序や表示名だけの差分は除外するが、接続集合、
+  component/pin identity、pad番号の差分は許容しない。
+- このnet-consistency gateは、ERC/DRC、再オープン、artifact hash gateより前に
+  成功しなければならない。結果には入力revision、netlist hash、tool version、
+  読み戻し結果、差分を記録する。
+
+Phase 0の最小投影はこの契約のfixtureと再オープン基盤を準備するが、完全な
+netlist-driven回路図・PCB投影とnet-consistency gateの実装はPhase 1作業とする。
 
 ## IPC API
 

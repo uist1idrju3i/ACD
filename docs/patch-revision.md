@@ -23,9 +23,7 @@
   "patchId": "patch:example:001",
   "baseRevision": 0,
   "resultRevision": 1,
-  "operations": [
-    { "op": "replace", "path": "/entities/0/name", "value": "example" }
-  ],
+  "operations": [{ "op": "replace", "path": "/entities/0/name", "value": "example" }],
   "createdAt": "2026-01-01T00:00:00Z",
   "createdBy": "agent:example"
 }

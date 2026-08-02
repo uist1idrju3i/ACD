@@ -1,0 +1,368 @@
+{
+  "schemaVersion": "1.0.0-draft",
+  "fixtureId": "fixture:phase1-smoke",
+  "fixtureKind": "smoke",
+  "requirement": {
+    "id": "requirement:phase1-smoke",
+    "name": "Two-layer LED indicator smoke board",
+    "functionalBlocks": ["power-input", "status-led"],
+    "board": {
+      "layers": 2,
+      "widthMm": 20,
+      "heightMm": 15,
+      "thicknessMm": 1.6,
+      "outline": "rectangle:20x15"
+    },
+    "electrical": {
+      "supplyVoltageV": 5,
+      "maxCurrentMa": 25,
+      "interfaces": ["power-input"]
+    },
+    "acceptanceCriteria": [
+      "The graph and projected KiCad connectivity are identical",
+      "ERC and DRC have no unwaived findings",
+      "The routed board has zero unrouted connections"
+    ],
+    "provenance": {
+      "source": "fixture",
+      "version": "phase1-smoke-1",
+      "license": "BSD-3-Clause",
+      "contentHash": null,
+      "pendingReason": "fixture-local provenance snapshot is pending; source is controlled by this fixture"
+    }
+  },
+  "parts": [
+    {
+      "id": "part:j1",
+      "reference": "J1",
+      "kind": "connector",
+      "mpn": "B2B-PH-K-S(LF)(SN)",
+      "manufacturer": "JST",
+      "quantity": 1,
+      "package": "JST_PH:JST_PH_B2B-PH-K_1x02_P2.00mm_Vertical",
+      "provenance": {
+        "source": "fixture",
+        "version": "phase1-smoke-1",
+        "license": "BSD-3-Clause",
+        "contentHash": null,
+        "pendingReason": "fixture-local provenance snapshot is pending; source is controlled by this fixture"
+      }
+    },
+    {
+      "id": "part:r1",
+      "reference": "R1",
+      "kind": "resistor",
+      "mpn": "RC0603FR-071KL",
+      "manufacturer": "Yageo",
+      "quantity": 1,
+      "package": "0603",
+      "provenance": {
+        "source": "fixture",
+        "version": "phase1-smoke-1",
+        "license": "BSD-3-Clause",
+        "contentHash": null,
+        "pendingReason": "fixture-local provenance snapshot is pending; source is controlled by this fixture"
+      }
+    },
+    {
+      "id": "part:d1",
+      "reference": "D1",
+      "kind": "led",
+      "mpn": "LTST-C190KRKT",
+      "manufacturer": "Lite-On",
+      "quantity": 1,
+      "package": "0603",
+      "provenance": {
+        "source": "fixture",
+        "version": "phase1-smoke-1",
+        "license": "BSD-3-Clause",
+        "contentHash": null,
+        "pendingReason": "fixture-local provenance snapshot is pending; source is controlled by this fixture"
+      }
+    },
+    {
+      "id": "part:c1",
+      "reference": "C1",
+      "kind": "capacitor",
+      "mpn": "CC0603ZRY5V8BB104",
+      "manufacturer": "Yageo",
+      "quantity": 1,
+      "package": "0603",
+      "provenance": {
+        "source": "fixture",
+        "version": "phase1-smoke-1",
+        "license": "BSD-3-Clause",
+        "contentHash": null,
+        "pendingReason": "fixture-local provenance snapshot is pending; source is controlled by this fixture"
+      }
+    }
+  ],
+  "mappings": [
+    {
+      "partId": "part:j1",
+      "symbolLibraryId": "Connector_Generic",
+      "symbolName": "Conn_01x02",
+      "footprintLibraryId": "Connector_JST",
+      "footprintName": "JST_PH_B2B-PH-K_1x02_P2.00mm_Vertical",
+      "pinPads": [
+        {
+          "pin": "1",
+          "pad": "1",
+          "electricalType": "power-input"
+        },
+        {
+          "pin": "2",
+          "pad": "2",
+          "electricalType": "power-input"
+        }
+      ],
+      "provenance": {
+        "source": "KiCad official libraries",
+        "version": "10.0.5",
+        "license": "CC-BY-SA-4.0-with-exception",
+        "contentHash": null,
+        "pendingReason": "fixture-local provenance snapshot is pending; source is controlled by this fixture"
+      }
+    },
+    {
+      "partId": "part:r1",
+      "symbolLibraryId": "Device",
+      "symbolName": "R",
+      "footprintLibraryId": "Resistor_SMD",
+      "footprintName": "R_0603_1608Metric",
+      "pinPads": [
+        {
+          "pin": "1",
+          "pad": "1",
+          "electricalType": "passive"
+        },
+        {
+          "pin": "2",
+          "pad": "2",
+          "electricalType": "passive"
+        }
+      ],
+      "provenance": {
+        "source": "KiCad official libraries",
+        "version": "10.0.5",
+        "license": "CC-BY-SA-4.0-with-exception",
+        "contentHash": null,
+        "pendingReason": "fixture-local provenance snapshot is pending; source is controlled by this fixture"
+      }
+    },
+    {
+      "partId": "part:d1",
+      "symbolLibraryId": "Device",
+      "symbolName": "LED",
+      "footprintLibraryId": "LED_SMD",
+      "footprintName": "LED_0603_1608Metric",
+      "pinPads": [
+        {
+          "pin": "1",
+          "pad": "1",
+          "electricalType": "passive"
+        },
+        {
+          "pin": "2",
+          "pad": "2",
+          "electricalType": "passive"
+        }
+      ],
+      "provenance": {
+        "source": "KiCad official libraries",
+        "version": "10.0.5",
+        "license": "CC-BY-SA-4.0-with-exception",
+        "contentHash": null,
+        "pendingReason": "fixture-local provenance snapshot is pending; source is controlled by this fixture"
+      }
+    },
+    {
+      "partId": "part:c1",
+      "symbolLibraryId": "Device",
+      "symbolName": "C",
+      "footprintLibraryId": "Capacitor_SMD",
+      "footprintName": "C_0603_1608Metric",
+      "pinPads": [
+        {
+          "pin": "1",
+          "pad": "1",
+          "electricalType": "passive"
+        },
+        {
+          "pin": "2",
+          "pad": "2",
+          "electricalType": "passive"
+        }
+      ],
+      "provenance": {
+        "source": "KiCad official libraries",
+        "version": "10.0.5",
+        "license": "CC-BY-SA-4.0-with-exception",
+        "contentHash": null,
+        "pendingReason": "fixture-local provenance snapshot is pending; source is controlled by this fixture"
+      }
+    }
+  ],
+  "nets": [
+    {
+      "id": "net:vcc",
+      "name": "+5V",
+      "class": "power",
+      "pins": [
+        {
+          "partId": "part:j1",
+          "pin": "1"
+        },
+        {
+          "partId": "part:r1",
+          "pin": "1"
+        },
+        {
+          "partId": "part:c1",
+          "pin": "1"
+        }
+      ]
+    },
+    {
+      "id": "net:led-a",
+      "name": "LED_A",
+      "class": "signal",
+      "pins": [
+        {
+          "partId": "part:r1",
+          "pin": "2"
+        },
+        {
+          "partId": "part:d1",
+          "pin": "2"
+        }
+      ]
+    },
+    {
+      "id": "net:gnd",
+      "name": "GND",
+      "class": "ground",
+      "pins": [
+        {
+          "partId": "part:j1",
+          "pin": "2"
+        },
+        {
+          "partId": "part:d1",
+          "pin": "1"
+        },
+        {
+          "partId": "part:c1",
+          "pin": "2"
+        }
+      ]
+    }
+  ],
+  "placementConstraints": {
+    "seed": 1,
+    "components": [
+      {
+        "partId": "part:j1",
+        "allowedLayers": ["F.Cu"],
+        "xMm": 3,
+        "yMm": 7.5,
+        "rotationDeg": 90
+      },
+      {
+        "partId": "part:r1",
+        "allowedLayers": ["F.Cu"],
+        "xMm": 8,
+        "yMm": 5,
+        "rotationDeg": 0
+      },
+      {
+        "partId": "part:d1",
+        "allowedLayers": ["F.Cu"],
+        "xMm": 12,
+        "yMm": 5,
+        "rotationDeg": 0
+      },
+      {
+        "partId": "part:c1",
+        "allowedLayers": ["F.Cu"],
+        "xMm": 8,
+        "yMm": 10,
+        "rotationDeg": 0
+      }
+    ]
+  },
+  "bom": [
+    {
+      "partId": "part:j1",
+      "referenceDesignators": ["J1"],
+      "quantity": 1,
+      "mpn": "B2B-PH-K-S(LF)(SN)",
+      "manufacturer": "JST",
+      "supplier": "fixture-avl",
+      "sku": "JST-B2B-PH-K-S",
+      "availability": "in-stock",
+      "lifecycle": "active",
+      "provenance": {
+        "source": "fixture AVL",
+        "version": "phase1-smoke-1",
+        "license": "BSD-3-Clause",
+        "contentHash": null,
+        "pendingReason": "fixture-local provenance snapshot is pending; source is controlled by this fixture"
+      }
+    },
+    {
+      "partId": "part:r1",
+      "referenceDesignators": ["R1"],
+      "quantity": 1,
+      "mpn": "RC0603FR-071KL",
+      "manufacturer": "Yageo",
+      "supplier": "fixture-avl",
+      "sku": "YAGEO-RC0603FR-071KL",
+      "availability": "in-stock",
+      "lifecycle": "active",
+      "provenance": {
+        "source": "fixture AVL",
+        "version": "phase1-smoke-1",
+        "license": "BSD-3-Clause",
+        "contentHash": null,
+        "pendingReason": "fixture-local provenance snapshot is pending; source is controlled by this fixture"
+      }
+    },
+    {
+      "partId": "part:d1",
+      "referenceDesignators": ["D1"],
+      "quantity": 1,
+      "mpn": "LTST-C190KRKT",
+      "manufacturer": "Lite-On",
+      "supplier": "fixture-avl",
+      "sku": "LITEON-LTST-C190KRKT",
+      "availability": "in-stock",
+      "lifecycle": "active",
+      "provenance": {
+        "source": "fixture AVL",
+        "version": "phase1-smoke-1",
+        "license": "BSD-3-Clause",
+        "contentHash": null,
+        "pendingReason": "fixture-local provenance snapshot is pending; source is controlled by this fixture"
+      }
+    },
+    {
+      "partId": "part:c1",
+      "referenceDesignators": ["C1"],
+      "quantity": 1,
+      "mpn": "CC0603ZRY5V8BB104",
+      "manufacturer": "Yageo",
+      "supplier": "fixture-avl",
+      "sku": "YAGEO-CC0603ZRY5V8BB104",
+      "availability": "in-stock",
+      "lifecycle": "active",
+      "provenance": {
+        "source": "fixture AVL",
+        "version": "phase1-smoke-1",
+        "license": "BSD-3-Clause",
+        "contentHash": null,
+        "pendingReason": "fixture-local provenance snapshot is pending; source is controlled by this fixture"
+      }
+    }
+  ]
+}

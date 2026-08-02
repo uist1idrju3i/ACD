@@ -64,6 +64,31 @@ hashを保存します。
 KiCadの回路図IPCはPhase 0/1の前提にしない。回路図投影は生成ファイルの再読込
 と、利用可能な場合だけ能力検出されたIPCで補助検証する。
 
+## Artifact hashの正規化契約
+
+`SHA256SUMS`は生成されたファイルの生バイト列に対するSHA-256 manifestであり、
+監査用に保存します。KiCadが生成時刻を埋め込むartifactでは再実行ごとに生hashが
+変化し得るため、再現性ゲートの比較には`STABLE-SHA256SUMS`を使用します。
+
+`STABLE-SHA256SUMS`の対象は、Gerber（`.gbr`、`.gtl`、`.gbl`、`.gto`、`.gbo`、
+`.gm1`）、drill（`.drl`）、STEP（`.step`）、ERC/DRC report（`.rpt`）です。
+`SHA256SUMS`および`STABLE-SHA256SUMS`自身は、どちらのmanifestにも含めません。
+
+正規化は、任意の日付文字列を置換せず、KiCad metadata行に限定します。現在の
+固定規則は次のとおりです。
+
+- Gerberの`%TF.CreationDate`および`TCreationDate`相当のcreation-date行
+- GerberのKiCad generator date行
+- drill headerの`DRILL file KiCad ... date`行および`TF.CreationDate`行
+- ERC reportの先頭`ERC report (timestamp, ...)`行
+- STEPの`FILE_NAME('board.step','timestamp'...)`行
+- KiCad generatorの`** Created on ... **`行
+
+上記の既知metadata行以外の座標、ネット名、部品値、設計データ、artifact本文は
+変更してはなりません。未知のtimestamp形式が見つかった場合は正規化規則を拡張
+するまでjidoka停止とします。合格条件は、同一入力revision・tool/container
+provenanceで2回以上生成した`STABLE-SHA256SUMS`が一致することです。
+
 実行ラッパーは`pnpm kicad:spike`（`scripts/kicad-spike.sh`）です。Dockerがない、
 またはimageが取得できない環境では、ラッパーは`SKIP`を返して終了します。
 

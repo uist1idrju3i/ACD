@@ -74,6 +74,8 @@ Phase 0は、次の全てを同じCI環境で再現できた時点で完了と�
 
 - UI、ブラウザUX、3Dビューア
 - LLM、自然言語要件変換、MCP公開
+- Phase 1の自然言語入力およびLLMによる`Requirement`変換（Phase 1は事前変換済み
+  `Requirement` fixtureから開始する）
 - custom router、custom WASM engine
 - 永続knowledge baseへの書き戻し
 - `FirmwarePackage`の実装・ビルド・検証
@@ -82,14 +84,45 @@ Phase 0は、次の全てを同じCI環境で再現できた時点で完了と�
 - 最終的なIndexedDB、OPFS、SQLite、RDBの選定
 - `ManufacturingProfile`の独立Entity化
 
+## Phase 1境界（Phase 0実装後に確定した事項）
+
+Phase 1は、自然言語やLLMからの変換ではなく、事前変換済みの`Requirement`
+fixtureから開始します。Phase 1の初期sourcing入力はfixture提供のMPN/AVLに限定し、
+sourcing APIは後続adapterです。受入はCLI／fixture runnerで行い、viewerは後続の
+read-only投影へ延期します。配線は`unrouted=0`を必須とし、未配線ratsnestを発注
+準備として許容しません。
+
+3〜5部品のsmoke fixtureは実装中の内部gate、ESP32・センサー・LED・電源・通信を
+含む2層fixtureはPhase 1の最終golden taskとします。FW package、自動発注、自然言語
+入力はPhase 1の受入対象外です。詳細なgateと製造package契約は
+[`phase1-gates.md`](phase1-gates.md)に定義します。
+
 ## 技術spike
 
-| Spike | 成功基準 | 失敗時の扱い |
-|---|---|---|
-| `kicad-cli`再現性 | 固定KiCad 10.x環境で再オープン、ERC/DRC、Gerber/drill、hashが再現 | CI基準または投影範囲を見直す |
-| ngspice WASM | 同一input/model/tool hashでDC/AC/transient、timeout/cancel、結果出力が再現 | Phase 0ゲートには含めず、workerまたは外部Evidenceへ延期 |
-| freerouting DSN/SES | 固定fixtureでCLI実行、SES取込、DRC再実行、失敗分類が再現 | adapterを後続Phaseへ延期 |
-| ブラウザstorage | quota、snapshot復旧、export/import、中断復旧を確認 | Phase 0はJSON Repositoryのまま継続 |
+| Spike               | 成功基準                                                                   | 失敗時の扱い                                            |
+| ------------------- | -------------------------------------------------------------------------- | ------------------------------------------------------- |
+| `kicad-cli`再現性   | 固定KiCad 10.x環境で再オープン、ERC/DRC、Gerber/drill、hashが再現          | CI基準または投影範囲を見直す                            |
+| ngspice WASM        | 同一input/model/tool hashでDC/AC/transient、timeout/cancel、結果出力が再現 | Phase 0ゲートには含めず、workerまたは外部Evidenceへ延期 |
+| freerouting DSN/SES | 固定fixtureでCLI実行、SES取込、DRC再実行、失敗分類が再現                   | adapterを後続Phaseへ延期                                |
+| ブラウザstorage     | quota、snapshot復旧、export/import、中断復旧を確認                         | Phase 0はJSON Repositoryのまま継続                      |
+
+### Spike実測メモ
+
+- **Freerouting DSN/SES（2026-08-02）：** 公式
+  `ghcr.io/freerouting/freerouting:2.2.4`（digest
+  `sha256:0d010c6bf13b562551e8cb41fb298090006033fa2850e5bfc678c98ecf47111e`）を
+  外部processとして実行した。公式の`multichannel_mixer-unrouted.dsn`を入力し、
+  `-mp 1`でSESを生成できた（入力約62 KB、SES約33 KB）。ただし、ログ上141
+  unrouted nets中128が未配線であり、round-trip成功は「入出力とSES生成」の範囲に
+  限定する。DSN/SESのKiCad再取込とDRC合格は未実施のため、Phase 1 adapter採用は
+  保留する。FreeroutingはGPLのためjar/containerをvendor・再配布しない。
+- **ngspice WASM（2026-08-02）：** `eecircuit-engine@1.7.0`（MIT、npm registry
+  のtarball、package integrityは実行時にnpmが表示）をmonorepo外の一時ディレクトリ
+  で評価した。ngspice互換のRC transient netlistを実行し、`dataType=real`、
+  `numPoints=208`、`time/v(in)/v(out)`を取得できた。したがって小規模なNode／
+  browser WASM feasibilityは肯定的だが、ngspice本体との完全互換、モデル・include、
+  timeout/cancel、worker isolation、ブラウザ性能は未検証であり、Phase 1の必須
+  engine採用は決定しない。packageは依存として追加していない。
 
 ## 完了レビュー
 

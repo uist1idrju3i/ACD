@@ -1,13 +1,16 @@
-export type ErrorCode =
-  | "schema-invalid"
-  | "reference-integrity"
-  | "patch-conflict"
-  | "revision-invalid"
-  | "event-replay-failure"
-  | "stale-result"
-  | "verification-failed"
-  | "reopen-failure"
-  | "tool-timeout";
+export const ERROR_CODES = [
+  "schema-invalid",
+  "reference-integrity",
+  "patch-conflict",
+  "revision-invalid",
+  "event-replay-failure",
+  "stale-result",
+  "verification-failed",
+  "reopen-failure",
+  "tool-timeout",
+] as const;
+
+export type ErrorCode = (typeof ERROR_CODES)[number];
 
 export type ErrorSeverity = "warning" | "error" | "critical";
 

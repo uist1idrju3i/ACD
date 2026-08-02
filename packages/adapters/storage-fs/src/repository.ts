@@ -66,7 +66,10 @@ export class FileRepository implements Repository {
       for (const patch of await this.readPatches()) {
         const validator = await loadSchemaValidator("patch");
         if (!validator(patch))
-          throw new GraphCoreError("schema-invalid", "persisted patch failed JSON Schema validation");
+          throw new GraphCoreError(
+            "schema-invalid",
+            "persisted patch failed JSON Schema validation",
+          );
         this.patchEngine.seedAccepted(patch, {
           graph: structuredClone(persistedSnapshot.graph),
           revision: persistedSnapshot.revision,

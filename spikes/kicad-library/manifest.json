@@ -1,0 +1,86 @@
+{
+  "schemaVersion": "0.1.0-draft",
+  "status": "draft",
+  "container": {
+    "image": "kicad/kicad:10.0",
+    "version": "10.0.5",
+    "digest": "sha256:182c8005cb775a2c448a4c18681d489f1ff472a761885eba3e08b07e3c0564de",
+    "source": "https://hub.docker.com/r/kicad/kicad",
+    "license": "GPL-3.0-or-later"
+  },
+  "libraries": [
+    {
+      "kind": "symbol",
+      "id": "Device",
+      "path": "/usr/share/kicad/symbols/Device.kicad_sym",
+      "version": "container-pinned-10.0.5",
+      "license": "CC-BY-SA-4.0-with-exception",
+      "licenseNote": "KiCad official library license; verify the exact upstream notice before redistribution.",
+      "source": "https://gitlab.com/kicad/libraries/kicad-symbols",
+      "contentHash": null,
+      "usedSymbols": ["R", "LED", "C"]
+    },
+    {
+      "kind": "symbol",
+      "id": "Connector_Generic",
+      "path": "/usr/share/kicad/symbols/Connector_Generic.kicad_sym",
+      "version": "container-pinned-10.0.5",
+      "license": "CC-BY-SA-4.0-with-exception",
+      "licenseNote": "KiCad official library license; verify the exact upstream notice before redistribution.",
+      "source": "https://gitlab.com/kicad/libraries/kicad-symbols",
+      "contentHash": null,
+      "usedSymbols": ["Conn_01x02"]
+    },
+    {
+      "kind": "footprint",
+      "id": "Resistor_SMD",
+      "path": "/usr/share/kicad/footprints/Resistor_SMD.pretty",
+      "version": "container-pinned-10.0.5",
+      "license": "CC-BY-SA-4.0-with-exception",
+      "licenseNote": "KiCad official library license; verify the exact upstream notice before redistribution.",
+      "source": "https://gitlab.com/kicad/libraries/kicad-footprints",
+      "contentHash": null,
+      "usedFootprints": ["R_0603_1608Metric"]
+    },
+    {
+      "kind": "footprint",
+      "id": "LED_SMD",
+      "path": "/usr/share/kicad/footprints/LED_SMD.pretty",
+      "version": "container-pinned-10.0.5",
+      "license": "CC-BY-SA-4.0-with-exception",
+      "licenseNote": "KiCad official library license; verify the exact upstream notice before redistribution.",
+      "source": "https://gitlab.com/kicad/libraries/kicad-footprints",
+      "contentHash": null,
+      "usedFootprints": ["LED_0603_1608Metric"]
+    },
+    {
+      "kind": "footprint",
+      "id": "Capacitor_SMD",
+      "path": "/usr/share/kicad/footprints/Capacitor_SMD.pretty",
+      "version": "container-pinned-10.0.5",
+      "license": "CC-BY-SA-4.0-with-exception",
+      "licenseNote": "KiCad official library license; verify the exact upstream notice before redistribution.",
+      "source": "https://gitlab.com/kicad/libraries/kicad-footprints",
+      "contentHash": null,
+      "usedFootprints": ["C_0603_1608Metric"]
+    },
+    {
+      "kind": "footprint",
+      "id": "Connector_JST",
+      "path": "/usr/share/kicad/footprints/Connector_JST.pretty",
+      "version": "container-pinned-10.0.5",
+      "license": "CC-BY-SA-4.0-with-exception",
+      "licenseNote": "KiCad official library license; verify the exact upstream notice before redistribution.",
+      "source": "https://gitlab.com/kicad/libraries/kicad-footprints",
+      "contentHash": null,
+      "usedFootprints": ["JST_PH_B2B-PH-K_1x02_P2.00mm_Vertical"]
+    }
+  ],
+  "verification": {
+    "probeCommand": "docker run --rm --user root -e HOME=/tmp -e KICAD_CONFIG_HOME=/tmp/kicad-config kicad/kicad:10.0 kicad-cli --version",
+    "reopenCommand": "kicad-cli pcb drc --output reports/drc.rpt project/design.kicad_pcb",
+    "reopenStatus": "passed-for-board",
+    "schematicStatus": "projection-spike-still-minimal",
+    "contentHashes": "pending-library-export"
+  }
+}
