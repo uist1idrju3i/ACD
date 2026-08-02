@@ -1,5 +1,5 @@
 import { createHash } from "node:crypto";
-import { readFile } from "node:fs/promises";
+import { readdir, readFile } from "node:fs/promises";
 import { join } from "node:path";
 
 const root = join(import.meta.dirname, "..");
@@ -31,6 +31,15 @@ for (const entry of manifest.files) {
   if (embedded.snapshotFiles[entry.path as keyof typeof embedded.snapshotFiles] !== content) {
     throw new Error(`generated library snapshot differs for ${entry.path}`);
   }
+}
+
+const manifestPaths = new Set(manifest.files.map((entry) => entry.path));
+const snapshotPaths = (await readdir(snapshotRoot, { recursive: true }))
+  .filter((path) => path !== "manifest.json")
+  .map((path) => path.replaceAll("\\", "/"));
+const orphanedPaths = snapshotPaths.filter((path) => !manifestPaths.has(path));
+if (orphanedPaths.length > 0) {
+  throw new Error(`orphaned library snapshot files: ${orphanedPaths.join(", ")}`);
 }
 
 console.log(`verified ${manifest.files.length} KiCad library snapshot files`);
