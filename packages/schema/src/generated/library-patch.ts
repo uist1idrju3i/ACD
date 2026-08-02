@@ -27,11 +27,13 @@ export interface ACDLibraryOverlayPatch {
       kind: "set-pad-mask-clearance";
       target: string;
       requiredValueMm: number;
+      padNumber?: string;
     },
     ...{
       kind: "set-pad-mask-clearance";
       target: string;
       requiredValueMm: number;
+      padNumber?: string;
     }[]
   ];
   content: string;

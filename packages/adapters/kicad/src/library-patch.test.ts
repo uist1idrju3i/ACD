@@ -1,6 +1,7 @@
 import { createHash } from "node:crypto";
 import { describe, expect, it } from "vitest";
 import type { KnowledgeItem } from "@acd/graph-core";
+import { loadSchemaValidator } from "@acd/schema";
 import {
   adoptVerifiedLibraryPatch,
   createLibraryPatchCandidate,
@@ -13,6 +14,7 @@ import {
   verifyLibraryPatchGeometry,
 } from "./library-patch.js";
 import { snapshotFiles, snapshotManifest } from "./library-snapshot.js";
+import { renderFootprintLibraryTable } from "./projection.js";
 
 const adoptedKnowledge = (): KnowledgeItem => ({
   id: "knowledge:test:r2",
@@ -69,6 +71,18 @@ describe("KiCad library overlay patches", () => {
     expect(verifyLibraryPatchGeometry(first)?.geometry).toBe("passed");
   });
 
+  it("validates the produced patch against the library-patch schema", async () => {
+    const patch = createLibraryPatchCandidate(adoptedKnowledge());
+    const validate = await loadSchemaValidator("library-patch");
+    expect(validate(patch)).toBe(true);
+  });
+
+  it("registers materialized overlays in fp-lib-table", () => {
+    expect(renderFootprintLibraryTable("/tmp/project/library-overlays")).toContain(
+      '(lib (name "ACD_Overlay")',
+    );
+  });
+
   it("rejects content changed outside the declared correction", () => {
     const patch = createLibraryPatchCandidate(adoptedKnowledge());
     const verification = verifyLibraryPatchGeometry({
@@ -90,6 +104,20 @@ describe("KiCad library overlay patches", () => {
     expect(patchedBoard).not.toBe(board);
     expect(patchedBoard).toContain('ACD_LibraryOverlay" "pad-mask-clearance=0.1');
     expect(materializeLibraryPatchInBoardSource(board, "other", patch.operations)).toBe(board);
+  });
+
+  it("materializes a library overlay into every matching footprint instance", () => {
+    const patch = createLibraryPatchCandidate(adoptedKnowledge());
+    const board = [
+      '(kicad_pcb (footprint "R_0603_1608Metric" (pad "1" smd roundrect (size 0.8 0.95))))',
+      '(footprint "R_0603_1608Metric" (pad "1" smd roundrect (size 0.8 0.95)))',
+    ].join("\n");
+    const patched = materializeLibraryPatchInBoardSource(
+      board,
+      patch.footprintId,
+      patch.operations,
+    );
+    expect(patched.match(/ACD_LibraryOverlay/g)).toHaveLength(2);
   });
 
   it("keeps the official snapshot manifest and file hashes immutable", () => {
@@ -118,10 +146,14 @@ describe("KiCad library overlay patches", () => {
   it("requires the shared approval boundary for library-wide promotion", () => {
     const patch = createLibraryPatchCandidate(adoptedKnowledge());
     expect(() => promoteLibraryPatch(patch, undefined, "2026-01-01T00:00:00.000Z")).toThrow(
+      /adopted/,
+    );
+    const adoptedPatch = { ...patch, status: "adopted" as const };
+    expect(() => promoteLibraryPatch(adoptedPatch, undefined, "2026-01-01T00:00:00.000Z")).toThrow(
       /approval/,
     );
     const promoted = promoteLibraryPatch(
-      patch,
+      adoptedPatch,
       {
         approvalId: "approval:test",
         subject: "knowledge:test",

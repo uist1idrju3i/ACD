@@ -44,7 +44,8 @@
         "properties": {
           "kind": { "const": "set-pad-mask-clearance" },
           "target": { "type": "string", "minLength": 1 },
-          "requiredValueMm": { "type": "number" }
+          "requiredValueMm": { "type": "number" },
+          "padNumber": { "type": "string", "minLength": 1 }
         }
       }
     },
