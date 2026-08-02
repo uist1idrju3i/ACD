@@ -1,14 +1,20 @@
 import { readFile } from "node:fs/promises";
 import { Ajv2020, type ValidateFunction } from "ajv/dist/2020.js";
 import * as formatsModule from "ajv-formats";
-import { designGraphSchemaPath, eventSchemaPath, patchSchemaPath } from "./paths.js";
+import {
+  designGraphSchemaPath,
+  errorTaxonomySchemaPath,
+  eventSchemaPath,
+  patchSchemaPath,
+} from "./paths.js";
 
-export type SchemaName = "design-graph" | "patch" | "event";
+export type SchemaName = "design-graph" | "patch" | "event" | "error-taxonomy";
 
 const paths: Record<SchemaName, string> = {
   "design-graph": designGraphSchemaPath,
   patch: patchSchemaPath,
   event: eventSchemaPath,
+  "error-taxonomy": errorTaxonomySchemaPath,
 };
 
 export const createSchemaValidator = (): Ajv2020 => {

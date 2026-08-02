@@ -3,6 +3,8 @@ import { Ajv2020, type ErrorObject, type ValidateFunction } from "ajv/dist/2020.
 import * as formatsModule from "ajv-formats";
 import {
   designGraphSchemaPath,
+  errorTaxonomyDataPath,
+  errorTaxonomySchemaPath,
   eventSchemaPath,
   patchSchemaPath,
   repositoryRoot,
@@ -27,7 +29,12 @@ export const formatValidationErrors = (errors: ErrorObject[] | null | undefined)
     .map((error) => `${error.instancePath || "/"} ${error.message ?? "invalid"}`)
     .join("; ");
 
-const samplePaths = [designGraphSchemaPath, patchSchemaPath, eventSchemaPath];
+const samplePaths = [
+  designGraphSchemaPath,
+  patchSchemaPath,
+  eventSchemaPath,
+  errorTaxonomySchemaPath,
+];
 for (const schemaPath of samplePaths) {
   await loadValidator(schemaPath);
   process.stdout.write(`validated schema: ${schemaPath}\n`);
@@ -43,3 +50,12 @@ if (!designGraphValidator(sample)) {
   );
 }
 process.stdout.write("validated sample: fixtures/design-graphs/normal-2layer.json\n");
+
+const errorTaxonomyValidator = await loadValidator(errorTaxonomySchemaPath);
+const errorTaxonomy = JSON.parse(await readFile(errorTaxonomyDataPath, "utf8")) as unknown;
+if (!errorTaxonomyValidator(errorTaxonomy)) {
+  throw new Error(
+    `error taxonomy is invalid: ${formatValidationErrors(errorTaxonomyValidator.errors)}`,
+  );
+}
+process.stdout.write("validated data: schemas/error-taxonomy.json\n");

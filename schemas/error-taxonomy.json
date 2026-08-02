@@ -1,0 +1,85 @@
+{
+  "version": "0.1.0-draft",
+  "errors": [
+    {
+      "code": "schema-invalid",
+      "severity": ["error"],
+      "jidokaAction": "stop"
+    },
+    {
+      "code": "reference-integrity",
+      "severity": ["error"],
+      "jidokaAction": "stop"
+    },
+    {
+      "code": "patch-conflict",
+      "severity": ["error"],
+      "jidokaAction": "stop"
+    },
+    {
+      "code": "revision-invalid",
+      "severity": ["error"],
+      "jidokaAction": "stop"
+    },
+    {
+      "code": "event-replay-failure",
+      "severity": ["critical"],
+      "jidokaAction": "stop"
+    },
+    {
+      "code": "stale-result",
+      "severity": ["error"],
+      "jidokaAction": "stop"
+    },
+    {
+      "code": "verification-failed",
+      "severity": ["error"],
+      "jidokaAction": "stop"
+    },
+    {
+      "code": "reopen-failure",
+      "severity": ["critical"],
+      "jidokaAction": "stop"
+    },
+    {
+      "code": "tool-timeout",
+      "severity": ["error"],
+      "jidokaAction": "stop"
+    },
+    {
+      "code": "tool-failure",
+      "severity": ["error"],
+      "jidokaAction": "stop"
+    },
+    {
+      "code": "convergence-failure",
+      "severity": ["error"],
+      "jidokaAction": "stop"
+    },
+    {
+      "code": "license-restriction",
+      "severity": ["critical"],
+      "jidokaAction": "escalate"
+    },
+    {
+      "code": "approval-required",
+      "severity": ["warning", "error"],
+      "jidokaAction": "hold"
+    },
+    {
+      "code": "budget-exceeded",
+      "severity": ["error"],
+      "jidokaAction": "stop"
+    },
+    {
+      "code": "unknown-impact",
+      "severity": ["warning", "error"],
+      "jidokaAction": "widen-verification"
+    },
+    {
+      "code": "patent-concern",
+      "severity": ["critical"],
+      "jidokaAction": "escalate"
+    }
+  ]
+}

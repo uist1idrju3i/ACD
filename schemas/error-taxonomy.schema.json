@@ -1,0 +1,40 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://acd.local/schemas/error-taxonomy.schema.json",
+  "title": "ACD Error Taxonomy",
+  "type": "object",
+  "required": ["version", "errors"],
+  "additionalProperties": false,
+  "properties": {
+    "version": {
+      "type": "string",
+      "minLength": 1
+    },
+    "errors": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": ["code", "severity", "jidokaAction"],
+        "additionalProperties": false,
+        "properties": {
+          "code": {
+            "type": "string",
+            "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$"
+          },
+          "severity": {
+            "type": "array",
+            "minItems": 1,
+            "items": {
+              "enum": ["warning", "error", "critical"]
+            }
+          },
+          "jidokaAction": {
+            "type": "string",
+            "minLength": 1
+          }
+        }
+      }
+    }
+  }
+}
