@@ -27,12 +27,12 @@ Phase 1は、事前変換済みの`Requirement` fixtureから、ESP32級golden t
 - 手書きのsmoke geometry tableを、抽出した実geometryへ段階的に置き換える。
 - projection前にmanifest hashを検証し、不一致ならjidoka停止する。
 
-実装済み範囲は`packages/adapters/kicad/library-snapshot/`の9ファイルです。
+実装済み範囲は`packages/adapters/kicad/library-snapshot/`のsmokeおよびgolden定義用
+スナップショットです。golden fixture追加時も同じ抽出scriptでmanifestを再生成します。
 固定digestから抽出したsymbol blockとfootprint `.kicad_mod`をmanifestへ登録し、
 projectionは公式pad位置、size、layer、THT drillを使用します。生成symbol moduleは
 抽出scriptから再生成され、projection前のruntime hash検証と未知construct停止を
-実装しています。未完了なのはgolden fixtureで必要になる追加libraryの抽出と、
-smoke範囲を越えた全library同期です。
+実装しています。未完了なのはsmoke/golden範囲を越えた全library同期です。
 
 **受入基準**
 
@@ -47,6 +47,8 @@ smoke範囲を越えた全library同期です。
 
 ### WP2：ESP32級golden fixture定義
 
+**状態：fixture定義・Gate 1/2検証・必要library snapshot拡張まで完了。**
+
 **作業**
 
 - ESP32、電源、センサー、status LED、通信、デカップリングを含む部品・netを定義する。
@@ -55,9 +57,16 @@ smoke範囲を越えた全library同期です。
 
 **受入基準**
 
-- `phase1-fixture.schema.json`とsemantic validatorを通過する。
+- `fixtures/phase1/golden-esp32.json`が`phase1-fixture.schema.json`とsemantic
+  validatorを通過する。
 - 全partにmapping、placement、BOM、provenanceがあり、全net pinが解決する。
+- ESP32-WROOM-32E、USB-C、regulator、BME280、passive、header、switchの
+  official mappingとhash-pinned footprint snapshotが存在する。
 - canonical netlist hashとfixture revisionを再現できる。
+
+本WPはfixture定義とGate 1/2の検証までを対象とする。golden fixtureは現時点で
+projection、placement、routing、Gate 3以降のrunnerへ投入しない。一般化された
+placementはWP3、golden routingと`unrouted=0`はWP4で実装する。
 
 **リスク**
 

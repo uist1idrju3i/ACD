@@ -8,6 +8,7 @@ import {
   eventSchemaPath,
   patchSchemaPath,
   phase1FixtureSchemaPath,
+  phase1GoldenFixturePath,
   phase1SmokeFixturePath,
   repositoryRoot,
 } from "./paths.js";
@@ -65,18 +66,23 @@ if (!errorTaxonomyValidator(errorTaxonomy)) {
 process.stdout.write("validated data: schemas/error-taxonomy.json\n");
 
 const phase1FixtureValidator = await loadValidator(phase1FixtureSchemaPath);
-const phase1SmokeFixture = JSON.parse(await readFile(phase1SmokeFixturePath, "utf8")) as unknown;
-if (!phase1FixtureValidator(phase1SmokeFixture)) {
-  throw new Error(
-    `phase 1 smoke fixture is invalid: ${formatValidationErrors(phase1FixtureValidator.errors)}`,
+for (const [fixturePath, label] of [
+  [phase1SmokeFixturePath, "fixtures/phase1/smoke.json"],
+  [phase1GoldenFixturePath, "fixtures/phase1/golden-esp32.json"],
+] as const) {
+  const fixture = JSON.parse(await readFile(fixturePath, "utf8")) as unknown;
+  if (!phase1FixtureValidator(fixture)) {
+    throw new Error(
+      `phase 1 fixture ${label} is invalid: ${formatValidationErrors(phase1FixtureValidator.errors)}`,
+    );
+  }
+  const referenceErrors = validatePhase1FixtureReferences(
+    fixture as Parameters<typeof validatePhase1FixtureReferences>[0],
   );
+  if (referenceErrors.length > 0) {
+    throw new Error(
+      `phase 1 fixture reference-integrity failure (${label}): ${referenceErrors.join("; ")}`,
+    );
+  }
+  process.stdout.write(`validated fixture: ${label}\n`);
 }
-const phase1ReferenceErrors = validatePhase1FixtureReferences(
-  phase1SmokeFixture as Parameters<typeof validatePhase1FixtureReferences>[0],
-);
-if (phase1ReferenceErrors.length > 0) {
-  throw new Error(
-    `phase 1 fixture reference-integrity failure: ${phase1ReferenceErrors.join("; ")}`,
-  );
-}
-process.stdout.write("validated fixture: fixtures/phase1/smoke.json\n");

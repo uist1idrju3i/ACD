@@ -60,6 +60,72 @@
     },
     {
       "kind": "symbol",
+      "id": "Connector:USB_C_Receptacle_PowerOnly_6P",
+      "path": "symbols/Connector_USB_C_Receptacle_PowerOnly_6P.kicad_sym",
+      "source": "/usr/share/kicad/symbols/Connector.kicad_sym",
+      "sourceUrl": "https://gitlab.com/kicad/libraries/kicad-symbols",
+      "version": "10.0.5",
+      "containerDigest": "sha256:182c8005cb775a2c448a4c18681d489f1ff472a761885eba3e08b07e3c0564de",
+      "license": "CC-BY-SA-4.0-with-exception",
+      "contentHash": "sha256:a348dc4d5d52a83c9353128a42a6b535088188460f7198366040eec7c6db08a2"
+    },
+    {
+      "kind": "symbol",
+      "id": "RF_Module:ESP32-WROOM-32E",
+      "path": "symbols/RF_Module_ESP32-WROOM-32E.kicad_sym",
+      "source": "/usr/share/kicad/symbols/RF_Module.kicad_sym",
+      "sourceUrl": "https://gitlab.com/kicad/libraries/kicad-symbols",
+      "version": "10.0.5",
+      "containerDigest": "sha256:182c8005cb775a2c448a4c18681d489f1ff472a761885eba3e08b07e3c0564de",
+      "license": "CC-BY-SA-4.0-with-exception",
+      "contentHash": "sha256:fd23dbc5879366c626532a63124da0d6c3d47f89cb8ae1ab319b133308330764"
+    },
+    {
+      "kind": "symbol",
+      "id": "Sensor:BME280",
+      "path": "symbols/Sensor_BME280.kicad_sym",
+      "source": "/usr/share/kicad/symbols/Sensor.kicad_sym",
+      "sourceUrl": "https://gitlab.com/kicad/libraries/kicad-symbols",
+      "version": "10.0.5",
+      "containerDigest": "sha256:182c8005cb775a2c448a4c18681d489f1ff472a761885eba3e08b07e3c0564de",
+      "license": "CC-BY-SA-4.0-with-exception",
+      "contentHash": "sha256:f86b0b30ce9140d5ef9050d6af6d3d450b9c0a3ee98ce4c6484c87ea78202743"
+    },
+    {
+      "kind": "symbol",
+      "id": "Regulator_Linear:AMS1117-3.3",
+      "path": "symbols/Regulator_Linear_AMS1117-3.3.kicad_sym",
+      "source": "/usr/share/kicad/symbols/Regulator_Linear.kicad_sym",
+      "sourceUrl": "https://gitlab.com/kicad/libraries/kicad-symbols",
+      "version": "10.0.5",
+      "containerDigest": "sha256:182c8005cb775a2c448a4c18681d489f1ff472a761885eba3e08b07e3c0564de",
+      "license": "CC-BY-SA-4.0-with-exception",
+      "contentHash": "sha256:592bf228ed9114c8559bbe692bbb754cb5ebf4534f03d089684a0f6cbbedebd1"
+    },
+    {
+      "kind": "symbol",
+      "id": "Connector_Generic:Conn_01x06",
+      "path": "symbols/Connector_Generic_Conn_01x06.kicad_sym",
+      "source": "/usr/share/kicad/symbols/Connector_Generic.kicad_sym",
+      "sourceUrl": "https://gitlab.com/kicad/libraries/kicad-symbols",
+      "version": "10.0.5",
+      "containerDigest": "sha256:182c8005cb775a2c448a4c18681d489f1ff472a761885eba3e08b07e3c0564de",
+      "license": "CC-BY-SA-4.0-with-exception",
+      "contentHash": "sha256:3987388712ccbda43779da74f49ba48e7ad46786c85cf8565e290c4ef96a356f"
+    },
+    {
+      "kind": "symbol",
+      "id": "Switch:SW_Push",
+      "path": "symbols/Switch_SW_Push.kicad_sym",
+      "source": "/usr/share/kicad/symbols/Switch.kicad_sym",
+      "sourceUrl": "https://gitlab.com/kicad/libraries/kicad-symbols",
+      "version": "10.0.5",
+      "containerDigest": "sha256:182c8005cb775a2c448a4c18681d489f1ff472a761885eba3e08b07e3c0564de",
+      "license": "CC-BY-SA-4.0-with-exception",
+      "contentHash": "sha256:9dfa2a9534f8fd5b93eb3012023eaf3653eeeb828490a6f9b8f405cacfd46a88"
+    },
+    {
+      "kind": "symbol",
       "id": "power:PWR_FLAG",
       "path": "symbols/power_PWR_FLAG.kicad_sym",
       "source": "/usr/share/kicad/symbols/power.kicad_sym",
@@ -112,6 +178,72 @@
       "containerDigest": "sha256:182c8005cb775a2c448a4c18681d489f1ff472a761885eba3e08b07e3c0564de",
       "license": "CC-BY-SA-4.0-with-exception",
       "contentHash": "sha256:fe0dbfefbb181a0466f93a8de52d84ba7b00fcd9acdbb69575f4128a0af4e405"
+    },
+    {
+      "kind": "footprint",
+      "id": "USB_C_Receptacle_GCT_USB4135-GF-A_6P_TopMnt_Horizontal",
+      "path": "footprints/USB_C_Receptacle_GCT_USB4135-GF-A_6P_TopMnt_Horizontal.kicad_mod",
+      "source": "/usr/share/kicad/footprints/Connector_USB.pretty/USB_C_Receptacle_GCT_USB4135-GF-A_6P_TopMnt_Horizontal.kicad_mod",
+      "sourceUrl": "https://gitlab.com/kicad/libraries/kicad-footprints",
+      "version": "10.0.5",
+      "containerDigest": "sha256:182c8005cb775a2c448a4c18681d489f1ff472a761885eba3e08b07e3c0564de",
+      "license": "CC-BY-SA-4.0-with-exception",
+      "contentHash": "sha256:beaaa41f4b1e53a8ca77ba55443631e22862ca17e23a6afc6e7c88b39ebb893d"
+    },
+    {
+      "kind": "footprint",
+      "id": "ESP32-WROOM-32E",
+      "path": "footprints/ESP32-WROOM-32E.kicad_mod",
+      "source": "/usr/share/kicad/footprints/RF_Module.pretty/ESP32-WROOM-32E.kicad_mod",
+      "sourceUrl": "https://gitlab.com/kicad/libraries/kicad-footprints",
+      "version": "10.0.5",
+      "containerDigest": "sha256:182c8005cb775a2c448a4c18681d489f1ff472a761885eba3e08b07e3c0564de",
+      "license": "CC-BY-SA-4.0-with-exception",
+      "contentHash": "sha256:b0690fed21a0929c7c43fb16f03ba0e6e5eaf9cf4eb36743f57651bfa00153d6"
+    },
+    {
+      "kind": "footprint",
+      "id": "Bosch_LGA-8_2x2.5mm_P0.65mm_ClockwisePinNumbering",
+      "path": "footprints/Bosch_LGA-8_2x2.5mm_P0.65mm_ClockwisePinNumbering.kicad_mod",
+      "source": "/usr/share/kicad/footprints/Package_LGA.pretty/Bosch_LGA-8_2x2.5mm_P0.65mm_ClockwisePinNumbering.kicad_mod",
+      "sourceUrl": "https://gitlab.com/kicad/libraries/kicad-footprints",
+      "version": "10.0.5",
+      "containerDigest": "sha256:182c8005cb775a2c448a4c18681d489f1ff472a761885eba3e08b07e3c0564de",
+      "license": "CC-BY-SA-4.0-with-exception",
+      "contentHash": "sha256:58d35c40c180b9abd031c277fd04f423bf267bb2eb7490589473398d39efd01d"
+    },
+    {
+      "kind": "footprint",
+      "id": "SOT-223-3_TabPin2",
+      "path": "footprints/SOT-223-3_TabPin2.kicad_mod",
+      "source": "/usr/share/kicad/footprints/Package_TO_SOT_SMD.pretty/SOT-223-3_TabPin2.kicad_mod",
+      "sourceUrl": "https://gitlab.com/kicad/libraries/kicad-footprints",
+      "version": "10.0.5",
+      "containerDigest": "sha256:182c8005cb775a2c448a4c18681d489f1ff472a761885eba3e08b07e3c0564de",
+      "license": "CC-BY-SA-4.0-with-exception",
+      "contentHash": "sha256:8ae5f03e2c16377abed15e51af6864e23a934e1457b97fb7ea930e17fa99f11d"
+    },
+    {
+      "kind": "footprint",
+      "id": "PinHeader_1x06_P2.54mm_Vertical",
+      "path": "footprints/PinHeader_1x06_P2.54mm_Vertical.kicad_mod",
+      "source": "/usr/share/kicad/footprints/Connector_PinHeader_2.54mm.pretty/PinHeader_1x06_P2.54mm_Vertical.kicad_mod",
+      "sourceUrl": "https://gitlab.com/kicad/libraries/kicad-footprints",
+      "version": "10.0.5",
+      "containerDigest": "sha256:182c8005cb775a2c448a4c18681d489f1ff472a761885eba3e08b07e3c0564de",
+      "license": "CC-BY-SA-4.0-with-exception",
+      "contentHash": "sha256:5f2993c50dbd5024384bf6fa972fcd10d40d0837039e1e371b326a27d9f5b8b7"
+    },
+    {
+      "kind": "footprint",
+      "id": "SW_SPST_EVQP2_ShortPushTravel_H2.1mm",
+      "path": "footprints/SW_SPST_EVQP2_ShortPushTravel_H2.1mm.kicad_mod",
+      "source": "/usr/share/kicad/footprints/Button_Switch_SMD.pretty/SW_SPST_EVQP2_ShortPushTravel_H2.1mm.kicad_mod",
+      "sourceUrl": "https://gitlab.com/kicad/libraries/kicad-footprints",
+      "version": "10.0.5",
+      "containerDigest": "sha256:182c8005cb775a2c448a4c18681d489f1ff472a761885eba3e08b07e3c0564de",
+      "license": "CC-BY-SA-4.0-with-exception",
+      "contentHash": "sha256:a317bc527e5222726dc61c864cfddc8f02c29f78205dc6deae8ecb4566d2e383"
     }
   ]
 }

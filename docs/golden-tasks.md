@@ -23,6 +23,17 @@ fixtureはネットワーク、現在時刻、ホストのKiCad、未固定ラ�
 
 ## 必須fixture
 
+### `phase1-golden-esp32`
+
+ESP32-WROOM-32E、USB-C電源入力、3.3V regulator、BME280 I2C sensor、UART header、
+status LED、decoupling、EN/IO0 strappingを含むPhase 1 golden fixture定義です。
+`pnpm schema:validate`でSchemaとreference-integrityを検証し、公式KiCad
+symbol/footprint mappingはcontent-hash pinned snapshotから解決します。
+
+このWPではfixture定義とGate 1/2のみを受入対象とします。golden fixtureをsmoke-only
+projection/routerへ渡してはならず、placementはWP3、外部routing toolのDSN/SES
+round-tripと`unrouted=0`はWP4で実装します。
+
 ### `normal-2layer`
 
 最小2層基板、部品、Pin、Net、Layout、BoardStackupからKiCad投影を生成する。

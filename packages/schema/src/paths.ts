@@ -15,3 +15,4 @@ export const phase1FixtureSchemaPath = resolve(
   "schemas/phase1-fixture.schema.json",
 );
 export const phase1SmokeFixturePath = resolve(repositoryRoot, "fixtures/phase1/smoke.json");
+export const phase1GoldenFixturePath = resolve(repositoryRoot, "fixtures/phase1/golden-esp32.json");

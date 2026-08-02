@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { readFile } from "node:fs/promises";
 import { parseFootprintPads, parseFootprintSource, verifyLibrarySnapshot } from "./library.js";
 
 describe("KiCad library snapshot", () => {
@@ -43,5 +44,17 @@ describe("KiCad library snapshot", () => {
       )
     )`;
     expect(() => parseFootprintSource("invalid", footprint)).toThrow(/unsupported drill construct/);
+  });
+
+  it("resolves every golden fixture footprint from the pinned snapshot", async () => {
+    const fixture = JSON.parse(
+      await readFile(
+        new URL("../../../../fixtures/phase1/golden-esp32.json", import.meta.url),
+        "utf8",
+      ),
+    ) as { mappings: Array<{ footprintName: string }> };
+    for (const mapping of fixture.mappings) {
+      expect(parseFootprintPads(mapping.footprintName).length).toBeGreaterThan(0);
+    }
   });
 });
