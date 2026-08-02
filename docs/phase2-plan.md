@@ -171,10 +171,11 @@ footprint／MPN不整合が後段で発見されました。KiCad ERCはこれ�
 - golden fixtureの電源・LED回路について、nominal解析が収束し、結果がEvidenceになる。
 - 収束失敗は`convergence-failure`で停止する。
 
-**未決定**
+**決定済み**
 
-- engine選定（ngspice共有ライブラリ／WASM、Xyce等）とライセンス境界はADRで決める。
-  高忠実度SI／熱解析はPhase 2の対象外。
+- engineはngspiceを固定digestコンテナの外部processとして実行する。
+  [ADR-0020](adr/0020-spice-engine-ngspice-external-process.md)。
+  nominal解析のみを対象とし、高忠実度SI／熱解析はPhase 2の対象外。
 
 ### WP7：schematic readability（Phase 1 WP6の繰延分）
 

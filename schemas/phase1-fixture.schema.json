@@ -160,6 +160,11 @@
           "minItems": 1,
           "items": { "type": "string", "minLength": 1 }
         },
+        "acceptanceVerifiedBy": {
+          "description": "Gate or test item deciding each acceptance criterion, aligned by index with acceptanceCriteria.",
+          "type": "array",
+          "items": { "type": "string", "pattern": "^(gate|test):[a-z0-9-]+$" }
+        },
         "provenance": { "$ref": "#/$defs/provenance" }
       }
     },

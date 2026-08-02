@@ -110,6 +110,12 @@ describe("design rationale", () => {
     expect(rulesOf(circular, "fail")).toEqual(["rationale-not-evidence"]);
   });
 
+  it("rejects a rationale cited as evidence even when the id does not resolve", () => {
+    const invented = clone(golden);
+    findRationale(invented, "rationale:esp32-compute").evidenceLinks = ["rationale:invented"];
+    expect(rulesOf(invented, "fail")).toEqual(["rationale-not-evidence"]);
+  });
+
   it("does not let an LLM-proposed rationale change a deterministic gate result", () => {
     const proposed = clone(golden);
     rationalesOf(proposed).push({

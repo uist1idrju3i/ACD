@@ -46,17 +46,17 @@ MPN文字列からの推定は行いません。値が無い場合は推定せ�
 
 ## Rule一覧
 
-| rule ID                         | 判定内容                                                       | `unknown`になる条件               |
-| ------------------------------- | -------------------------------------------------------------- | --------------------------------- |
-| `pin-connected`                 | power pinおよび二端子受動部品（R／C／LED）の全pinがnetに属する | なし（欠落は`fail`）              |
-| `power-net-voltage-declared`    | power netが`nominalVoltageV`を宣言している                     | 未宣言                            |
-| `regulator-bulk-capacitance`    | レギュレータ入出力のbulk容量が要求値以上                       | 要求値または容量が未宣言          |
-| `decoupling-present`            | IC／module／sensorの供給pinに電源—GND間の小容量capacitorがある | 容量が未宣言                      |
-| `led-series-current`            | `I = (Vdrive − Vf) / R`がLEDの電流窓に入る                     | Vf・R・駆動電圧のいずれかが未宣言 |
-| `usb-cc-termination`            | USB-C CC netにGNDへの約5.1 kΩ pull-downがある                  | 抵抗値が未宣言                    |
-| `i2c-pullup`                    | I2C netにpower netへの1 k〜10 kΩ pull-upがある                 | 抵抗値が未宣言                    |
-| `capacitor-voltage-derating`    | capacitorの定格電圧 ≥ net公称電圧 × 1.5                        | 定格またはnet電圧が未宣言         |
-| `footprint-package-consistency` | footprint名がpackage記述子またはMPN先頭tokenを含む             | 比較可能なtokenを取り出せない     |
+| rule ID                         | 判定内容                                                       | `unknown`になる条件                                     |
+| ------------------------------- | -------------------------------------------------------------- | ------------------------------------------------------- |
+| `pin-connected`                 | power pinおよび二端子受動部品（R／C／LED）の全pinがnetに属する | なし（欠落は`fail`）                                    |
+| `power-net-voltage-declared`    | power netが`nominalVoltageV`を宣言している                     | 未宣言                                                  |
+| `regulator-bulk-capacitance`    | レギュレータ入出力のbulk容量が要求値以上                       | 要求値または容量が未宣言                                |
+| `decoupling-present`            | IC／module／sensorの供給pinに電源—GND間の小容量capacitorがある | 容量が未宣言                                            |
+| `led-series-current`            | `I = (Vdrive − Vf) / R`がLEDの電流窓に入る                     | Vf・R・駆動電圧のいずれかが未宣言、または直列経路が分岐 |
+| `usb-cc-termination`            | USB-C CC netにGNDへの約5.1 kΩ pull-downがある                  | 抵抗値が未宣言                                          |
+| `i2c-pullup`                    | I2C netにpower netへの1 k〜10 kΩ pull-upがある                 | 抵抗値が未宣言                                          |
+| `capacitor-voltage-derating`    | capacitorの定格電圧 ≥ net公称電圧 × 1.5                        | 定格またはnet電圧が未宣言                               |
+| `footprint-package-consistency` | footprint名がpackage記述子またはMPN先頭tokenを含む             | 比較可能なtokenを取り出せない                           |
 
 しきい値（ディレーティング係数、pull-up範囲、CC抵抗値と許容比、デカップリング上限容量）は
 `ElectricalLintProfile`として明示し、既定値を`defaultElectricalLintProfile`に固定します。

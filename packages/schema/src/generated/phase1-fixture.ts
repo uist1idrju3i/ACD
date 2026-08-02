@@ -59,6 +59,10 @@ export interface Requirement {
    * @minItems 1
    */
   acceptanceCriteria: [string, ...string[]];
+  /**
+   * Gate or test item deciding each acceptance criterion, aligned by index with acceptanceCriteria.
+   */
+  acceptanceVerifiedBy?: string[];
   provenance: Provenance;
 }
 export interface Board {
