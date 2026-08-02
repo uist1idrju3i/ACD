@@ -9,13 +9,17 @@ import {
   parseMeasurement,
   spiceRuleIds,
   type SpiceAnalysis,
+  type SpicePlan,
 } from "./index.js";
 
 const goldenPath = fileURLToPath(
   new URL("../../../../fixtures/phase1/golden-esp32.json", import.meta.url),
 );
 const golden = JSON.parse(await readFile(goldenPath, "utf8")) as Phase1Fixture;
-const analyses = buildSpiceAnalyses(golden);
+const plan = buildSpiceAnalyses(golden);
+const analyses = plan.analyses;
+const engineVersion = "44.2";
+const only = (entry: SpiceAnalysis): SpicePlan => ({ analyses: [entry], unresolved: [] });
 
 const analysis = (id: string): SpiceAnalysis => {
   const found = analyses.find((candidate) => candidate.id === id);
@@ -63,20 +67,25 @@ describe("spice analyses", () => {
   });
 
   it("passes when every analysis converges inside its band", () => {
-    const report = evaluateSpiceRuns(analyses, [
-      { analysisId: "spice:led-branch-d1", stdout: opOutput, exitCode: 0 },
-      { analysisId: "spice:i2c-rise-i2c-sda", stdout: tranOutput, exitCode: 0 },
-      { analysisId: "spice:i2c-rise-i2c-scl", stdout: tranOutput, exitCode: 0 },
-    ]);
+    const report = evaluateSpiceRuns(
+      plan,
+      [
+        { analysisId: "spice:led-branch-d1", stdout: opOutput, exitCode: 0 },
+        { analysisId: "spice:i2c-rise-i2c-sda", stdout: tranOutput, exitCode: 0 },
+        { analysisId: "spice:i2c-rise-i2c-scl", stdout: tranOutput, exitCode: 0 },
+      ],
+      engineVersion,
+    );
     expect(report.verdict).toBe("pass");
     expect([...new Set(report.findings.map((finding) => finding.ruleId))].sort()).toEqual(
-      [...spiceRuleIds].sort(),
+      // Derivation only reports the analyses a fixture does not support.
+      [...spiceRuleIds].filter((ruleId) => ruleId !== "spice-analysis-derivation").sort(),
     );
   });
 
   it("fails when a measurement leaves its band", () => {
     const report = evaluateSpiceRuns(
-      [analysis("spice:led-branch-d1")],
+      only(analysis("spice:led-branch-d1")),
       [
         {
           analysisId: "spice:led-branch-d1",
@@ -84,6 +93,7 @@ describe("spice analyses", () => {
           exitCode: 0,
         },
       ],
+      engineVersion,
     );
     expect(report.verdict).toBe("fail");
     expect(report.findings.find((finding) => finding.ruleId === "spice-margin")?.status).toBe(
@@ -94,7 +104,7 @@ describe("spice analyses", () => {
   it("blocks on a non-converged run, a missing run and a missing measurement", () => {
     expect(
       evaluateSpiceRuns(
-        [analysis("spice:led-branch-d1")],
+        only(analysis("spice:led-branch-d1")),
         [
           {
             analysisId: "spice:led-branch-d1",
@@ -102,13 +112,17 @@ describe("spice analyses", () => {
             exitCode: 1,
           },
         ],
+        engineVersion,
       ).verdict,
     ).toBe("blocked");
-    expect(evaluateSpiceRuns([analysis("spice:led-branch-d1")], []).verdict).toBe("blocked");
+    expect(
+      evaluateSpiceRuns(only(analysis("spice:led-branch-d1")), [], engineVersion).verdict,
+    ).toBe("blocked");
     expect(
       evaluateSpiceRuns(
-        [analysis("spice:led-branch-d1")],
+        only(analysis("spice:led-branch-d1")),
         [{ analysisId: "spice:led-branch-d1", stdout: "ngspice-44.2 done\n", exitCode: 0 }],
+        engineVersion,
       ).verdict,
     ).toBe("blocked");
   });
@@ -126,10 +140,37 @@ describe("spice analyses", () => {
       ],
     };
     const report = evaluateSpiceRuns(
-      [vendor],
+      only(vendor),
       [{ analysisId: vendor.id, stdout: opOutput, exitCode: 0 }],
+      engineVersion,
     );
     expect(report.verdict).toBe("blocked");
+  });
+
+  it("blocks when the engine does not report its version", () => {
+    const runs = [{ analysisId: "spice:led-branch-d1", stdout: opOutput, exitCode: 0 }];
+    const report = evaluateSpiceRuns(only(analysis("spice:led-branch-d1")), runs);
+    expect(report.verdict).toBe("blocked");
+    expect(
+      report.findings.find((finding) => finding.ruleId === "spice-engine-version")?.status,
+    ).toBe("unknown");
+  });
+
+  it("blocks when an analysis cannot be derived instead of skipping it", () => {
+    const undeclared = JSON.parse(JSON.stringify(golden)) as Phase1Fixture;
+    undeclared.nets = undeclared.nets.map((net) =>
+      net.class === "power" ? { ...net, nominalVoltageV: undefined } : net,
+    ) as Phase1Fixture["nets"];
+    const derived = buildSpiceAnalyses(undeclared);
+    expect(derived.unresolved.length).toBeGreaterThan(0);
+    expect(derived.unresolved.every((finding) => finding.status === "unknown")).toBe(true);
+    expect(evaluateSpiceRuns(derived, [], engineVersion).verdict).toBe("blocked");
+  });
+
+  it("takes the rail from the net the pull-up is tied to", () => {
+    const bus = analysis("spice:i2c-rise-i2c-sda");
+    expect(bus.deck).toContain("vdd vdd 0 dc 3.3");
+    expect(bus.assumptions.some((entry) => entry.includes("3V3"))).toBe(true);
   });
 
   it("reports the margin to each side of the band", () => {

@@ -148,20 +148,27 @@ export const inadmissibleReason = (
 ): string | undefined => {
   for (const operation of operations) {
     const segments = segmentsOf(operation.path);
-    if (segments[0] === "parts" && segments[2] === "provenance") {
-      return `${operation.path} rewrites part provenance`;
-    }
-    if (segments[0] === "bom" && segments[2] !== undefined) {
-      const field = segments[2];
-      if (["provenance", "availability", "lifecycle", "supplier", "sku"].includes(field)) {
-        return `${operation.path} rewrites order-relevant sourcing state`;
+    // An operation on an ancestor rewrites everything below it, so `/parts/11` is judged the
+    // same way as `/parts/11/provenance`.
+    if (segments[0] === "parts") {
+      if (segments.length < 3 || segments[2] === "provenance") {
+        return `${operation.path} rewrites part provenance`;
+      }
+      if (segments[2] === "parameters") {
+        const index = Number(segments[1]);
+        const source = fixture.parts[index]?.parameters?.source ?? "";
+        if (source.startsWith("datasheet:")) {
+          return `${operation.path} rewrites a datasheet-sourced parameter (${source})`;
+        }
       }
     }
-    if (segments[0] === "parts" && segments[2] === "parameters" && segments[3] !== undefined) {
-      const index = Number(segments[1]);
-      const source = fixture.parts[index]?.parameters?.source ?? "";
-      if (source.startsWith("datasheet:")) {
-        return `${operation.path} rewrites a datasheet-sourced parameter (${source})`;
+    if (segments[0] === "bom") {
+      const field = segments[2];
+      if (
+        field === undefined ||
+        ["provenance", "availability", "lifecycle", "supplier", "sku"].includes(field)
+      ) {
+        return `${operation.path} rewrites order-relevant sourcing state`;
       }
     }
   }
@@ -169,10 +176,13 @@ export const inadmissibleReason = (
 };
 
 /** Findings of every deterministic Phase 2 gate that judges the typed fixture. */
-export const evaluateFixtureGates = (fixture: Phase1Fixture): RuleFinding[] => {
+export const evaluateFixtureGates = (
+  fixture: Phase1Fixture,
+  gateIds: readonly string[],
+): RuleFinding[] => {
   const lint = lintElectricalTopology(fixture);
   const rationale = evaluateDesignRationale(fixture);
-  const plan = buildTestPlan(fixture, electricalLintRuleIds);
+  const plan = buildTestPlan(fixture, electricalLintRuleIds, gateIds);
   return sortFindings([...lint.findings, ...rationale.findings, ...plan.findings]);
 };
 
@@ -187,13 +197,14 @@ const promptHashOf = (findings: readonly RuleFinding[]): string =>
 export const runRepairLoop = (input: {
   fixture: Phase1Fixture;
   proposer: RepairProposer;
+  gateIds: readonly string[];
   maxIterations?: number;
 }): RepairLoopResult => {
   const maxIterations = input.maxIterations ?? 4;
   const iterations: RepairIteration[] = [];
   const appliedProposalIds: string[] = [];
   let current = input.fixture;
-  let unresolved = unresolvedFindings(evaluateFixtureGates(current));
+  let unresolved = unresolvedFindings(evaluateFixtureGates(current, input.gateIds));
   if (unresolved.length === 0) {
     return {
       status: "already-passing",
@@ -205,7 +216,9 @@ export const runRepairLoop = (input: {
 
   for (let iteration = 1; iteration <= maxIterations; iteration += 1) {
     const attempts: RepairAttempt[] = [];
-    const proposals = input.proposer.propose({ fixture: current, findings: unresolved });
+    // The audit records the findings the proposer actually saw, not the state after a repair.
+    const promptFindings = unresolved;
+    const proposals = input.proposer.propose({ fixture: current, findings: promptFindings });
     const before = unresolved.length;
     let advanced = false;
     for (const proposal of proposals) {
@@ -233,7 +246,7 @@ export const runRepairLoop = (input: {
         });
         continue;
       }
-      const after = unresolvedFindings(evaluateFixtureGates(patched));
+      const after = unresolvedFindings(evaluateFixtureGates(patched, input.gateIds));
       const newFailures = after.filter(
         (finding) =>
           finding.status === "fail" &&
@@ -264,8 +277,8 @@ export const runRepairLoop = (input: {
     }
     iterations.push({
       iteration,
-      promptHash: promptHashOf(unresolved),
-      unresolved: advanced ? [] : unresolved,
+      promptHash: promptHashOf(promptFindings),
+      unresolved: promptFindings,
       attempts,
     });
     if (unresolved.length === 0) {

@@ -31,6 +31,7 @@
       "Official symbol and footprint mappings are hash-pinned",
       "Golden placement and routing remain deferred to WP3/WP4"
     ],
+    "acceptanceVerifiedBy": ["gate:fixture-schema", "gate:component-selection", "gate:routing"],
     "provenance": {
       "source": "fixture",
       "version": "phase1-golden-2",

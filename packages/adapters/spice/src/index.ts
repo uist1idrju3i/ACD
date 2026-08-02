@@ -39,6 +39,15 @@ export type SpiceRun = {
   exitCode: number;
 };
 
+/**
+ * Analyses derived from the fixture plus the ones that could not be derived. A missing
+ * analysis is recorded, never dropped, so an underspecified fixture blocks the gate.
+ */
+export type SpicePlan = {
+  analyses: SpiceAnalysis[];
+  unresolved: RuleFinding[];
+};
+
 export type SpiceReport = {
   verdict: RuleVerdict;
   rulesEvaluated: string[];
@@ -51,6 +60,52 @@ const i2cRiseTimeLimitNs = 1000;
 
 const resistanceOf = (fixture: Phase1Fixture, partId: string): number | undefined =>
   fixture.parts.find((part) => part.id === partId)?.parameters?.resistanceOhm;
+
+type Pullup = { resistanceOhm: number; railName: string; railVoltageV: number };
+
+/**
+ * A pull-up is a resistor with one pin on the bus and the other on a power net; the rail is
+ * that net. Picking the smallest resistor on the net instead would take a series or shunt
+ * resistor for a pull-up and would guess the rail voltage from an unrelated net.
+ */
+const pullupOf = (
+  fixture: Phase1Fixture,
+  net: Phase1Fixture["nets"][number],
+): { pullup?: Pullup; reason?: string } => {
+  const found: Pullup[] = [];
+  for (const pin of net.pins) {
+    const part = fixture.parts.find((candidate) => candidate.id === pin.partId);
+    if (part?.kind !== "resistor") continue;
+    const resistanceOhm = resistanceOf(fixture, part.id);
+    for (const rail of fixture.nets) {
+      if (rail.id === net.id || rail.class !== "power") continue;
+      if (!rail.pins.some((other) => other.partId === part.id)) continue;
+      if (resistanceOhm === undefined) {
+        return { reason: `${part.reference} declares no resistanceOhm` };
+      }
+      if (rail.nominalVoltageV === undefined) {
+        return { reason: `${rail.name} declares no nominalVoltageV` };
+      }
+      found.push({ resistanceOhm, railName: rail.name, railVoltageV: rail.nominalVoltageV });
+    }
+  }
+  const unique = [...new Map(found.map((entry) => [JSON.stringify(entry), entry])).values()];
+  const pullup = unique[0];
+  if (pullup === undefined) return { reason: "no resistor ties the bus to a power net" };
+  if (unique.length > 1) {
+    return { reason: `${unique.length} different pull-up and rail combinations are declared` };
+  }
+  return { pullup };
+};
+
+const underived = (id: string, subject: string, reason: string): RuleFinding => ({
+  ruleId: "spice-analysis-derivation",
+  status: "unknown",
+  entity: id,
+  expected: "the fixture declares everything the nominal analysis needs",
+  observed: `${subject}: ${reason}`,
+  basis: "declared part parameters and net voltages",
+});
 
 const idealModels = (source: string): SpiceModel[] => [
   {
@@ -94,18 +149,27 @@ const i2cRiseDeck = (pullupOhm: number, busCapacitancePf: number, railV: number)
     "",
   ].join("\n");
 
-/** Derives the nominal analyses. Returns an empty list when the fixture declares nothing to solve. */
-export const buildSpiceAnalyses = (fixture: Phase1Fixture): SpiceAnalysis[] => {
+/** Derives the nominal analyses and records the ones the fixture does not support. */
+export const buildSpiceAnalyses = (fixture: Phase1Fixture): SpicePlan => {
   const analyses: SpiceAnalysis[] = [];
+  const unresolved: RuleFinding[] = [];
   const source = `fixture ${fixture.fixtureId}: declared part parameters and net voltages`;
 
   for (const branch of ledBranchCurrents(fixture)) {
+    const id = `spice:led-branch-${branch.reference.toLowerCase()}`;
     if (
       branch.driveVoltageV === undefined ||
       branch.currentMa === undefined ||
       branch.minMa === undefined ||
       branch.maxMa === undefined
     ) {
+      unresolved.push(
+        underived(
+          id,
+          branch.partId,
+          "the drive voltage, the series resistance or the LED current window is not declared",
+        ),
+      );
       continue;
     }
     const seriesOhm = branch.seriesResistorRefs
@@ -116,7 +180,7 @@ export const buildSpiceAnalyses = (fixture: Phase1Fixture): SpiceAnalysis[] => {
     const forwardVoltageV =
       fixture.parts.find((part) => part.id === branch.partId)?.parameters?.forwardVoltageV ?? 0;
     analyses.push({
-      id: `spice:led-branch-${branch.reference.toLowerCase()}`,
+      id,
       title: `${branch.reference} branch operating point`,
       subject: branch.partId,
       deck: ledBranchDeck(branch.driveVoltageV, seriesOhm, forwardVoltageV),
@@ -136,30 +200,29 @@ export const buildSpiceAnalyses = (fixture: Phase1Fixture): SpiceAnalysis[] => {
   }
 
   const i2cNets = fixture.nets.filter((net) => net.role === "i2c");
-  const rail = fixture.nets.find(
-    (net) => net.class === "power" && net.nominalVoltageV !== undefined,
-  );
   for (const net of i2cNets) {
-    const pullup = net.pins
-      .map((pin) => resistanceOf(fixture, pin.partId))
-      .filter((value): value is number => value !== undefined)
-      .sort((left, right) => left - right)[0];
-    if (pullup === undefined || rail?.nominalVoltageV === undefined) continue;
+    const id = `spice:i2c-rise-${net.name.toLowerCase().replace(/[^a-z0-9]+/g, "-")}`;
+    const { pullup, reason } = pullupOf(fixture, net);
+    if (pullup === undefined) {
+      unresolved.push(underived(id, net.id, reason ?? "no pull-up could be derived"));
+      continue;
+    }
     analyses.push({
-      id: `spice:i2c-rise-${net.name.toLowerCase().replace(/[^a-z0-9]+/g, "-")}`,
+      id,
       title: `${net.name} pull-up rise time`,
       subject: net.id,
-      deck: i2cRiseDeck(pullup, i2cBusCapacitancePf, rail.nominalVoltageV),
+      deck: i2cRiseDeck(pullup.resistanceOhm, i2cBusCapacitancePf, pullup.railVoltageV),
       measurement: { name: "trise", unit: "s", min: 0, max: i2cRiseTimeLimitNs / 1e9 },
       models: idealModels(source),
       assumptions: [
         `bus capacitance is assumed to be ${i2cBusCapacitancePf} pF; the assembled board is not measured here`,
         "open-drain drivers are modelled as an ideal release at t=0",
+        `the bus is pulled up to ${pullup.railName} at ${pullup.railVoltageV} V`,
       ],
       testItemId: "test:i2c-rise-time",
     });
   }
-  return analyses;
+  return { analyses, unresolved };
 };
 
 const numberPattern = /(-?\d+(?:\.\d+)?(?:e[+-]?\d+)?)/i;
@@ -183,21 +246,35 @@ const convergenceFailed = (stdout: string): boolean =>
   /doAnalyses: (TRAN|DC)|no convergence|singular matrix|iteration limit reached/i.test(stdout);
 
 export const spiceRuleIds: readonly string[] = [
+  "spice-analysis-derivation",
   "spice-convergence",
+  "spice-engine-version",
   "spice-margin",
   "spice-model-provenance",
 ];
+
+const enginePattern = /^\d+(\.\d+)*$/;
 
 /**
  * Three-valued evaluation of the runs. A missing measurement or a non-converged run is
  * unknown, never a pass, so an unusable simulation widens verification instead of closing it.
  */
 export const evaluateSpiceRuns = (
-  analyses: readonly SpiceAnalysis[],
+  plan: SpicePlan,
   runs: readonly SpiceRun[],
+  engineVersion?: string,
 ): SpiceReport => {
-  const findings: RuleFinding[] = [];
-  for (const analysis of analyses) {
+  const findings: RuleFinding[] = [...plan.unresolved];
+  const engineKnown = engineVersion !== undefined && enginePattern.test(engineVersion);
+  findings.push({
+    ruleId: "spice-engine-version",
+    status: engineKnown ? "pass" : "unknown",
+    entity: "ngspice",
+    expected: "the engine reports the version that produced the results",
+    observed: engineKnown ? `ngspice ${engineVersion}` : "the engine version was not reported",
+    basis: "ngspice batch output",
+  });
+  for (const analysis of plan.analyses) {
     const run = runs.find((candidate) => candidate.analysisId === analysis.id);
     const basis = `ngspice batch run of ${analysis.id}`;
     if (run === undefined || run.exitCode !== 0 || convergenceFailed(run.stdout)) {

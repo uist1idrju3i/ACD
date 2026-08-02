@@ -50,18 +50,31 @@ const band = (nominal: number, ratio: number, unit: string): string =>
 
 const rationales = (fixture: Fixture): Rationale[] => fixture.rationales ?? [];
 
-/** Acceptance criteria are requirements: each one needs a verification method. */
+const declaredVerification = (fixture: Fixture, index: number): string | undefined =>
+  fixture.requirement.acceptanceVerifiedBy?.[index];
+
+/**
+ * An acceptance criterion becomes an inspection item only when the requirement declares the
+ * gate that decides it. Generating an item for every criterion would let the plan prove its
+ * own coverage.
+ */
 const fromAcceptanceCriteria = (fixture: Fixture): TestItem[] =>
-  fixture.requirement.acceptanceCriteria.map((criterion, index) => ({
-    id: `test:acceptance-${index + 1}-${slug(criterion)}`,
-    title: criterion,
-    subject: fixture.requirement.id,
-    method: "inspection" as const,
-    conditions: "golden run artifacts and gate results of the recorded revision",
-    expected: "the criterion holds for the run under review",
-    verifiedBy: "gate:pre-order-readiness",
-    sources: [`requirement:acceptanceCriteria[${index}]`],
-  }));
+  fixture.requirement.acceptanceCriteria.flatMap((criterion, index) => {
+    const verifiedBy = declaredVerification(fixture, index);
+    if (verifiedBy === undefined || !verifiedBy.startsWith("gate:")) return [];
+    return [
+      {
+        id: `test:acceptance-${index + 1}-${slug(criterion)}`,
+        title: criterion,
+        subject: fixture.requirement.id,
+        method: "inspection" as const,
+        conditions: "golden run artifacts and gate results of the recorded revision",
+        expected: "the criterion holds for the run under review",
+        verifiedBy,
+        sources: [`requirement:acceptanceCriteria[${index}]`],
+      },
+    ];
+  });
 
 const fromSupplyBudget = (fixture: Fixture): TestItem[] => [
   {
@@ -103,7 +116,7 @@ const fromLeds = (fixture: Fixture): TestItem[] =>
         ? "LED driven continuously at room temperature"
         : `${branch.driveVoltageV} V drive, LED on continuously at room temperature`,
     expected:
-      branch.currentMa === undefined
+      branch.currentMa === undefined || branch.minMa === undefined || branch.maxMa === undefined
         ? "unknown: LED parameters, drive voltage or series resistance are not declared"
         : `${band(branch.currentMa, 0.2, "mA")} and inside the ${branch.minMa}-${branch.maxMa} mA rating`,
     verifiedBy: physicalGate,
@@ -147,8 +160,10 @@ const fromLintRules = (fixture: Fixture, ruleIds: readonly string[]): TestItem[]
 const fromRationales = (fixture: Fixture): TestItem[] =>
   rationales(fixture).flatMap((rationale) =>
     rationale.assumptions
-      .filter((assumption) => assumption.status === "unconfirmed")
-      .map((assumption, index) => ({
+      // The index is taken over all assumptions so confirming one does not renumber the rest.
+      .map((assumption, index) => ({ assumption, index }))
+      .filter(({ assumption }) => assumption.status === "unconfirmed")
+      .map(({ assumption, index }) => ({
         id:
           assumption.testItemId ??
           `test:${slug(rationale.id.replace("rationale:", ""))}-${index + 1}`,
@@ -178,36 +193,69 @@ export const generateTestItems = (fixture: Fixture, lintRuleIds: readonly string
     ...fromRationales(fixture),
   ]);
 
-const requirementCoverage = (fixture: Fixture, items: TestItem[]): RuleFinding[] =>
+/**
+ * Coverage is decided by the declared verification, not by the item this module generates
+ * from the criterion, so the plan cannot certify itself.
+ */
+const requirementCoverage = (
+  fixture: Fixture,
+  items: TestItem[],
+  gateIds: readonly string[],
+): RuleFinding[] =>
   fixture.requirement.acceptanceCriteria.map((criterion, index) => {
     const source = `requirement:acceptanceCriteria[${index}]`;
-    const covered = items.filter((item) => item.sources.includes(source));
+    const declared = declaredVerification(fixture, index);
+    const resolved =
+      declared === undefined
+        ? undefined
+        : declared.startsWith("gate:")
+          ? gateIds.includes(declared)
+          : items.some((item) => item.id === declared);
     return {
       ruleId: "test-item-requirement-coverage",
-      status: covered.length > 0 ? ("pass" as const) : ("fail" as const),
+      status: declared === undefined ? ("unknown" as const) : resolved ? ("pass" as const) : "fail",
       entity: source,
-      expected: "the acceptance criterion has an assigned verification method",
-      observed: covered.length > 0 ? covered.map((item) => item.id).join(", ") : "unverified",
+      expected: "the acceptance criterion declares a gate or test item that decides it",
+      observed:
+        declared === undefined
+          ? "no verification method is declared for the criterion"
+          : resolved
+            ? declared
+            : `${declared} is not a contracted gate or a generated test item`,
       basis: criterion,
     };
   });
 
-/** A rationale that names a test item must actually produce it. */
+/**
+ * An open assumption must have a test item that would close it; a confirmed one must name the
+ * evidence that closed it. A rationale is never that evidence.
+ */
 const assumptionCoverage = (fixture: Fixture, items: TestItem[]): RuleFinding[] => {
   const generated = new Set(items.map((item) => item.id));
   return rationales(fixture).flatMap((rationale) =>
-    rationale.assumptions
-      .filter((assumption) => assumption.testItemId !== undefined)
-      .map((assumption) => ({
+    rationale.assumptions.map((assumption) => {
+      const unconfirmed = assumption.status === "unconfirmed";
+      const evidence = assumption.evidenceLink;
+      const covered = unconfirmed
+        ? assumption.testItemId !== undefined && generated.has(assumption.testItemId)
+        : evidence !== undefined && !evidence.startsWith("rationale:");
+      return {
+        // A generated id nobody references cannot close an assumption, so the rationale has to
+        // name the item; an id that is named but not generated is a broken link.
         ruleId: "test-item-assumption-coverage",
-        status: generated.has(assumption.testItemId ?? "") ? ("pass" as const) : ("fail" as const),
-        entity: assumption.testItemId ?? "",
-        expected: "the named test item exists in the generated plan",
-        observed: generated.has(assumption.testItemId ?? "")
-          ? "generated"
-          : "no generated test item carries this id",
+        status: covered ? ("pass" as const) : ("unknown" as const),
+        entity: assumption.testItemId ?? assumption.statement,
+        expected: unconfirmed
+          ? "the open assumption names a test item that the plan generates"
+          : "the confirmed assumption names evidence outside the rationale set",
+        observed: covered
+          ? (evidence ?? "generated")
+          : unconfirmed
+            ? "no generated test item is named for the open assumption"
+            : "confirmed without recorded evidence",
         basis: rationale.id,
-      })),
+      };
+    }),
   );
 };
 
@@ -242,10 +290,14 @@ export const testPlanRuleIds: readonly string[] = [
   "test-item-unique-id",
 ];
 
-export const buildTestPlan = (fixture: Fixture, lintRuleIds: readonly string[]): TestPlan => {
+export const buildTestPlan = (
+  fixture: Fixture,
+  lintRuleIds: readonly string[],
+  gateIds: readonly string[],
+): TestPlan => {
   const items = generateTestItems(fixture, lintRuleIds);
   const findings = sortFindings([
-    ...requirementCoverage(fixture, items),
+    ...requirementCoverage(fixture, items, gateIds),
     ...assumptionCoverage(fixture, items),
     ...completeness(items),
     ...uniqueIds(items),

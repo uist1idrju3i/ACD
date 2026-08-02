@@ -24,12 +24,16 @@ const recordings = (await read("../../../fixtures/phase2/repair-recordings.json"
   proposals: RecordedProposal[];
 };
 
+const gateIds = (
+  (await read("../../../schemas/gate-matrix.json")) as { gates: { id: string }[] }
+).gates.map((gate) => gate.id);
+
 const proposer = recordedProposer(recordings.proposals);
 const partIndex = (id: string): number => golden.parts.findIndex((part) => part.id === id);
 
 describe("repair loop", () => {
   it("leaves a passing fixture untouched", () => {
-    const result = runRepairLoop({ fixture: golden, proposer });
+    const result = runRepairLoop({ fixture: golden, proposer, gateIds });
     expect(result.status).toBe("already-passing");
     expect(result.appliedProposalIds).toEqual([]);
   });
@@ -38,13 +42,13 @@ describe("repair loop", () => {
     "detects and repairs %s",
     (_caseId, entry) => {
       const injected = applyFixturePatch(golden, entry.injection);
-      const detected = unresolvedFindings(evaluateFixtureGates(injected));
+      const detected = unresolvedFindings(evaluateFixtureGates(injected, gateIds));
       for (const ruleId of entry.expectedRuleIds) {
         expect(detected.map((finding) => finding.ruleId)).toContain(ruleId);
       }
-      const result = runRepairLoop({ fixture: injected, proposer });
+      const result = runRepairLoop({ fixture: injected, proposer, gateIds });
       expect(result.status).toBe("repaired");
-      expect(unresolvedFindings(evaluateFixtureGates(result.fixture))).toEqual([]);
+      expect(unresolvedFindings(evaluateFixtureGates(result.fixture, gateIds))).toEqual([]);
     },
   );
 
@@ -52,8 +56,8 @@ describe("repair loop", () => {
     const entry = cases.cases[0];
     if (!entry) throw new Error("no repair cases");
     const injected = applyFixturePatch(golden, entry.injection);
-    const first = runRepairLoop({ fixture: injected, proposer });
-    const second = runRepairLoop({ fixture: injected, proposer });
+    const first = runRepairLoop({ fixture: injected, proposer, gateIds });
+    const second = runRepairLoop({ fixture: injected, proposer, gateIds });
     expect(first.appliedProposalIds).toEqual(second.appliedProposalIds);
     expect(JSON.stringify(first.fixture)).toBe(JSON.stringify(second.fixture));
   });
@@ -71,7 +75,7 @@ describe("repair loop", () => {
     const injected = applyFixturePatch(golden, [
       { op: "replace", path: `/parts/${partIndex("part:r3")}/parameters/resistanceOhm`, value: 47 },
     ]);
-    const result = runRepairLoop({ fixture: injected, proposer });
+    const result = runRepairLoop({ fixture: injected, proposer, gateIds });
     const rejected = result.iterations
       .flatMap((iteration) => iteration.attempts)
       .filter((attempt) => !attempt.accepted);
@@ -94,11 +98,38 @@ describe("repair loop", () => {
     ).toContain("provenance");
   });
 
+  it("refuses an ancestor rewrite that would carry a protected field with it", () => {
+    const led = partIndex("part:d1");
+    expect(inadmissibleReason(golden, [{ op: "replace", path: `/parts/${led}`, value: {} }])).toBe(
+      `/parts/${led} rewrites part provenance`,
+    );
+    expect(
+      inadmissibleReason(golden, [
+        { op: "replace", path: `/parts/${led}/parameters`, value: { source: "injected" } },
+      ]),
+    ).toContain("datasheet-sourced");
+    expect(inadmissibleReason(golden, [{ op: "remove", path: "/bom/0" }])).toContain(
+      "order-relevant",
+    );
+  });
+
+  it("records the findings the proposer was given, not the state after the repair", () => {
+    const injected = applyFixturePatch(golden, [
+      { op: "replace", path: `/parts/${partIndex("part:r3")}/parameters/resistanceOhm`, value: 47 },
+    ]);
+    const before = unresolvedFindings(evaluateFixtureGates(injected, gateIds));
+    const result = runRepairLoop({ fixture: injected, proposer, gateIds });
+    expect(result.status).toBe("repaired");
+    const first = result.iterations[0];
+    if (!first) throw new Error("the loop recorded no iteration");
+    expect(first.unresolved).toEqual(before);
+  });
+
   it("stops instead of guessing when no recorded proposal matches", () => {
     const injected = applyFixturePatch(golden, [
       { op: "remove", path: `/parts/${partIndex("part:r8")}/parameters/resistanceOhm` },
     ]);
-    const result = runRepairLoop({ fixture: injected, proposer });
+    const result = runRepairLoop({ fixture: injected, proposer, gateIds });
     expect(result.status).toBe("not-repaired");
     expect(result.stopReason).toContain("no accepted repair");
   });
@@ -111,7 +142,7 @@ describe("repair loop", () => {
       { op: "replace", path: `/parts/${partIndex("part:r3")}/parameters/resistanceOhm`, value: 47 },
     ]);
     expect(() =>
-      runRepairLoop({ fixture: injected, proposer: recordedProposer(tampered) }),
+      runRepairLoop({ fixture: injected, proposer: recordedProposer(tampered), gateIds }),
     ).toThrowError(/does not match its response hash/);
   });
 
