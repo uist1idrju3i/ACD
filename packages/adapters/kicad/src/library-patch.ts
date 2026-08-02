@@ -155,7 +155,6 @@ export const materializeLibraryPatchInBoardSource = (
     }
     let cursor = 0;
     let output = "";
-    let applied = false;
     while (true) {
       const start = source.indexOf('(footprint "', cursor);
       if (start < 0) {
@@ -164,8 +163,7 @@ export const materializeLibraryPatchInBoardSource = (
       }
       const block = blockAt(source, start);
       output += source.slice(cursor, start);
-      if (!applied && block.startsWith(`(footprint "${footprintId}"`)) {
-        applied = true;
+      if (block.startsWith(`(footprint "${footprintId}"`)) {
         const marker = `(property "ACD_LibraryOverlay" "pad-mask-clearance=${operation.requiredValueMm}" (at 0 0 0) (layer "F.Fab") hide (effects (font (size 1 1) (thickness 0.15))))`;
         output += `${block.slice(0, -1)}\n\t${marker}\n)`;
       } else {
@@ -344,6 +342,9 @@ export const promoteLibraryPatch = (
   approval: KnowledgeApproval | undefined,
   now: string,
 ): LibraryOverlayPatch => {
+  if (patch.status !== "adopted") {
+    throw new GraphCoreError("verification-failed", "only adopted library patches can be promoted");
+  }
   assertKnowledgeLibraryWideApproval(patch.sourceKnowledgeId, approval, now);
   return { ...patch, scope: "library-wide", approvalId: approval!.approvalId };
 };
