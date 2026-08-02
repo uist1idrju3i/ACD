@@ -6,7 +6,7 @@ import type {
 import { GraphCoreError } from "./errors.js";
 import { createEvent, type EventEnvelope } from "./event-log.js";
 import { rulesForFabProfile, type FabProfileRules } from "./fab-profile-rules.js";
-import { sha256 } from "./hash.js";
+import { compareIds, sha256 } from "./hash.js";
 
 export type FabFeedbackReport = Omit<SchemaFabFeedbackReport, "source"> & {
   source: {
@@ -99,9 +99,6 @@ const unificationKey = (
 
 const severityRank = (severity: RawFinding["severityReported"]): number =>
   ({ unknown: 0, info: 1, low: 2, medium: 3, high: 4, critical: 5 })[severity];
-const compareCodeUnits = (left: string, right: string): number =>
-  left < right ? -1 : left > right ? 1 : 0;
-
 const assertSourceProvenance = (report: FabFeedbackReport): void => {
   if (
     report.source.kind === "fixture" &&
@@ -255,7 +252,7 @@ export const intakeFabFeedback = (
       if (result.verdict === "unknown") existing.verdict = "unknown";
       existing.originalText = [existing.originalText, result.originalText]
         .filter((text, index, texts) => texts.indexOf(text) === index)
-        .sort(compareCodeUnits)
+        .sort(compareIds)
         .join(" / ");
     } else {
       findingsByKey.set(key, result);
@@ -263,7 +260,7 @@ export const intakeFabFeedback = (
   }
 
   const findings = [...findingsByKey.values()].sort((left, right) =>
-    compareCodeUnits(left.findingId, right.findingId),
+    compareIds(left.findingId, right.findingId),
   );
   const unknownFindingIds = findings
     .filter((finding) => finding.verdict === "unknown")
