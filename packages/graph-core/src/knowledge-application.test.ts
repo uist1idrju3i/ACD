@@ -44,7 +44,7 @@ const item = (overrides: Partial<KnowledgeItem> = {}): KnowledgeItem => ({
 const context = createTargetDesignKnowledgeContext({
   designRevision: "prototype-2",
   fabProfileId: "fab:jlcpcb-class-2layer",
-  footprintIds: ["R_0603_1608Metric"],
+  footprintIds: ["footprint:Resistor_SMD:R_0603_1608Metric"],
   ruleIds: [],
   classifications: [],
   reproductionConditions: [],
@@ -79,6 +79,49 @@ describe("knowledge application", () => {
     });
     expect(result.decisions[0]?.status).toBe("unknown");
     expect(result.applicableKnowledgeIds).toEqual(["knowledge:test"]);
+  });
+
+  it("treats unavailable rule dimensions as unknown", () => {
+    const ruleItem = item({
+      appliesWhen: [
+        { field: "fabProfileId", operator: "equals", value: "fab:jlcpcb-class-2layer" },
+        { field: "ruleId", operator: "equals", value: "mask-sliver-min" },
+      ],
+    });
+    const target = createTargetDesignKnowledgeContext({
+      designRevision: "prototype-2",
+      fabProfileId: "fab:jlcpcb-class-2layer",
+      footprintIds: ["footprint:Resistor_SMD:R_0603_1608Metric"],
+      reproductionConditions: [],
+    });
+    expect(evaluateKnowledgeApplications([ruleItem], target).decisions[0]?.status).toBe("unknown");
+  });
+
+  it("keeps footprint library qualifiers during normalization", () => {
+    const otherLibrary = evaluateKnowledgeApplications([item()], {
+      ...context,
+      footprintIds: ["footprint:OtherLib:R_0603_1608Metric"],
+      footprintId: ["footprint:OtherLib:R_0603_1608Metric"],
+    });
+    expect(otherLibrary.decisions[0]?.status).toBe("fail");
+  });
+
+  it("stops applicable knowledge without a correction or exemption", () => {
+    const noCorrection = item({
+      appliesWhen: [
+        { field: "fabProfileId", operator: "equals", value: "fab:jlcpcb-class-2layer" },
+        {
+          field: "footprintId",
+          operator: "equals",
+          value: "footprint:Resistor_SMD:R_0603_1608Metric",
+        },
+        { field: "ruleId", operator: "equals", value: "copper-clearance-min" },
+      ],
+    });
+    const result = evaluateKnowledgeApplications([noCorrection], context);
+    expect(() => assertKnowledgeApplicationsComplete(result, "projection")).toThrow(
+      /was not applied/,
+    );
   });
 
   it("records explicit no-applicable-knowledge", () => {

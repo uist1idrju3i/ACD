@@ -1,4 +1,4 @@
-import type { ApplicabilityCondition } from "./fab-profile-rules.js";
+import { rulesForFabProfile, type ApplicabilityCondition } from "./fab-profile-rules.js";
 import {
   evaluateKnowledgeApplicability,
   type ApplicabilityContext,
@@ -17,6 +17,7 @@ export type KnowledgeApplicationDecision = {
   applied: boolean;
   applicability?: KnowledgeApplicability;
   libraryRevision?: string;
+  applicationExemption?: string;
   explanation?: {
     text: string;
     basis: "commentary-only";
@@ -27,8 +28,8 @@ export type KnowledgeApplicationContext = ApplicabilityContext & {
   designRevision: string;
   fabProfileId: string;
   footprintIds: string[];
-  ruleIds: string[];
-  classifications: string[];
+  ruleIds?: string[];
+  classifications?: string[];
   reproductionConditions: string[];
 };
 
@@ -65,6 +66,12 @@ const decisionForItem = (
   context: ApplicabilityContext,
 ): KnowledgeApplicationDecision => {
   const applicability = evaluateKnowledgeApplicability(item, context);
+  const profileId = item.appliesWhen.find((condition) => condition.field === "fabProfileId")?.value;
+  const ruleId = item.appliesWhen.find((condition) => condition.field === "ruleId")?.value;
+  const rule =
+    profileId && ruleId
+      ? rulesForFabProfile(profileId)?.rules.find((candidate) => candidate.ruleId === ruleId)
+      : undefined;
   return {
     knowledgeItemId: item.id,
     knowledgeId: item.knowledgeId,
@@ -72,6 +79,7 @@ const decisionForItem = (
     status: item.status === "adopted" ? applicability : "not-applicable",
     applied: false,
     applicability,
+    ...(rule?.applicationExemption ? { applicationExemption: rule.applicationExemption } : {}),
   };
 };
 
@@ -141,7 +149,8 @@ export const assertKnowledgeApplicationsComplete = (
     (decision) =>
       decision.lifecycleStatus === "adopted" &&
       (decision.status === "pass" || decision.status === "unknown") &&
-      !decision.applied,
+      !decision.applied &&
+      !decision.applicationExemption,
   );
   if (missing.length > 0) {
     throw new GraphCoreError(
@@ -160,15 +169,20 @@ export const createTargetDesignKnowledgeContext = (input: {
   designRevision: string;
   fabProfileId: string;
   footprintIds: string[];
-  ruleIds: string[];
-  classifications: string[];
+  ruleIds?: string[];
+  classifications?: string[];
   reproductionConditions: string[];
   partIds?: string[];
 }): KnowledgeApplicationContext => ({
-  ...input,
-  partId: input.partIds ?? [],
+  designRevision: input.designRevision,
+  fabProfileId: input.fabProfileId,
+  footprintIds: input.footprintIds,
+  reproductionConditions: input.reproductionConditions,
   footprintId: input.footprintIds,
-  ruleId: input.ruleIds,
-  classification: input.classifications,
   reproductionCondition: input.reproductionConditions,
+  ...(input.ruleIds?.length ? { ruleIds: input.ruleIds, ruleId: input.ruleIds } : {}),
+  ...(input.classifications?.length
+    ? { classifications: input.classifications, classification: input.classifications }
+    : {}),
+  ...(input.partIds?.length ? { partId: input.partIds } : {}),
 });

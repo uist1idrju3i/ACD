@@ -25,6 +25,7 @@ export type FabProfileRule = {
   reproductionConditions: string[];
   appliesWhen: ApplicabilityCondition[];
   excludesWhen: ApplicabilityCondition[];
+  applicationExemption?: "no-correction-required";
   correction?: {
     target: "pad-mask-clearance";
     requiredValueMm: number;

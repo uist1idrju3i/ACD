@@ -78,7 +78,9 @@ const evaluateCondition = (
   if (observed === undefined) return "unknown";
   const values = Array.isArray(observed) ? observed : [observed];
   const normalize = (value: string): string =>
-    conditionToEvaluate.field === "footprintId" ? (value.split(":").at(-1) ?? value) : value;
+    conditionToEvaluate.field === "footprintId" && value.startsWith("footprint:")
+      ? value.slice("footprint:".length)
+      : value;
   const matches = values.map(normalize).includes(normalize(conditionToEvaluate.value));
   return (conditionToEvaluate.operator === "equals" ? matches : !matches) ? "pass" : "fail";
 };

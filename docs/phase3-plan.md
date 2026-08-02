@@ -117,7 +117,7 @@ Phase 5、自働発注はPhase 6の範囲であり、本フェーズでは扱い
 
 ### WP4：次設計への自動適用（gate 22）
 
-**状態：未着手。** gate契約はgate 22（`gate:knowledge-application`、`runsAfter: gate:library-patch`）。
+**状態：実装済み。** gate契約はgate 22（`gate:knowledge-application`、`runsAfter: gate:library-patch`）。
 
 **作業**
 
