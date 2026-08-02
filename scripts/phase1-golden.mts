@@ -968,7 +968,7 @@ try {
   }
   const adoptedKnowledgeItems = knowledgeStates.map((state) => state.adopted);
   const targetKnowledgeContext = createTargetDesignKnowledgeContext({
-    designRevision: "prototype-2",
+    designRevision: fixture.requirement.provenance.version,
     fabProfileId: fixture.manufacturingProfile.fabProfileId,
     footprintIds: [
       ...new Set(
@@ -983,22 +983,34 @@ try {
     adoptedKnowledgeItems,
     targetKnowledgeContext,
   );
-  const appliedResult = recordKnowledgeApplications(
-    applicationResult,
-    applicationResult.decisions
-      .filter(
-        (decision) =>
-          decision.lifecycleStatus === "adopted" &&
-          (decision.status === "pass" || decision.status === "unknown"),
-      )
-      .map((decision) => ({
-        knowledgeId: decision.knowledgeId,
-        ...(decision.knowledgeId === adoptedKnowledgeForLibraryPatch.knowledgeId
-          ? { libraryRevision: adoptedLibraryPatch.libraryRevision }
-          : {}),
-      })),
-  );
-  assertKnowledgeApplicationsComplete(appliedResult, "projection");
+  const appliedResult = recordKnowledgeApplications(applicationResult, [
+    {
+      knowledgeId: adoptedKnowledgeForLibraryPatch.knowledgeId,
+      libraryRevision: adoptedLibraryPatch.libraryRevision,
+    },
+  ]);
+  try {
+    assertKnowledgeApplicationsComplete(appliedResult, "projection");
+  } catch (error) {
+    await writeFile(
+      join(artifactRoot, "knowledge-application.json"),
+      `${JSON.stringify(
+        {
+          targetContext: targetKnowledgeContext,
+          decisions: appliedResult.decisions,
+          libraryRevisions: appliedResult.libraryRevisions,
+          failureReason: error instanceof Error ? error.message : String(error),
+          inputHash: hash({
+            targetContext: targetKnowledgeContext,
+            decisions: appliedResult.decisions,
+          }),
+        },
+        null,
+        2,
+      )}\n`,
+    );
+    throw error;
+  }
   const applicationProjectRoot = join(artifactRoot, "knowledge-application-project");
   await projectToKicad(fixture, applicationProjectRoot, {
     libraryRevision: adoptedLibraryPatch.libraryRevision,
@@ -1007,7 +1019,7 @@ try {
   const projectionArtifactId = "artifact:phase1-golden:knowledge-application-project";
   let eventRevision = Math.max(
     0,
-    ...(await fabFeedbackEventLog.readAll()).map((event) => event.resultRevision),
+    ...(await knowledgeEventLog.readAll()).map((event) => event.resultRevision),
   );
   const appliedEvents = [];
   const targetRevision = Number(fixture.requirement.provenance.version.match(/\d+$/)?.[0] ?? 0);
@@ -1035,7 +1047,7 @@ try {
         projectionArtifactId,
       },
     });
-    await fabFeedbackEventLog.append(appliedEvent);
+    await knowledgeEventLog.append(appliedEvent);
     appliedEvents.push(appliedEvent);
   }
   await writeFile(
