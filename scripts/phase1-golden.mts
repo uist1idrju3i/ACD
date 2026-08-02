@@ -1,6 +1,6 @@
 import { execFileSync } from "node:child_process";
 import { createHash } from "node:crypto";
-import { mkdir, readFile, rm, writeFile } from "node:fs/promises";
+import { mkdir, readFile, readdir, rm, writeFile } from "node:fs/promises";
 import { join, resolve } from "node:path";
 import {
   compareNetlists,
@@ -9,6 +9,7 @@ import {
 } from "../packages/adapters/kicad/src/index.js";
 import { validatePhase1FixtureReferences } from "../packages/schema/src/index.js";
 import type { Phase1Fixture } from "../packages/schema/src/generated/phase1-fixture.js";
+import preOrder from "./pre-order.ts";
 
 const root = resolve(import.meta.dirname, "..");
 const fixture = JSON.parse(
@@ -239,6 +240,16 @@ try {
         dsnHash: hash((await readFile(join(projectRoot, "golden.dsn"))).toString()),
         sesHash: sesHashA,
         pcbHash: hash((await readFile(join(projectRoot, "routed.kicad_pcb"))).toString()),
+        artifactHashes: Object.fromEntries(
+          await Promise.all(
+            (await readdir(join(projectRoot, "manufacturing"), { withFileTypes: true }))
+              .filter((entry) => entry.isFile())
+              .map(async (entry) => [
+                entry.name,
+                hash((await readFile(join(projectRoot, "manufacturing", entry.name))).toString()),
+              ]),
+          ),
+        ),
         graphRevision: fixture.requirement.provenance.version,
       },
       null,
@@ -250,6 +261,43 @@ try {
     drill: true,
     manifest: true,
     deterministic: sesHashA === sesHashB,
+  });
+  const manufacturingManifest = JSON.parse(
+    await readFile(join(projectRoot, "manufacturing-manifest.json"), "utf8"),
+  ) as Record<string, unknown>;
+  const preOrderResult = preOrder.evaluatePreOrderReadiness({
+    bom: fixture.bom,
+    budgetCap: fixture.orderConstraints?.budgetCap ?? 0,
+    fabQuote: fixture.orderConstraints?.fabQuote ?? {
+      unitPrice: 0,
+      currency: "USD",
+    },
+    artifactManifest: {
+      ...Object.fromEntries(
+        Object.entries(manufacturingManifest).filter(
+          ([, value]) => typeof value === "string" && /^sha256:[0-9a-f]{64}$/.test(value),
+        ),
+      ),
+      ...((manufacturingManifest.artifactHashes as Record<string, string> | undefined) ?? {}),
+    } as Record<string, string>,
+    unresolvedUnknowns: [],
+  });
+  await writeFile(
+    join(artifactRoot, "pre-order-checklist.json"),
+    JSON.stringify(
+      {
+        verdict: preOrderResult.ready ? "ready-for-order" : "blocked",
+        ...preOrderResult,
+      },
+      null,
+      2,
+    ),
+  );
+  if (!preOrderResult.ready)
+    throw new Error(`pre-order readiness failed: ${preOrderResult.reasons.join("; ")}`);
+  pass(12, "Pre-order readiness", {
+    ...preOrderResult,
+    verdict: "ready-for-order, approval required",
   });
 } catch (error) {
   results.push({
@@ -264,4 +312,4 @@ try {
 }
 
 await writeFile(join(artifactRoot, "gate-results.json"), JSON.stringify(results, null, 2));
-process.stdout.write("Phase 1 golden gates 1-11 passed\n");
+process.stdout.write("Phase 1 golden gates 1-12 passed\n");

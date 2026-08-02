@@ -4,4 +4,7 @@ export type { ACDDesignGraphPhase0Draft, Entity, Id } from "./generated/design-g
 export type { ACDPatchEnvelope as PatchEnvelope } from "./generated/patch.js";
 export type { ACDEventEnvelope as EventEnvelope } from "./generated/event.js";
 export type { ACDPhase1Fixture as Phase1Fixture } from "./generated/phase1-fixture.js";
+export type { ACDPhase1PhysicalEvidence as PhysicalEvidence } from "./generated/physical-evidence.js";
 export { validatePhase1FixtureReferences } from "./phase1-semantic.js";
+export { evaluatePhysicalEvidence } from "./physical-evidence.js";
+export type { PhysicalEvidenceVerdict } from "./physical-evidence.js";

@@ -5,6 +5,7 @@ import {
   eventSchemaPath,
   patchSchemaPath,
   phase1FixtureSchemaPath,
+  physicalEvidenceSchemaPath,
 } from "./paths.js";
 
 const generatedDirectory = new URL("./generated/", import.meta.url);
@@ -14,6 +15,7 @@ const definitions = [
   ["patch.schema.json", patchSchemaPath],
   ["event.schema.json", eventSchemaPath],
   ["phase1-fixture.schema.json", phase1FixtureSchemaPath],
+  ["physical-evidence.schema.json", physicalEvidenceSchemaPath],
 ] as const;
 
 for (const [filename, schemaPath] of definitions) {

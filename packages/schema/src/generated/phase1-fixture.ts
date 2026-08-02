@@ -43,6 +43,7 @@ export interface ACDPhase1Fixture {
    * @minItems 1
    */
   bom: [BomLine, ...BomLine[]];
+  orderConstraints?: OrderConstraints;
 }
 export interface Requirement {
   id: Id;
@@ -156,7 +157,19 @@ export interface BomLine {
   manufacturer: string;
   supplier: string;
   sku?: string;
+  unitPrice?: number;
+  currency?: string;
   availability: "in-stock" | "limited" | "preorder" | "unknown";
   lifecycle?: "active" | "nrnd" | "eol" | "unknown";
   provenance: Provenance;
+}
+export interface OrderConstraints {
+  budgetCap: number;
+  currency: string;
+  fabQuote: {
+    description: string;
+    unitPrice: number;
+    currency: string;
+    provenance: Provenance;
+  };
 }
