@@ -1,0 +1,8 @@
+{
+  "files": [],
+  "references": [
+    { "path": "./packages/schema" },
+    { "path": "./packages/graph-core" },
+    { "path": "./packages/adapters/kicad" }
+  ]
+}

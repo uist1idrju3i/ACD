@@ -1,0 +1,20 @@
+{
+  "name": "@acd/adapter-kicad",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "tsc -b",
+    "typecheck": "tsc -b --pretty false",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@acd/graph-core": "workspace:*",
+    "@acd/schema": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/node": "22.15.21",
+    "typescript": "5.8.3",
+    "vitest": "3.2.4"
+  }
+}
