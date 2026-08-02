@@ -57,7 +57,8 @@ docker run --rm -v "$ROOT/$OUT:/work" "$IMAGE" kicad-cli pcb export step \
 current_step="ERC"
 set +e
 docker run --rm -v "$ROOT/$OUT:/work" "$IMAGE" kicad-cli sch erc \
-  --output /work/reports/erc.rpt /work/project/design.kicad_sch
+  --output /work/reports/erc.rpt /work/project/design.kicad_sch \
+  2> "$ROOT/$OUT/reports/erc.stderr"
 erc_status=$?
 set -e
 if [ ! -f "$ROOT/$OUT/reports/erc.rpt" ]; then
