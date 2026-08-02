@@ -1,8 +1,11 @@
+**ステータス：Phase 1完了（main）。smoke Gate 1〜11、golden Gate 1〜12が合格。
+Gate 13 contractは実装済みだが、physical evidenceはhardware測定待ち。**
+
 ## WP3実装境界
 
 golden fixtureは決定論的placement後、公式symbolとfootprintを用いてschematicおよび
-未配線PCBへ投影する。`pnpm phase1:golden`はGate 1〜8（ERCを含む）を実行し、
-Gate 9〜11は未配線boardに対して実行せず、WP4へ明示的に延期する。
+PCBへ投影する。`pnpm phase1:golden`はgolden Gate 1〜12を実行する。Gate 13は
+実機Evidenceを`pnpm phase1:gate13`で別途検証する。
 
 AMS1117-3.3は公式symbolが`extends`で親symbolへ依存するため、固定snapshotの
 schematic pin geometryには`Regulator_Linear:AP1117-15`を代替symbolとして使用する。
