@@ -51,4 +51,6 @@ READMEの「9. 長時間タスクを走り切る実行基盤」と設計原則�
 - [`design-graph.md`](design-graph.md)：チェックポイントが参照する正規リビジョン
 - [`pipeline.md`](pipeline.md)：実行対象の6ステップ
 - [`testing.md`](testing.md)：ゴールデンタスクの評価
+- [`event-log.md`](event-log.md)：Phase 0のイベントreplay
+- [`tool-contract.md`](tool-contract.md)：型付きツール境界
 - [`../README.md`](../README.md#9-長時間タスクを走り切る実行基盤)

@@ -91,4 +91,6 @@ ISO 9001の設計記録、ISO 13485／FDAのDHF・DMR・設計管理、AS9100／
 - [`pipeline.md`](pipeline.md)：グラフを更新する6ステップ
 - [`verification-gates.md`](verification-gates.md)：グラフを進める合否ゲート
 - [`knowledge-base.md`](knowledge-base.md)：知識と根拠の書き戻し
+- [`patch-revision.md`](patch-revision.md)：patchとリビジョンの適用契約
+- [`event-log.md`](event-log.md)：追記専用イベントとreplay
 - [`../README.md`](../README.md#設計原則)

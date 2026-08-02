@@ -58,5 +58,6 @@ KiCadの回路図エディタはngspiceを統合し、SPICE解析と波形確認
 
 - [`design-graph.md`](design-graph.md)：KiCadへ投影する正規モデル
 - [`verification-gates.md`](verification-gates.md)：ERC/DRCと出力検証
+- [`kicad-ci-profile.md`](kicad-ci-profile.md)：Phase 0/1の固定CI環境
 - [`testing.md`](testing.md)：ゴールデンタスクと再オープン検証
 - [`../README.md`](../README.md#7-ロードマップ)
