@@ -614,6 +614,81 @@ try {
     artifact: "knowledge.json",
   });
 
+  enter(20);
+  const firstFabFinding = fabFeedback.findings[0];
+  if (!firstFabFinding) throw new Error("verification-failed: fab feedback produced no finding");
+  const knowledgeCandidate = createKnowledgeCandidate({
+    finding: firstFabFinding,
+    report: fabFeedbackReport,
+    sourceEventId: "event:fab-feedback:prototype-1-jlcpcb-001",
+    designRevision: fabFeedbackReport.target.designRevision,
+    derivationInputHash: fabFeedback.evidence.value.derivationInputHash,
+    derivationOutputHash: fabFeedback.evidence.value.derivationOutputHash,
+    excludesWhen: ["fabProfileId!=fab:jlcpcb-class-2layer"],
+    createdAt: "2026-01-01T00:00:00.000Z",
+  });
+  const reviewedKnowledge = transitionKnowledgeItem(knowledgeCandidate, {
+    status: "reviewed",
+    now: "2026-01-01T00:00:00.000Z",
+  });
+  const adoptedKnowledge = transitionKnowledgeItem(reviewedKnowledge, {
+    status: "adopted",
+    now: "2026-01-01T00:00:00.000Z",
+  });
+  await fabFeedbackEventLog.append(
+    createKnowledgeCandidateCreatedEvent({
+      eventId: "event:knowledge:candidate:prototype-1",
+      occurredAt: "2026-01-01T00:00:00.000Z",
+      actor: "fixture:fab-report-prototype-1-jlcpcb",
+      projectId: fixture.fixtureId,
+      baseRevision: 0,
+      resultRevision: 0,
+      knowledgeItem: knowledgeCandidate,
+    }),
+  );
+  await fabFeedbackEventLog.append(
+    createKnowledgeTransitionedEvent({
+      eventId: "event:knowledge:reviewed:prototype-1",
+      occurredAt: "2026-01-01T00:00:00.000Z",
+      actor: "fixture:fab-report-prototype-1-jlcpcb",
+      projectId: fixture.fixtureId,
+      baseRevision: 0,
+      resultRevision: 0,
+      knowledgeItem: reviewedKnowledge,
+      previousStatus: "candidate",
+    }),
+  );
+  await fabFeedbackEventLog.append(
+    createKnowledgeTransitionedEvent({
+      eventId: "event:knowledge:adopted:prototype-1",
+      occurredAt: "2026-01-01T00:00:00.000Z",
+      actor: "fixture:fab-report-prototype-1-jlcpcb",
+      projectId: fixture.fixtureId,
+      baseRevision: 0,
+      resultRevision: 0,
+      knowledgeItem: adoptedKnowledge,
+      previousStatus: "reviewed",
+    }),
+  );
+  await writeFile(
+    join(artifactRoot, "knowledge.json"),
+    `${JSON.stringify(
+      {
+        candidate: knowledgeCandidate,
+        reviewed: reviewedKnowledge,
+        adopted: adoptedKnowledge,
+        events: await fabFeedbackEventLog.readAll(),
+      },
+      null,
+      2,
+    )}\n`,
+  );
+  pass(20, {
+    candidateId: knowledgeCandidate.id,
+    adoptedId: adoptedKnowledge.id,
+    artifact: "knowledge.json",
+  });
+
   enter(6);
   await projectToKicad(fixture, projectRoot);
   docker([
