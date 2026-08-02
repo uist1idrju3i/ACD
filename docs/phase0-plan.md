@@ -76,7 +76,9 @@ Phase 0は、次の全てを同じCI環境で再現できた時点で完了と�
 - LLM、自然言語要件変換、MCP公開
 - Phase 1の自然言語入力およびLLMによる`Requirement`変換（Phase 1は事前変換済み
   `Requirement` fixtureから開始する）
-- custom router、custom WASM engine
+- 一般用途のcustom router、custom WASM engine（smoke fixture限定の承認済み
+  deterministic track/via projectionはPhase 1の例外。goldenは外部routing toolまたは
+  将来ADRで承認された方式を使用する）
 - 永続knowledge baseへの書き戻し
 - `FirmwarePackage`の実装・ビルド・検証
 - 自動発注、外部checkout、支払い
