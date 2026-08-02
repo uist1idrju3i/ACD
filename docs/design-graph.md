@@ -87,6 +87,8 @@
 
 `VerificationResult`は検証入力のグラフリビジョン、関連パッチ、入力ハッシュを参照します。依存するEntityまたは属性が変更されたとき、過去の結果は自動的にstale（再検証待ち）となり、staleな結果を合格証拠として下流へ流しません。これにより、差分開発では影響範囲だけを効率的に再検証しつつ、jidokaの停止・通知・証拠追跡を維持できます。
 
+知識のdeprecation伝播では、成功済みの依存結果だけをstaleへ更新し、failed・blocked・waivedなど成功以外の記録は上書きせず保全します。staleへ更新したEntityはrevisionをインクリメントし、伝播時に保全したEntity IDもEvidenceへ記録します。
+
 ## 監査文書の生成投影
 
 設計グラフと追記専用イベント履歴から、要求トレーサビリティマトリクス、設計履歴・レビュー記録、変更管理（ECR/ECO相当）、検証・試験報告、出所付きBOM／部品トレーサビリティ、`Rationale.risks`を起点とするFMEA風ビュー、PPAP／PSW相当の量産引き渡し証拠パッケージを生成できます。後者では、設計記録をグラフrevision、ECN/ECOをpatchと影響マトリックス、DFMEAをリスク付きRationale、Process Flow／Control Planを外部製造プロファイル参照（Phase 0/1では`fabProfileId`等）、ゲート、TestPlan、測定・性能結果をEvidence、PSWをApproval／提出記録へ対応させます。`ManufacturingProfile`を独立Entityとして扱うかは将来ADRで決定します。各文書は対象グラフリビジョン、イベント範囲、`patchId`、入力ハッシュ、証拠リンクを含む派生成果物であり、正規設計グラフを置き換えません。再生成時に現在の設計状態と一致しない古い文書はstaleとして扱います。PPAPの提出レベル、顧客固有様式、顧客承認をACD単体で保証するものではありません。

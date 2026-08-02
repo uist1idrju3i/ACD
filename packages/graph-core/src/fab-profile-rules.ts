@@ -37,7 +37,7 @@ export type FabProfileRules = {
 export const fabProfileRules: FabProfileRules[] = [
   {
     profileId: "fab:jlcpcb-class-2layer",
-    version: "0.1.0",
+    version: "0.2.0",
     confidenceFloor: 0.8,
     rules: [
       {

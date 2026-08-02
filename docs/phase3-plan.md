@@ -76,12 +76,11 @@ Phase 5、自働発注はPhase 6の範囲であり、本フェーズでは扱い
 
 ### WP2：KnowledgeItemのライフサイクルと永続化（gate 20）
 
-**状態：未着手。** gate契約はgate 20（`gate:knowledge-lifecycle`、`runsAfter: gate:fab-feedback-intake`）。
+**状態：実装済み。** gate契約はgate 20（`gate:knowledge-lifecycle`、`runsAfter: gate:fab-feedback-intake`）。
 
 **作業**
 
-- 知識の生成・遷移・保存を担う責務境界を新設する（`packages/knowledge-core`を想定。
-  永続化は`adapters/storage-fs`を拡張）。
+- 知識の生成・遷移・保存は`packages/graph-core`と`packages/adapters/storage-fs`に実装した。
 - `candidate → reviewed → adopted → deprecated`の遷移を実装し、昇格の必須条件
   （provenance、source event、再現条件、`appliesWhen`／`excludesWhen`）を検査する。
 - 知識イベント（`knowledge.candidate.created`、`knowledge.transitioned`、

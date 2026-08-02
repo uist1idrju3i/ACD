@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import type { Entity } from "@acd/schema";
+import { loadSchemaValidator, type Entity } from "@acd/schema";
 import {
   createKnowledgeAppliedEvent,
   createKnowledgeCandidate,
@@ -38,6 +38,25 @@ const item = (): KnowledgeItem => ({
 });
 
 describe("knowledge lifecycle", () => {
+  it("validates generated KnowledgeItems against the design graph schema", async () => {
+    const validator = await loadSchemaValidator("design-graph");
+    expect(
+      validator({
+        schemaVersion: "0.1.0-draft",
+        project: { id: "project:test", type: "Project", revision: 0 },
+        entities: [item()],
+      }),
+    ).toBe(true);
+    const invalid = { ...item(), sourceEventIds: [] };
+    expect(
+      validator({
+        schemaVersion: "0.1.0-draft",
+        project: { id: "project:test", type: "Project", revision: 0 },
+        entities: [invalid],
+      }),
+    ).toBe(false);
+  });
+
   it("creates deterministic candidates from passing intake findings", () => {
     const input = {
       finding: {
@@ -196,6 +215,68 @@ describe("knowledge lifecycle", () => {
       approval,
     });
     expect(adopted.scope).toBe("library-wide");
+    expect(() =>
+      transitionKnowledgeItem(reviewed, {
+        status: "adopted",
+        scope: "library-wide",
+        now: "not-a-date",
+        approval,
+      }),
+    ).toThrow(/approval/);
+  });
+
+  it("rejects terminal transitions, scope downgrades, and unvalidated approvals", () => {
+    const rejected = transitionKnowledgeItem(item(), {
+      status: "rejected",
+      rejectionReason: "not reproduced",
+      now: "2026-01-01T00:00:00.000Z",
+    });
+    expect(() =>
+      transitionKnowledgeItem(rejected, {
+        status: "deprecated",
+        now: "2026-01-01T00:00:00.000Z",
+      }),
+    ).toThrow(/terminal/);
+    const adopted = transitionKnowledgeItem(
+      transitionKnowledgeItem(item(), {
+        status: "reviewed",
+        now: "2026-01-01T00:00:00.000Z",
+      }),
+      {
+        status: "adopted",
+        scope: "library-wide",
+        now: "2026-01-01T00:00:00.000Z",
+        approval: {
+          approvalId: "approval:test",
+          subject: item().knowledgeId,
+          scope: "library-wide",
+          approvedBy: "user:test",
+          approvedAt: "2026-01-01T00:00:00.000Z",
+          expiresAt: "2026-01-02T00:00:00.000Z",
+        },
+      },
+    );
+    expect(() =>
+      transitionKnowledgeItem(adopted, {
+        status: "candidate",
+        scope: "project-local",
+        now: "2026-01-01T00:00:00.000Z",
+      }),
+    ).toThrow(/downgraded|illegal/);
+    expect(() =>
+      transitionKnowledgeItem(item(), {
+        status: "reviewed",
+        approval: {
+          approvalId: "approval:unvalidated",
+          subject: item().knowledgeId,
+          scope: "library-wide",
+          approvedBy: "user:test",
+          approvedAt: "2026-01-01T00:00:00.000Z",
+          expiresAt: "2026-01-02T00:00:00.000Z",
+        },
+        now: "2026-01-01T00:00:00.000Z",
+      }),
+    ).toThrow(/approval may only/);
   });
 
   it("allows already-library-wide knowledge to be deprecated or rejected", () => {
@@ -337,6 +418,17 @@ describe("knowledge lifecycle", () => {
             findingIds: ["rationale:test"],
           },
           {
+            id: "verification:failed",
+            type: "VerificationResult",
+            revision: 4,
+            gate: "knowledge",
+            status: "failed",
+            inputRevision: 0,
+            toolVersion: "test",
+            checkedAt: "2026-01-01T00:00:00.000Z",
+            findingIds: ["rationale:test"],
+          },
+          {
             id: "custom:test",
             type: "CustomEntity",
             revision: 0,
@@ -347,6 +439,7 @@ describe("knowledge lifecycle", () => {
       "knowledge item deprecated",
     );
     expect(result.staleEntityIds).toEqual(["rationale:test", "verification:test"]);
+    expect(result.preservedEntityIds).toEqual(["verification:failed"]);
     expect(result.traversalBasis).toContain(
       "rationale:test:Rationale:evidenceLinks,generatedTestItemIds,links",
     );
@@ -355,6 +448,9 @@ describe("knowledge lifecycle", () => {
     );
     expect(result.graph.entities[2]?.status).toBe("stale");
     expect(result.graph.entities[3]?.status).toBe("stale");
+    expect(result.graph.entities[2]?.revision).toBe(1);
+    expect(result.graph.entities[4]?.status).toBe("failed");
+    expect(result.graph.entities[4]?.revision).toBe(4);
   });
 
   it("creates typed hashed lifecycle events", () => {
