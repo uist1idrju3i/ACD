@@ -69,6 +69,9 @@ overlay markerだけではKiCadが使用するgeometryを変えません。libra
 
 ## Phase 4へ持ち越す既知のギャップ
 
+controlとknowledge-enabledの比較は、独立した第三者検証ではなく、同一の決定論的測定器を
+両runへ適用した対照実験である。
+
 - 実fab reportではなく、実fab形式を模したfixtureを入力にしている。
 - live sourcing APIやオンラインdatasheet取得は実装していない。
 - organization-wide knowledge sharingはPhase 3の範囲外である。
@@ -76,6 +79,10 @@ overlay markerだけではKiCadが使用するgeometryを変えません。libra
   projectionがこのcomponent libraryを部品選択・投影へ消費するところまでは実装していない。
 - component recordの未取得datasheetや未検証属性は`unknown`として残しており、Phase 4以降で
   検証経路を追加する必要がある。
+- Gate 22のreopen/DRC拡張はPhase 4の設計課題として残る。
+- overlay libraryがboardから直接参照されない点はPhase 4の設計課題として残る。
+- process conditionの片方向チェックで未宣言必須条件を`fail`ではなく`unknown`とするかは
+  Phase 4の設計課題として残る。
 
 ## 参照
 
