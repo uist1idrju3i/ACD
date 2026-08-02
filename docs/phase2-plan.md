@@ -1,6 +1,6 @@
 # Phase 2実装計画
 
-**ステータス：Draft（WP1〜WP6実装済み、WP7は未着手）**
+**ステータス：Draft（WP1〜WP7実装済み）**
 
 ## 目的と権威範囲
 
@@ -188,9 +188,29 @@ footprint／MPN不整合が後段で発見されました。KiCad ERCはこれ�
 
 ### WP7：schematic readability（Phase 1 WP6の繰延分）
 
-**状態：未着手・低優先。**
+**状態：実装済み。** 契約は[`schematic-readability.md`](schematic-readability.md)。
 
-net label中心の投影を、electrical semantics、netlist、ERC結果を変えずに読みやすくします。
+net label中心の投影を、electrical semantics、netlist、ERC結果を変えずに読みやすくしました。
+
+**作業**
+
+- WP3の設計根拠（`rationale.appliesTo`）からpart→functional blockの割当を導き、
+  基板placement順ではなく機能ブロック単位でsymbolを配置する。
+- symbol snapshotのpin座標から実寸の外形を求め、重なりのない間隔で積み上げる。
+- ブロック見出しとtitle blockという非電気的な注記を追加する。
+
+**受入基準**
+
+- Gate 7（netlist readback）とGate 8（ERC 0/0）が変更前と同じ結果で合格する。
+- 同じfixtureから同じ座標が決定論的に得られる。
+
+**実装で判明した事項**
+
+- eeschemaは同一座標のpinを接続するため、読みやすさのための再配置が意図しない接続を
+  作り得ます。異なるsymbol間のpin重なりを検出して停止する検査を入れました
+  （実際に初回実装でJ1とR7のpin重なりを検出しました）。
+- 機能ブロックはfixtureのpartには宣言されておらず、WP3のrationaleにしかありません。
+  読みやすさが設計根拠の副産物として得られる形になりました。
 
 ## リスク登録簿
 
