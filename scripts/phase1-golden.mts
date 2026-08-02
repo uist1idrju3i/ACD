@@ -1,6 +1,6 @@
 import { execFileSync, spawnSync } from "node:child_process";
 import { createHash } from "node:crypto";
-import { copyFile, mkdir, readFile, readdir, rm, writeFile } from "node:fs/promises";
+import { copyFile, mkdir, readFile, rm, writeFile } from "node:fs/promises";
 import { join, resolve } from "node:path";
 import {
   compareNetlists,
@@ -63,7 +63,6 @@ import {
 } from "../packages/schema/src/index.js";
 
 import type { Phase1Fixture } from "../packages/schema/src/generated/phase1-fixture.js";
-import preOrder from "./pre-order.ts";
 
 const root = resolve(import.meta.dirname, "..");
 const fixture = JSON.parse(
@@ -127,22 +126,6 @@ const dockerOutput = (args: string[]): { stdout: string; stderr: string } => {
   }
   return { stdout: result.stdout, stderr: result.stderr };
 };
-const freerouting = (args: string[]): string =>
-  run("docker", [
-    "run",
-    "--rm",
-    "--user",
-    "root",
-    "-e",
-    "HOME=/tmp",
-    "-v",
-    `${artifactRoot}:/work`,
-    "ghcr.io/freerouting/freerouting@sha256:0d010c6bf13b562551e8cb41fb298090006033fa2850e5bfc678c98ecf47111e",
-    "java",
-    "-jar",
-    "/app/freerouting-executable.jar",
-    ...args,
-  ]);
 /** Names the gate being evaluated so a stop is recorded against it, not against the last pass. */
 const enter = (gate: number): void => {
   currentGate = gate;
