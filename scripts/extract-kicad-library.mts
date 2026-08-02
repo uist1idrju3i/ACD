@@ -6,7 +6,10 @@ import { join, relative } from "node:path";
 const root = join(import.meta.dirname, "..");
 const image = "kicad/kicad@sha256:182c8005cb775a2c448a4c18681d489f1ff472a761885eba3e08b07e3c0564de";
 const libraryRoot = join(root, "packages/adapters/kicad/library-snapshot");
-const fixturePath = join(root, "fixtures/phase1/smoke.json");
+const fixturePaths = [
+  join(root, "fixtures/phase1/smoke.json"),
+  join(root, "fixtures/phase1/golden-esp32.json"),
+];
 const license = "CC-BY-SA-4.0-with-exception";
 
 type Fixture = {
@@ -79,7 +82,15 @@ const blockAt = (text: string, start: number): string => {
   throw new Error(`unbalanced s-expression at offset ${start}`);
 };
 
-const namedSymbol = (source: string, libraryId: string, symbolName: string): string => {
+const namedSymbol = (
+  source: string,
+  libraryId: string,
+  symbolName: string,
+  seen = new Set<string>(),
+): string => {
+  const key = `${libraryId}:${symbolName}`;
+  if (seen.has(key)) throw new Error(`cyclic symbol extends chain at ${key}`);
+  seen.add(key);
   const localMarker = `(symbol "${symbolName}"`;
   const qualifiedMarker = `(symbol "${libraryId}:${symbolName}"`;
   const start = source.indexOf(localMarker);
@@ -88,8 +99,10 @@ const namedSymbol = (source: string, libraryId: string, symbolName: string): str
     throw new Error(`missing official symbol ${libraryId}:${symbolName}`);
   }
   const block = blockAt(source, qualifiedStart >= 0 ? qualifiedStart : start);
-  if (qualifiedStart >= 0) return block;
-  return block.replace(localMarker, qualifiedMarker);
+  const extendsMatch = block.match(/\(extends\s+"([^"]+)"\)/);
+  const parent = extendsMatch?.[1] ? namedSymbol(source, libraryId, extendsMatch[1], seen) : "";
+  const normalized = qualifiedStart >= 0 ? block : block.replace(localMarker, qualifiedMarker);
+  return parent ? `${parent}\n${normalized}` : normalized;
 };
 
 const parsePads = (source: string, footprintName: string): Pad[] => {
@@ -136,18 +149,21 @@ const parsePads = (source: string, footprintName: string): Pad[] => {
 };
 
 const main = async (): Promise<void> => {
-  const fixture = JSON.parse(await readFile(fixturePath, "utf8")) as Fixture;
+  const fixtures = await Promise.all(
+    fixturePaths.map(async (path) => ({
+      path,
+      fixture: JSON.parse(await readFile(path, "utf8")) as Fixture,
+    })),
+  );
+  const mappings = fixtures.flatMap(({ fixture }) => fixture.mappings);
   const uniqueSymbols = [
     ...new Map(
-      fixture.mappings.map((mapping) => [
-        `${mapping.symbolLibraryId}:${mapping.symbolName}`,
-        mapping,
-      ]),
+      mappings.map((mapping) => [`${mapping.symbolLibraryId}:${mapping.symbolName}`, mapping]),
     ).values(),
   ];
   const uniqueFootprints = [
     ...new Map(
-      fixture.mappings.map((mapping) => [
+      mappings.map((mapping) => [
         `${mapping.footprintLibraryId}:${mapping.footprintName}`,
         mapping,
       ]),
@@ -162,7 +178,7 @@ const main = async (): Promise<void> => {
   ];
   const files: Record<string, string> = {};
   const manifestEntries: Array<Record<string, unknown>> = [];
-  const symbolBlocks: string[] = [];
+  const symbolBlocksByKey = new Map<string, string>();
 
   for (const mapping of symbolRequests) {
     const symbolPath = `/usr/share/kicad/symbols/${mapping.symbolLibraryId}.kicad_sym`;
@@ -170,7 +186,7 @@ const main = async (): Promise<void> => {
     const symbolBlock = namedSymbol(symbolSource, mapping.symbolLibraryId, mapping.symbolName);
     const symbolRelative = `symbols/${mapping.symbolLibraryId}_${mapping.symbolName}.kicad_sym`;
     files[symbolRelative] = symbolBlock;
-    symbolBlocks.push(symbolBlock);
+    symbolBlocksByKey.set(`${mapping.symbolLibraryId}:${mapping.symbolName}`, symbolBlock);
     manifestEntries.push({
       kind: "symbol",
       id: `${mapping.symbolLibraryId}:${mapping.symbolName}`,
@@ -206,19 +222,21 @@ const main = async (): Promise<void> => {
     });
   }
 
-  for (const mapping of fixture.mappings) {
-    const contentHash = footprintHashes.get(
-      `${mapping.footprintLibraryId}:${mapping.footprintName}`,
-    );
-    if (!contentHash) {
-      throw new Error(`missing extracted footprint hash for ${mapping.footprintName}`);
+  for (const { fixture } of fixtures) {
+    for (const mapping of fixture.mappings) {
+      const contentHash = footprintHashes.get(
+        `${mapping.footprintLibraryId}:${mapping.footprintName}`,
+      );
+      if (!contentHash) {
+        throw new Error(`missing extracted footprint hash for ${mapping.footprintName}`);
+      }
+      mapping.provenance = {
+        source: "KiCad official libraries",
+        version: "10.0.5",
+        license,
+        contentHash,
+      };
     }
-    mapping.provenance = {
-      source: "KiCad official libraries",
-      version: "10.0.5",
-      license,
-      contentHash,
-    };
   }
 
   for (const [path, content] of Object.entries(files)) {
@@ -245,13 +263,33 @@ const main = async (): Promise<void> => {
   const manifestText = `${JSON.stringify(manifest, null, 2)}\n`;
   await writeFile(join(libraryRoot, "manifest.json"), manifestText, "utf8");
   await writeFile(join(root, "spikes/kicad-library/manifest.json"), manifestText, "utf8");
-  await writeFile(fixturePath, `${JSON.stringify(fixture, null, 2)}\n`, "utf8");
-  execFileSync("pnpm", ["exec", "prettier", "--write", fixturePath], {
-    cwd: root,
-    stdio: "ignore",
-  });
+  for (const { path, fixture } of fixtures) {
+    await writeFile(path, `${JSON.stringify(fixture, null, 2)}\n`, "utf8");
+    execFileSync("pnpm", ["exec", "prettier", "--write", path], {
+      cwd: root,
+      stdio: "ignore",
+    });
+  }
 
-  const snapshotModule = `/* Generated by scripts/extract-kicad-library.mts. Do not edit by hand. */\nexport const snapshotManifest = ${JSON.stringify(manifest)} as const;\nexport const snapshotFiles = ${JSON.stringify(files)} as const;\nexport const smokeLibrarySymbols = ${JSON.stringify(symbolBlocks.join("\n"))};\n`;
+  const symbolsForFixture = (fixture: Fixture): string => {
+    const keys = [
+      ...new Set(
+        fixture.mappings.map((mapping) => `${mapping.symbolLibraryId}:${mapping.symbolName}`),
+      ),
+      "power:PWR_FLAG",
+    ];
+    return keys
+      .map((key) => symbolBlocksByKey.get(key))
+      .filter((block): block is string => Boolean(block))
+      .join("\n");
+  };
+  const symbolsByFixture = Object.fromEntries(
+    fixtures.map(({ path, fixture }) => [
+      path.endsWith("smoke.json") ? "smoke" : "golden",
+      symbolsForFixture(fixture),
+    ]),
+  );
+  const snapshotModule = `/* Generated by scripts/extract-kicad-library.mts. Do not edit by hand. */\nexport const snapshotManifest = ${JSON.stringify(manifest)} as const;\nexport const snapshotFiles = ${JSON.stringify(files)} as const;\nexport const smokeLibrarySymbols = ${JSON.stringify(symbolsByFixture.smoke ?? "")};\nexport const goldenLibrarySymbols = ${JSON.stringify(symbolsByFixture.golden ?? "")};\n`;
   const snapshotModulePath = join(root, "packages/adapters/kicad/src/library-snapshot.ts");
   await writeFile(snapshotModulePath, snapshotModule, "utf8");
   console.log(`extracted ${manifestEntries.length} pinned library files`);
