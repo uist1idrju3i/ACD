@@ -692,9 +692,6 @@ export const projectToKicad = async (
   const projectPath = join(directory, "design.kicad_pro");
   const schematicPath = join(directory, "design.kicad_sch");
   const boardPath = join(directory, "design.kicad_pcb");
-  if (!isPhase1Fixture(graph) && graph.project.type !== "Project") {
-    throw new Error("graph project entity must have type Project");
-  }
   await writeFile(projectPath, renderProject(), "utf8");
   if (isPhase1Fixture(graph)) {
     await writeFile(join(directory, "fp-lib-table"), renderFootprintLibraryTable(), "utf8");

@@ -138,13 +138,11 @@ try {
   };
   if (counts.messages !== 0)
     throw new Error(`golden ERC contains findings: ${JSON.stringify(counts)}`);
-  pass(7, "ERC/topology", { ...counts, waiver: "none" });
+  pass(8, "ERC/topology", { ...counts, waiver: "none" });
 
-  defer(
-    8,
-    "Routing / DRC / manufacturing",
-    "WP4: golden routing and downstream gates are deferred",
-  );
+  defer(9, "Routing", "WP4: golden routing is deferred; this runner intentionally does not route");
+  defer(10, "DRC/DFM", "WP4: golden DRC is deferred because the board is intentionally unrouted");
+  defer(11, "Manufacturing outputs", "WP4: golden manufacturing outputs are deferred");
 } catch (error) {
   results.push({
     gate: results.length + 1,
@@ -159,5 +157,5 @@ try {
 
 await writeFile(join(artifactRoot, "gate-results.json"), JSON.stringify(results, null, 2));
 process.stdout.write(
-  "Phase 1 golden gates 1-7 passed; routing/DRC/manufacturing deferred to WP4\n",
+  "Phase 1 golden gates 1-8 passed; routing/DRC/manufacturing (Gates 9-11) deferred to WP4\n",
 );

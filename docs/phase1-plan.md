@@ -64,9 +64,12 @@ projectionは公式pad位置、size、layer、THT drillを使用します。生�
   official mappingとhash-pinned footprint snapshotが存在する。
 - canonical netlist hashとfixture revisionを再現できる。
 
-本WPはfixture定義とGate 1/2の検証までを対象とする。golden fixtureは現時点で
-projection、placement、routing、Gate 3以降のrunnerへ投入しない。一般化された
-placementはWP3、golden routingと`unrouted=0`はWP4で実装する。
+本WPはfixture定義とGate 1/2の検証までを対象とした。AMS1117-3.3の公式symbolは
+`extends`で親symbolへ依存し、固定snapshotへ直接pin geometryを埋め込めないため、
+schematic projectionでは同じ公式Regulator_Linear libraryの`AP1117-15`をsymbol
+substitutionとして使用する。BOM/MPNはAMS1117-3.3のまま保持し、理由をfixture
+mapping provenanceへ記録した。goldenのplacement・projection・Gate 3以降はWP3、
+golden routingと`unrouted=0`はWP4で実装する。
 
 **リスク**
 
@@ -76,6 +79,9 @@ placementはWP3、golden routingと`unrouted=0`はWP4で実装する。
   切り分けられない。
 
 ### WP3：一般化された決定論的placement
+
+**状態：golden placement、KiCad schematic/PCB projection、Gate 1〜8 runnerを実装済み。
+Gate 9〜11（routing、DRC、manufacturing）はWP4へ延期。**
 
 **作業**
 
