@@ -1,6 +1,6 @@
 # Phase 1ゲートと製造準備契約
 
-**ステータス：Draft（smokeおよびgoldenのGate 1〜11を実装済み。Gate 12/13は将来）**
+**ステータス：Draft（smokeおよびgoldenのGate 1〜13契約を実装済み。Gate 13実機完了は未実施）**
 
 ## 実装済みsmoke vertical slice
 
@@ -66,6 +66,12 @@ Phase 1 fixtureは次を含む。
 各gateの合否、対象gate、入力revision、入力hash、tool version、判定時刻は`VerificationResult`へ
 記録する。測定・tool output・library／model provenance、output hash、uncertainty、停止理由は
 `Evidence`として記録し、`VerificationResult`からID参照する。
+
+Gate 12は合格しても自動発注、checkout、支払いを実行せず、`ready for order,
+approval required`で停止する。Gate 13のpending／simulated evidenceはschemaに
+適合しても合格証拠ではなく、runnerは明示的に拒否する。Gate 13の完了には実機、
+assembled board、校正状態がvalidな測定器、測定条件と不確実性、全TestItemの
+passが必要であり、本セッションの範囲では実機を用意しないため未完了である。
 
 ## BOM／manufacturing package契約
 

@@ -144,6 +144,16 @@ Gate 9〜11（routing、DRC、manufacturing）はWP4へ延期。**
 - 手動組立、通電、導通、電源、通信、センサー、LEDの測定項目を定義する。
 - `Evidence`に測定器、校正状態、条件、期待範囲、実測値、判定、artifact linkを記録する。
 
+**実装状況（WP5）**：
+
+- Gate 12はgolden Gate 1〜11のmanifest、fixture BOM／AVL、fixture-provided
+  fabrication quote、budget capを消費し、部品価格と基板価格をroll-upする。
+- Gate 12は欠落SKU、EOL／unknown availability、hash欠落、予算超過、unknownを
+  jidoka停止し、合格時も「ready for order, approval required」で停止する。
+- Gate 13はphysical evidence schemaとpending／simulated refusal modeを実装した。
+  実機測定、校正済みinstrument、assembled board、全TestItemのpassが揃うまで
+  Gate 13は合格にしない。
+
 **受入基準**
 
 - order-relevant unknownがゼロである。

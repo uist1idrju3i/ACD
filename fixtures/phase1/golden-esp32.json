@@ -1582,7 +1582,9 @@
         "license": "BSD-3-Clause",
         "contentHash": null,
         "pendingReason": "AVL source is fixture-provided; distributor availability must be rechecked before ordering"
-      }
+      },
+      "unitPrice": 0.35,
+      "currency": "USD"
     },
     {
       "partId": "part:u1",
@@ -1600,7 +1602,9 @@
         "license": "BSD-3-Clause",
         "contentHash": null,
         "pendingReason": "AVL source is fixture-provided; distributor availability must be rechecked before ordering"
-      }
+      },
+      "unitPrice": 0.35,
+      "currency": "USD"
     },
     {
       "partId": "part:u2",
@@ -1618,7 +1622,9 @@
         "license": "BSD-3-Clause",
         "contentHash": null,
         "pendingReason": "AVL source is fixture-provided; distributor availability must be rechecked before ordering"
-      }
+      },
+      "unitPrice": 0.35,
+      "currency": "USD"
     },
     {
       "partId": "part:u3",
@@ -1636,7 +1642,9 @@
         "license": "BSD-3-Clause",
         "contentHash": null,
         "pendingReason": "AVL source is fixture-provided; distributor availability must be rechecked before ordering"
-      }
+      },
+      "unitPrice": 0.35,
+      "currency": "USD"
     },
     {
       "partId": "part:j2",
@@ -1654,7 +1662,9 @@
         "license": "BSD-3-Clause",
         "contentHash": null,
         "pendingReason": "AVL source is fixture-provided; distributor availability must be rechecked before ordering"
-      }
+      },
+      "unitPrice": 0.35,
+      "currency": "USD"
     },
     {
       "partId": "part:r1",
@@ -1672,7 +1682,9 @@
         "license": "BSD-3-Clause",
         "contentHash": null,
         "pendingReason": "AVL source is fixture-provided; distributor availability must be rechecked before ordering"
-      }
+      },
+      "unitPrice": 0.35,
+      "currency": "USD"
     },
     {
       "partId": "part:r2",
@@ -1690,7 +1702,9 @@
         "license": "BSD-3-Clause",
         "contentHash": null,
         "pendingReason": "AVL source is fixture-provided; distributor availability must be rechecked before ordering"
-      }
+      },
+      "unitPrice": 0.35,
+      "currency": "USD"
     },
     {
       "partId": "part:r3",
@@ -1708,7 +1722,9 @@
         "license": "BSD-3-Clause",
         "contentHash": null,
         "pendingReason": "AVL source is fixture-provided; distributor availability must be rechecked before ordering"
-      }
+      },
+      "unitPrice": 0.35,
+      "currency": "USD"
     },
     {
       "partId": "part:c1",
@@ -1726,7 +1742,9 @@
         "license": "BSD-3-Clause",
         "contentHash": null,
         "pendingReason": "AVL source is fixture-provided; distributor availability must be rechecked before ordering"
-      }
+      },
+      "unitPrice": 0.35,
+      "currency": "USD"
     },
     {
       "partId": "part:c2",
@@ -1744,7 +1762,9 @@
         "license": "BSD-3-Clause",
         "contentHash": null,
         "pendingReason": "AVL source is fixture-provided; distributor availability must be rechecked before ordering"
-      }
+      },
+      "unitPrice": 0.35,
+      "currency": "USD"
     },
     {
       "partId": "part:c3",
@@ -1762,7 +1782,9 @@
         "license": "BSD-3-Clause",
         "contentHash": null,
         "pendingReason": "AVL source is fixture-provided; distributor availability must be rechecked before ordering"
-      }
+      },
+      "unitPrice": 0.35,
+      "currency": "USD"
     },
     {
       "partId": "part:d1",
@@ -1780,7 +1802,9 @@
         "license": "BSD-3-Clause",
         "contentHash": null,
         "pendingReason": "AVL source is fixture-provided; distributor availability must be rechecked before ordering"
-      }
+      },
+      "unitPrice": 0.35,
+      "currency": "USD"
     },
     {
       "partId": "part:sw1",
@@ -1798,7 +1822,9 @@
         "license": "BSD-3-Clause",
         "contentHash": null,
         "pendingReason": "AVL source is fixture-provided; distributor availability must be rechecked before ordering"
-      }
+      },
+      "unitPrice": 0.35,
+      "currency": "USD"
     },
     {
       "partId": "part:sw2",
@@ -1816,7 +1842,9 @@
         "license": "BSD-3-Clause",
         "contentHash": null,
         "pendingReason": "AVL source is fixture-provided; distributor availability must be rechecked before ordering"
-      }
+      },
+      "unitPrice": 0.35,
+      "currency": "USD"
     },
     {
       "partId": "part:r6",
@@ -1834,7 +1862,9 @@
         "license": "BSD-3-Clause",
         "contentHash": null,
         "pendingReason": "fixture-owned provenance snapshot is pending; source is controlled by this fixture"
-      }
+      },
+      "unitPrice": 0.35,
+      "currency": "USD"
     },
     {
       "partId": "part:r7",
@@ -1852,7 +1882,9 @@
         "license": "BSD-3-Clause",
         "contentHash": null,
         "pendingReason": "fixture-owned provenance snapshot is pending; source is controlled by this fixture"
-      }
+      },
+      "unitPrice": 0.35,
+      "currency": "USD"
     },
     {
       "partId": "part:c4",
@@ -1870,7 +1902,9 @@
         "license": "BSD-3-Clause",
         "contentHash": null,
         "pendingReason": "fixture-owned provenance snapshot is pending; source is controlled by this fixture"
-      }
+      },
+      "unitPrice": 0.35,
+      "currency": "USD"
     },
     {
       "partId": "part:c5",
@@ -1888,7 +1922,9 @@
         "license": "BSD-3-Clause",
         "contentHash": null,
         "pendingReason": "fixture-owned provenance snapshot is pending; source is controlled by this fixture"
-      }
+      },
+      "unitPrice": 0.35,
+      "currency": "USD"
     },
     {
       "partId": "part:r5",
@@ -1906,7 +1942,25 @@
         "license": "BSD-3-Clause",
         "contentHash": null,
         "pendingReason": "fixture-owned provenance snapshot is pending; source is controlled by this fixture"
+      },
+      "unitPrice": 0.35,
+      "currency": "USD"
+    }
+  ],
+  "orderConstraints": {
+    "budgetCap": 50,
+    "currency": "USD",
+    "fabQuote": {
+      "description": "placeholder 2-layer 60x45mm PCB fabrication",
+      "unitPrice": 12,
+      "currency": "USD",
+      "provenance": {
+        "source": "fixture-provided quote",
+        "version": "phase1-golden-1",
+        "license": "CC0-1.0",
+        "contentHash": null,
+        "pendingReason": "placeholder quote is fixture-provided and must be refreshed before ordering"
       }
     }
-  ]
+  }
 }

@@ -10,6 +10,8 @@ import {
   phase1FixtureSchemaPath,
   phase1GoldenFixturePath,
   phase1SmokeFixturePath,
+  physicalEvidenceSamplePath,
+  physicalEvidenceSchemaPath,
   repositoryRoot,
 } from "./paths.js";
 import { validatePhase1FixtureReferences } from "./phase1-semantic.js";
@@ -39,6 +41,7 @@ const samplePaths = [
   eventSchemaPath,
   errorTaxonomySchemaPath,
   phase1FixtureSchemaPath,
+  physicalEvidenceSchemaPath,
 ];
 for (const schemaPath of samplePaths) {
   await loadValidator(schemaPath);
@@ -64,6 +67,19 @@ if (!errorTaxonomyValidator(errorTaxonomy)) {
   );
 }
 process.stdout.write("validated data: schemas/error-taxonomy.json\n");
+
+const physicalEvidenceValidator = await loadValidator(physicalEvidenceSchemaPath);
+const physicalEvidenceSample = JSON.parse(
+  await readFile(physicalEvidenceSamplePath, "utf8"),
+) as unknown;
+if (!physicalEvidenceValidator(physicalEvidenceSample)) {
+  throw new Error(
+    `physical evidence sample is invalid: ${formatValidationErrors(physicalEvidenceValidator.errors)}`,
+  );
+}
+process.stdout.write(
+  "validated physical evidence: fixtures/phase1/physical-evidence-pending.json\n",
+);
 
 const phase1FixtureValidator = await loadValidator(phase1FixtureSchemaPath);
 for (const [fixturePath, label] of [

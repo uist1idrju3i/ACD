@@ -1,7 +1,7 @@
 import { execFileSync } from "node:child_process";
 import { createHash } from "node:crypto";
 import { mkdir, readFile, readdir, rm, writeFile } from "node:fs/promises";
-import { join, relative, resolve } from "node:path";
+import { join, resolve } from "node:path";
 import {
   compareNetlists,
   placeFixture,
@@ -9,6 +9,7 @@ import {
 } from "../packages/adapters/kicad/src/index.js";
 import { validatePhase1FixtureReferences } from "../packages/schema/src/index.js";
 import type { Phase1Fixture } from "../packages/schema/src/generated/phase1-fixture.js";
+import preOrder from "./pre-order.ts";
 
 const root = resolve(import.meta.dirname, "..");
 const fixture = JSON.parse(
@@ -41,8 +42,6 @@ const docker = (args: string[]): string =>
     "--rm",
     "--user",
     "root",
-    "--user",
-    "root",
     "-e",
     "HOME=/tmp",
     "-e",
@@ -56,6 +55,8 @@ const freerouting = (args: string[]): string =>
   run("docker", [
     "run",
     "--rm",
+    "--user",
+    "root",
     "-e",
     "HOME=/tmp",
     "-v",
@@ -70,13 +71,6 @@ const pass = (gate: number, name: string, evidence: Record<string, unknown>): vo
   currentGate = gate;
   currentName = name;
   results.push({ gate, name, status: "passed", evidence });
-};
-const filesUnder = async (directory: string): Promise<string[]> => {
-  const entries = await readdir(directory, { recursive: true, withFileTypes: true });
-  return entries
-    .filter((entry) => entry.isFile())
-    .map((entry) => relative(directory, join(entry.parentPath, entry.name)))
-    .sort();
 };
 await rm(artifactRoot, { recursive: true, force: true });
 await mkdir(projectRoot, { recursive: true });
@@ -227,9 +221,8 @@ try {
   const sesB = await readFile(join(projectRoot, "golden-b.ses"));
   const sesHashA = hash(sesA.toString());
   const sesHashB = hash(sesB.toString());
-  if (sesHashA !== sesHashB) {
+  if (sesHashA !== sesHashB)
     throw new Error(`verification-failed: nondeterministic SES hashes ${sesHashA} != ${sesHashB}`);
-  }
   const importPython = [
     "import pcbnew",
     "b=pcbnew.LoadBoard('/work/project/design.kicad_pcb')",
@@ -287,6 +280,10 @@ try {
     "/work/project/manufacturing/",
     "/work/project/routed.kicad_pcb",
   ]);
+  const dsn = await readFile(join(projectRoot, "golden.dsn"), "utf8");
+  if (!dsn.includes("(width 250)") || !dsn.includes("(clearance 127")) {
+    throw new Error("golden DSN does not carry the 0.25 mm / 0.127 mm routing rules");
+  }
   await writeFile(
     join(projectRoot, "manufacturing-manifest.json"),
     JSON.stringify(
@@ -295,17 +292,22 @@ try {
         dsnHash: hash((await readFile(join(projectRoot, "golden.dsn"))).toString()),
         sesHash: sesHashA,
         pcbHash: hash((await readFile(join(projectRoot, "routed.kicad_pcb"))).toString()),
-        graphRevision: fixture.requirement.provenance.version,
-        files: Object.fromEntries(
+        dsnRules: { trackWidthMm: 0.25, clearanceMm: 0.127 },
+        bom: fixture.bom,
+        layerVerification: { reopened: true, layers: ["F.Cu", "B.Cu"] },
+        artifactHashes: Object.fromEntries(
           await Promise.all(
-            (await filesUnder(join(projectRoot, "manufacturing"))).map(async (file) => {
-              const content = await readFile(join(projectRoot, "manufacturing", file));
-              return [file, { sha256: hash(content.toString()), bytes: content.byteLength }];
-            }),
+            (await readdir(join(projectRoot, "manufacturing"), { withFileTypes: true }))
+              .filter((entry) => entry.isFile())
+              .map((entry) => entry.name)
+              .sort()
+              .map(async (name) => {
+                const content = await readFile(join(projectRoot, "manufacturing", name));
+                return [name, { sha256: hash(content.toString()), bytes: content.byteLength }];
+              }),
           ),
         ),
-        bom: fixture.bom,
-        layerVerification: { layers: 2, reopened: true },
+        graphRevision: fixture.requirement.provenance.version,
       },
       null,
       2,
@@ -316,7 +318,45 @@ try {
     drill: true,
     manifest: true,
     deterministic: true,
-    files: await filesUnder(join(projectRoot, "manufacturing")),
+  });
+  const manufacturingManifest = JSON.parse(
+    await readFile(join(projectRoot, "manufacturing-manifest.json"), "utf8"),
+  ) as Record<string, unknown>;
+  const preOrderResult = preOrder.evaluatePreOrderReadiness({
+    bom: fixture.bom,
+    budgetCap: fixture.orderConstraints?.budgetCap ?? 0,
+    fabQuote: fixture.orderConstraints?.fabQuote ?? {
+      unitPrice: 0,
+      currency: "USD",
+    },
+    artifactManifest: {
+      dsnHash: manufacturingManifest.dsnHash as string,
+      sesHash: manufacturingManifest.sesHash as string,
+      pcbHash: manufacturingManifest.pcbHash as string,
+      ...Object.fromEntries(
+        Object.entries(
+          (manufacturingManifest.artifactHashes ?? {}) as Record<string, { sha256: string }>,
+        ).map(([name, value]) => [name, value.sha256]),
+      ),
+    } as Record<string, string>,
+    unresolvedUnknowns: [],
+  });
+  await writeFile(
+    join(artifactRoot, "pre-order-checklist.json"),
+    JSON.stringify(
+      {
+        verdict: preOrderResult.ready ? "ready-for-order" : "blocked",
+        ...preOrderResult,
+      },
+      null,
+      2,
+    ),
+  );
+  if (!preOrderResult.ready)
+    throw new Error(`pre-order readiness failed: ${preOrderResult.reasons.join("; ")}`);
+  pass(12, "Pre-order readiness", {
+    ...preOrderResult,
+    verdict: "ready-for-order, approval required",
   });
 } catch (error) {
   results.push({
@@ -331,4 +371,4 @@ try {
 }
 
 await writeFile(join(artifactRoot, "gate-results.json"), JSON.stringify(results, null, 2));
-process.stdout.write("Phase 1 golden gates 1-11 passed\n");
+process.stdout.write("Phase 1 golden gates 1-12 passed\n");

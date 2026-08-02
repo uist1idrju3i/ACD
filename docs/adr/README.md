@@ -40,3 +40,4 @@ ADRはACDの技術選定を、理由・代替案・前提・結果とともに�
 - [`0015-structural-safety-checks-placement.md`](0015-structural-safety-checks-placement.md)
 - [`0016-worst-case-analysis-fidelity.md`](0016-worst-case-analysis-fidelity.md)
 - [`0017-open-review-findings-queue.md`](0017-open-review-findings-queue.md)
+- [`0018-golden-routing-technology.md`](0018-golden-routing-technology.md)

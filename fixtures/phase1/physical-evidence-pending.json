@@ -1,0 +1,58 @@
+{
+  "id": "evidence:phase1-golden:board-bringup-pending",
+  "revision": 0,
+  "kind": "physical-measurement",
+  "status": "pending",
+  "board": {
+    "projectId": "project:phase1-golden",
+    "graphRevision": 0,
+    "boardRevision": "pending",
+    "pcbArtifactHash": "sha256:0000000000000000000000000000000000000000000000000000000000000000"
+  },
+  "assembly": { "status": "not-assembled" },
+  "instruments": [
+    { "id": "instrument:pending", "model": "pending", "calibrationStatus": "unknown" }
+  ],
+  "conditions": { "mode": "simulated/pending" },
+  "testItems": [
+    {
+      "id": "test:power-rail",
+      "procedure": "Measure 3V3 rail",
+      "observed": null,
+      "expected": "3.3V ±5%",
+      "pass": false,
+      "uncertainty": "not measured"
+    },
+    {
+      "id": "test:i2c-ack",
+      "procedure": "Scan BME280 I2C address",
+      "observed": null,
+      "expected": "ACK at 0x76",
+      "pass": false,
+      "uncertainty": "not measured"
+    },
+    {
+      "id": "test:status-led",
+      "procedure": "Exercise status LED",
+      "observed": null,
+      "expected": "LED responds",
+      "pass": false,
+      "uncertainty": "not measured"
+    },
+    {
+      "id": "test:uart-echo",
+      "procedure": "Run UART echo",
+      "observed": null,
+      "expected": "echo succeeds",
+      "pass": false,
+      "uncertainty": "not measured"
+    }
+  ],
+  "provenance": {
+    "source": "fixture simulated evidence",
+    "mode": "pending",
+    "toolVersion": "none",
+    "inputHash": "sha256:0000000000000000000000000000000000000000000000000000000000000000",
+    "uncertainty": "No physical hardware is available"
+  }
+}
