@@ -1,4 +1,5 @@
 import { execFileSync } from "node:child_process";
+import process from "node:process";
 
 const allowed = new Set([
   "0BSD",
@@ -24,9 +25,11 @@ for (const [license, packages] of Object.entries(inventory)) {
 }
 
 if (violations.length > 0) {
-  console.error("Disallowed or unknown dependency licenses:");
-  for (const violation of violations) console.error(`- ${violation}`);
+  globalThis.console.error("Disallowed or unknown dependency licenses:");
+  for (const violation of violations) globalThis.console.error(`- ${violation}`);
   process.exit(1);
 }
 
-console.log(`License check passed for ${Object.values(inventory).flat().length} packages.`);
+globalThis.console.log(
+  `License check passed for ${Object.values(inventory).flat().length} packages.`,
+);

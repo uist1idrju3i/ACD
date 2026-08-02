@@ -10,7 +10,7 @@
     "test": "vitest run",
     "lint": "eslint .",
     "license:check": "node scripts/check-licenses.mjs",
-    "format:check": "prettier --check .",
+    "format:check": "prettier --check . --ignore-unknown",
     "schema:validate": "pnpm --filter @acd/schema schema:validate",
     "schema:generate": "pnpm --filter @acd/schema schema:generate",
     "schema:check": "pnpm --filter @acd/schema schema:check",

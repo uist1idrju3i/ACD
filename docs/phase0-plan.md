@@ -103,6 +103,13 @@ Phase 0は、次の全てを同じCI環境で再現できた時点で完了と�
   unrouted nets中128が未配線であり、round-trip成功は「入出力とSES生成」の範囲に
   限定する。DSN/SESのKiCad再取込とDRC合格は未実施のため、Phase 1 adapter採用は
   保留する。FreeroutingはGPLのためjar/containerをvendor・再配布しない。
+- **ngspice WASM（2026-08-02）：** `eecircuit-engine@1.7.0`（MIT、npm registry
+  のtarball、package integrityは実行時にnpmが表示）をmonorepo外の一時ディレクトリ
+  で評価した。ngspice互換のRC transient netlistを実行し、`dataType=real`、
+  `numPoints=208`、`time/v(in)/v(out)`を取得できた。したがって小規模なNode／
+  browser WASM feasibilityは肯定的だが、ngspice本体との完全互換、モデル・include、
+  timeout/cancel、worker isolation、ブラウザ性能は未検証であり、Phase 1の必須
+  engine採用は決定しない。packageは依存として追加していない。
 
 ## 完了レビュー
 
