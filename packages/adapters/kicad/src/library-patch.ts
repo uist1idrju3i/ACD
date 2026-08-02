@@ -282,6 +282,9 @@ export const verifyLibraryPatchGeometry = (
   });
   try {
     verifyLibrarySnapshot();
+    if (patch.snapshotManifestHash !== snapshotManifestHash()) {
+      throw new Error("library snapshot manifest hash mismatch");
+    }
     const officialContent = sourceForFootprint(patch.footprintId);
     const expectedContent = materializeLibraryPatchContent(patch.footprintId, patch.operations);
     if (patch.content !== expectedContent || patch.contentHash !== hashText(patch.content)) {
@@ -420,6 +423,12 @@ export const resolveLibraryRevision = (
     );
   }
   const patch = matches[0]!;
+  if (patch.snapshotManifestHash !== snapshotManifestHash()) {
+    throw new GraphCoreError(
+      "verification-failed",
+      `library revision snapshot manifest is stale: ${requestedRevision}`,
+    );
+  }
   if (!allowUnadopted && patch.status !== "adopted") {
     throw new GraphCoreError(
       "verification-failed",

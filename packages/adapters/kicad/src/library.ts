@@ -66,12 +66,14 @@ export const verifyLibrarySnapshot = (): void => {
 };
 
 export const parseFootprintSource = (footprintName: string, source: string): FootprintPad[] => {
+  const footprintStart = source.indexOf(`(footprint "${footprintName}"`);
+  const footprintSource = footprintStart >= 0 ? blockAt(source, footprintStart) : source;
   const pads: FootprintPad[] = [];
   let cursor = 0;
   while (true) {
-    const start = source.indexOf('(pad "', cursor);
+    const start = footprintSource.indexOf('(pad "', cursor);
     if (start < 0) break;
-    const block = blockAt(source, start);
+    const block = blockAt(footprintSource, start);
     const header = block.match(/^\(pad "([^"]+)" ([^\s]+) ([^\s]+)/);
     const at = block.match(
       /\(at\s+(-?\d+(?:\.\d+)?)\s+(-?\d+(?:\.\d+)?)(?:\s+(-?\d+(?:\.\d+)?))?\)/,
@@ -108,7 +110,9 @@ export const parseFootprintSource = (footprintName: string, source: string): Foo
       height: Number(size[2]),
       ...(at[3] ? { rotation: Number(at[3]) } : {}),
       ...(drill?.[1] ? { drill: Number(drill[1]) } : {}),
-      ...(solderMaskMargin?.[1] ? { solderMaskMargin: Number(solderMaskMargin[1]) } : {}),
+      ...(solderMaskMargin?.[1] !== undefined
+        ? { solderMaskMargin: Number(solderMaskMargin[1]) }
+        : {}),
       layers: layerText.match(/"[^"]+"/g)?.map((layer) => layer.slice(1, -1)) ?? [],
     });
     cursor = start + block.length;
