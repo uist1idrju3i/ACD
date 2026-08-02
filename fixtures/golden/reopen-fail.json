@@ -1,13 +1,17 @@
 {
   "taskId": "golden:reopen-fail",
   "kind": "tool",
+  "inputFixture": "design-graphs/normal-2layer.json",
   "expected": {
+    "gate": "reopen",
     "outcome": "fail",
     "jidoka": "stop",
     "errorCode": "reopen-failure"
   },
   "scenario": {
-    "artifact": "missing.kicad_pcb",
+    "description": "Corrupted board artifact",
+    "mutation": "truncate-projected-board",
+    "artifact": "design.kicad_pcb",
     "retryable": false
   }
 }

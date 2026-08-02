@@ -1,12 +1,15 @@
 {
   "taskId": "golden:stale-result",
   "kind": "verification",
+  "inputFixture": "design-graphs/normal-2layer.json",
   "expected": {
+    "gate": "freshness",
     "outcome": "fail",
     "jidoka": "stop",
     "errorCode": "stale-result"
   },
   "scenario": {
+    "description": "A verification result from revision 0 is reused after revision 1",
     "resultRevision": 0,
     "currentRevision": 1
   }

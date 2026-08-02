@@ -95,8 +95,8 @@ export const parseKicadNetlist = (netlist: string): CanonicalPin[] => {
 export const parseIpc356 = (ipc: string): CanonicalPin[] => {
   const pins: CanonicalPin[] = [];
   for (const line of ipc.split(/\r?\n/)) {
-    if (!line.startsWith("327")) continue;
-    const match = line.match(/^327(.+?)\s{2,}(\S+)\s+-([A-Za-z0-9]+)/);
+    if (!line.startsWith("317") && !line.startsWith("327")) continue;
+    const match = line.match(/^3(?:17|27)(.+?)\s{2,}(\S+)\s+-([A-Za-z0-9]+)/);
     if (match) {
       const [, net, reference, pin] = match;
       if (net && reference && pin) pins.push({ net: net.trim(), reference, pin });

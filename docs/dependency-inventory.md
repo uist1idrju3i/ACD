@@ -28,6 +28,23 @@ KiCad `10.0.5`は`kicad/kicad:10.0`のDocker外部プロセスとしてのみ実
 ACDへリンク・vendor・再配布しません。KiCad本体のライセンスとcontainerの
 provenanceは[`kicad-ci-profile.md`](kicad-ci-profile.md)を参照してください。
 
+## コミット済みKiCad公式library snapshot
+
+smoke fixtureで実際に使用するsymbol／footprintだけを、
+`kicad/kicad:10.0`（KiCad `10.0.5`、digest
+`sha256:182c8005cb775a2c448a4c18681d489f1ff472a761885eba3e08b07e3c0564de`）
+から`packages/adapters/kicad/library-snapshot/`へ抽出してコミットしています。
+抽出元、container、version、license、各ファイルのSHA-256は
+[`packages/adapters/kicad/library-snapshot/manifest.json`](../packages/adapters/kicad/library-snapshot/manifest.json)
+が正本です。`scripts/extract-kicad-library.mts`で再生成できます。
+
+snapshotのsymbol／footprintはKiCad公式library由来で、
+`CC-BY-SA-4.0-with-exception`のnoticeをsnapshotディレクトリ内に保持します。
+ACDはKiCad本体やDocker imageをvendorせず、公式libraryの必要最小限の
+snapshotだけを、帰属とhash manifest付きで再配布します。projection前に
+manifest hashを検証し、欠落、manifest entry不在、改変、未知pad形式は
+`verification-failed`として停止します。
+
 ## 関連文書
 
 - [`../AGENTS.md`](../AGENTS.md)：依存、ライセンス、固定と更新の作業契約

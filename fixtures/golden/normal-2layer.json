@@ -8,6 +8,17 @@
     "errorCode": null
   },
   "scenario": {
-    "description": "Minimal deterministic two-layer fixture"
+    "description": "Minimal deterministic two-layer fixture",
+    "checks": [
+      "schema",
+      "semantic",
+      "projection",
+      "netlist-readback",
+      "erc",
+      "drc",
+      "gerber",
+      "drill",
+      "artifact-hash-stability"
+    ]
   }
 }

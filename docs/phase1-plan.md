@@ -17,6 +17,8 @@ Phase 1は、事前変換済みの`Requirement` fixtureから、ESP32級golden t
 
 ### WP1：公式symbol／footprint library snapshot
 
+**状態：smoke fixture範囲で完了。**
+
 **作業**
 
 - 固定KiCad containerから公式symbol／footprintを機械的に抽出する。
@@ -24,6 +26,13 @@ Phase 1は、事前変換済みの`Requirement` fixtureから、ESP32級golden t
   content hashをmanifestへ記録する。
 - 手書きのsmoke geometry tableを、抽出した実geometryへ段階的に置き換える。
 - projection前にmanifest hashを検証し、不一致ならjidoka停止する。
+
+実装済み範囲は`packages/adapters/kicad/library-snapshot/`の9ファイルです。
+固定digestから抽出したsymbol blockとfootprint `.kicad_mod`をmanifestへ登録し、
+projectionは公式pad位置、size、layer、THT drillを使用します。生成symbol moduleは
+抽出scriptから再生成され、projection前のruntime hash検証と未知construct停止を
+実装しています。未完了なのはgolden fixtureで必要になる追加libraryの抽出と、
+smoke範囲を越えた全library同期です。
 
 **受入基準**
 

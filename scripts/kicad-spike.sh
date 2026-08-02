@@ -12,16 +12,8 @@ fi
 
 rm -rf "$ROOT/$OUT"
 mkdir -p "$ROOT/$OUT/project" "$ROOT/$OUT/reports" "$ROOT/$OUT/gerbers" "$ROOT/$OUT/drill"
-pnpm --filter @acd/adapter-kicad build >/dev/null
-node --input-type=module - "$ROOT/$OUT/project" <<'NODE'
-import { projectToKicad } from "./packages/adapters/kicad/dist/projection.js";
-const directory = process.argv[2];
-await projectToKicad({
-  schemaVersion: "0.1.0-draft",
-  project: { id: "project:normal-2layer", type: "Project", revision: 0 },
-  entities: [{ id: "project:normal-2layer", type: "Project", revision: 0 }]
-}, directory);
-NODE
+pnpm exec tsx "$ROOT/scripts/project-graph.mts" \
+  "$ROOT/fixtures/design-graphs/normal-2layer.json" "$ROOT/$OUT/project" >/dev/null
 
 docker_run() {
   docker run --rm \

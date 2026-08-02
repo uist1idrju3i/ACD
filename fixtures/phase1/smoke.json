@@ -120,8 +120,7 @@
         "source": "KiCad official libraries",
         "version": "10.0.5",
         "license": "CC-BY-SA-4.0-with-exception",
-        "contentHash": null,
-        "pendingReason": "fixture-local provenance snapshot is pending; source is controlled by this fixture"
+        "contentHash": "sha256:dd59286748b9a6fa9174237072608f811cf3169dddf00eab54a5c196fcb6f7e8"
       }
     },
     {
@@ -146,8 +145,7 @@
         "source": "KiCad official libraries",
         "version": "10.0.5",
         "license": "CC-BY-SA-4.0-with-exception",
-        "contentHash": null,
-        "pendingReason": "fixture-local provenance snapshot is pending; source is controlled by this fixture"
+        "contentHash": "sha256:7190ac4a00125b807e54129ef0d87d87f2a658eeb74d025a7028203419b09f23"
       }
     },
     {
@@ -172,8 +170,7 @@
         "source": "KiCad official libraries",
         "version": "10.0.5",
         "license": "CC-BY-SA-4.0-with-exception",
-        "contentHash": null,
-        "pendingReason": "fixture-local provenance snapshot is pending; source is controlled by this fixture"
+        "contentHash": "sha256:7931ed1efba34cb13c8d74a60eb1dca4b0be57d950c38e08c3e7f007db500a1c"
       }
     },
     {
@@ -198,8 +195,7 @@
         "source": "KiCad official libraries",
         "version": "10.0.5",
         "license": "CC-BY-SA-4.0-with-exception",
-        "contentHash": null,
-        "pendingReason": "fixture-local provenance snapshot is pending; source is controlled by this fixture"
+        "contentHash": "sha256:fe0dbfefbb181a0466f93a8de52d84ba7b00fcd9acdbb69575f4128a0af4e405"
       }
     }
   ],
