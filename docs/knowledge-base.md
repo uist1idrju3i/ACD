@@ -58,6 +58,8 @@ KnowledgeItem、操作内容、検証Evidence、明示的library revisionを記�
 
 状態は`candidate`→`reviewed`→`adopted`→`deprecated`とします（Schemaの`KnowledgeItem.status`）。検討を打ち切った候補は`rejected`と理由を記録して保持します。昇格にはsource event、provenance、再現条件、適用条件と除外条件が必要です。`appliesWhen`と`excludesWhen`は`field`・`operator`・`value`を持つ構造化条件であり、WP4は文字列をparseせず決定論的に評価します。条件を評価できない場合は`unknown`として検証範囲を広げます。出所は`provenance`へ記録し、元の設計revisionは適用条件に含めず、fab profile、部品・footprint、rule、再現条件など次の設計で再現可能な条件だけを`appliesWhen`へ記録します。`library-wide`へのscope昇格には対象を限定した有効期限付きapprovalが必要です。内容を変更したrevisionは承認を継承せず、`candidate`かつ`project-local`へ戻り、`approvalId`を削除して再レビューします。誤りが判明した知識は`deprecated`にし、その知識を根拠に行った判断と`VerificationResult`を明示的な参照フィールドから探索して再検証対象（stale）にします。宣言されていないentity typeは依存の可能性を除外せず、探索根拠を記録して保守的に扱います。内容を黙って書き換えず、変更は旧版を参照する新しいKnowledgeItem revisionとして記録します。却下した案、失敗したspike、再現しなかった結果も条件付きで残し、同じ検討の反復を防ぎます。
 
+WP4では、次設計から導出した`fabProfileId`、使用中のfootprint・rule・classification・reproduction conditionと設計revisionを入力として、採用済みKnowledgeItemごとの`pass`・`fail`・`unknown`を必ず記録します。`unknown`は非適用ではなく検証範囲を広げる結果です。採用済み知識が対象設計に適用可能な場合、投影前に明示的なlibrary revision（必要ならWP3のoverlay）へ解決し、KnowledgeItem→library revision→projection artifactを`knowledge.applied`で追跡します。適用記録がないまま投影・検証・製造出力へ進むことはできません。`knowledge-application.json`には決定、適用状態、対象context、解決revision、イベントを保存します。
+
 ## 説明可能性
 
 知識が部品、配置、ルール、テスト項目の判断を変えたとき、UIは「どの過去イベントが、どの知識版を経由し、どの判断を変えたか」を表示します。説明できない書き換えは採用せず、未確認の推測は`uncertainty`として残します。

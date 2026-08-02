@@ -77,7 +77,9 @@ const evaluateCondition = (
   const observed = context[conditionToEvaluate.field];
   if (observed === undefined) return "unknown";
   const values = Array.isArray(observed) ? observed : [observed];
-  const matches = values.includes(conditionToEvaluate.value);
+  const normalize = (value: string): string =>
+    conditionToEvaluate.field === "footprintId" ? (value.split(":").at(-1) ?? value) : value;
+  const matches = values.map(normalize).includes(normalize(conditionToEvaluate.value));
   return (conditionToEvaluate.operator === "equals" ? matches : !matches) ? "pass" : "fail";
 };
 
@@ -464,6 +466,8 @@ export type KnowledgeAppliedPayload = {
   targetProjectId: string;
   targetRevision: number;
   appliedAt: string;
+  libraryRevision?: string;
+  projectionArtifactId?: string;
 };
 
 export const createKnowledgeCandidateCreatedEvent = (input: {

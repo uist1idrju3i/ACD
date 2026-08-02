@@ -26,6 +26,11 @@ import {
   createKnowledgeCandidate,
   createKnowledgeCandidateCreatedEvent,
   createKnowledgeTransitionedEvent,
+  createKnowledgeAppliedEvent,
+  assertKnowledgeApplicationsComplete,
+  createTargetDesignKnowledgeContext,
+  evaluateKnowledgeApplications,
+  recordKnowledgeApplications,
   evaluateDesignRationale,
   evaluateFixtureGates,
   failedFindings,
@@ -55,7 +60,7 @@ import {
   missingExecutedGates,
   validatePhase1FixtureReferences,
 } from "../packages/schema/src/index.js";
-import { loadSchemaValidator } from "../packages/schema/src/index.js";
+import { loadSchemaValidator } from "../packages/schema/src/validator.js";
 import type { Phase1Fixture } from "../packages/schema/src/generated/phase1-fixture.js";
 import preOrder from "./pre-order.ts";
 
@@ -84,6 +89,10 @@ const results: Result[] = [];
 let currentGate = 0;
 let currentName = "golden";
 let adoptedKnowledgeForLibraryPatch: KnowledgeItem | undefined;
+let adoptedLibraryPatch: ReturnType<typeof createLibraryPatchCandidate> | undefined;
+let targetDesignRuleIds: string[] = [];
+let targetDesignClassifications: string[] = [];
+let targetDesignReproductionConditions: string[] = [];
 const hash = (content: string): string =>
   `sha256:${createHash("sha256").update(content).digest("hex")}`;
 const run = (command: string, args: string[]): string =>
@@ -482,9 +491,6 @@ try {
       throw error;
     }
     knowledgeStates.push({ candidate, reviewed, adopted });
-    if (finding.references.ruleId === "mask-sliver-min") {
-      adoptedKnowledgeForLibraryPatch = adopted;
-    }
     await knowledgeEventLog.append(
       createKnowledgeCandidateCreatedEvent({
         eventId: `event:knowledge:candidate:prototype-1:${finding.findingId}`,
@@ -541,6 +547,262 @@ try {
       knowledgeHash: hash(knowledgeText),
       eventCount: knowledgeEvents.length,
     },
+    artifact: "knowledge.json",
+  });
+
+  enter(20);
+  const passingFindings = fabFeedback.findings
+    .filter((finding) => finding.verdict === "pass")
+    .sort((left, right) => left.findingId.localeCompare(right.findingId));
+  if (passingFindings.length === 0) {
+    throw new Error("verification-failed: fab feedback produced no passing findings");
+  }
+  const knowledgeStates = [];
+  for (const finding of passingFindings) {
+    const candidate = createKnowledgeCandidate({
+      finding,
+      report: fabFeedbackReport,
+      sourceEventId: "event:fab-feedback:prototype-1-jlcpcb-001",
+      designRevision: fabFeedbackReport.target.designRevision,
+      derivationInputHash: fabFeedback.evidence.value.derivationInputHash,
+      derivationOutputHash: fabFeedback.evidence.value.derivationOutputHash,
+      createdAt: "2026-01-01T00:00:00.000Z",
+    });
+    const reviewed = transitionKnowledgeItem(candidate, {
+      status: "reviewed",
+      now: "2026-01-01T00:00:00.000Z",
+    });
+    const adopted = transitionKnowledgeItem(reviewed, {
+      status: "adopted",
+      now: "2026-01-01T00:00:00.000Z",
+    });
+    knowledgeStates.push({ candidate, reviewed, adopted });
+    await fabFeedbackEventLog.append(
+      createKnowledgeCandidateCreatedEvent({
+        eventId: `event:knowledge:candidate:prototype-1:${finding.findingId}`,
+        occurredAt: "2026-01-01T00:00:00.000Z",
+        actor: "fixture:fab-report-prototype-1-jlcpcb",
+        projectId: fixture.fixtureId,
+        baseRevision: 0,
+        resultRevision: 0,
+        knowledgeItem: candidate,
+      }),
+    );
+    await fabFeedbackEventLog.append(
+      createKnowledgeTransitionedEvent({
+        eventId: `event:knowledge:reviewed:prototype-1:${finding.findingId}`,
+        occurredAt: "2026-01-01T00:00:00.000Z",
+        actor: "fixture:fab-report-prototype-1-jlcpcb",
+        projectId: fixture.fixtureId,
+        baseRevision: 0,
+        resultRevision: 0,
+        knowledgeItem: reviewed,
+        previousStatus: "candidate",
+      }),
+    );
+    await fabFeedbackEventLog.append(
+      createKnowledgeTransitionedEvent({
+        eventId: `event:knowledge:adopted:prototype-1:${finding.findingId}`,
+        occurredAt: "2026-01-01T00:00:00.000Z",
+        actor: "fixture:fab-report-prototype-1-jlcpcb",
+        projectId: fixture.fixtureId,
+        baseRevision: 0,
+        resultRevision: 0,
+        knowledgeItem: adopted,
+        previousStatus: "reviewed",
+      }),
+    );
+  }
+  await writeFile(
+    join(artifactRoot, "knowledge.json"),
+    `${JSON.stringify(
+      {
+        knowledgeStates,
+        events: await fabFeedbackEventLog.readAll(),
+      },
+      null,
+      2,
+    )}\n`,
+  );
+  pass(20, {
+    candidateCount: knowledgeStates.length,
+    adoptedIds: knowledgeStates.map((state) => state.adopted.id),
+    artifact: "knowledge.json",
+  });
+
+  enter(20);
+  const passingFindings = fabFeedback.findings
+    .filter((finding) => finding.verdict === "pass")
+    .sort((left, right) => left.findingId.localeCompare(right.findingId));
+  targetDesignRuleIds = [
+    ...new Set(
+      passingFindings.flatMap((finding) =>
+        finding.references.ruleId ? [finding.references.ruleId] : [],
+      ),
+    ),
+  ].sort();
+  targetDesignClassifications = [
+    ...new Set(passingFindings.map((finding) => finding.classification)),
+  ].sort();
+  targetDesignReproductionConditions = [
+    ...new Set(passingFindings.flatMap((finding) => finding.reproductionConditions)),
+  ].sort();
+  if (passingFindings.length === 0) {
+    throw new Error("verification-failed: fab feedback produced no passing findings");
+  }
+  const knowledgeStates = [];
+  for (const finding of passingFindings) {
+    const candidate = createKnowledgeCandidate({
+      finding,
+      report: fabFeedbackReport,
+      sourceEventId: "event:fab-feedback:prototype-1-jlcpcb-001",
+      designRevision: fabFeedbackReport.target.designRevision,
+      derivationInputHash: fabFeedback.evidence.value.derivationInputHash,
+      derivationOutputHash: fabFeedback.evidence.value.derivationOutputHash,
+      createdAt: "2026-01-01T00:00:00.000Z",
+    });
+    const reviewed = transitionKnowledgeItem(candidate, {
+      status: "reviewed",
+      now: "2026-01-01T00:00:00.000Z",
+    });
+    const adopted = transitionKnowledgeItem(reviewed, {
+      status: "adopted",
+      now: "2026-01-01T00:00:00.000Z",
+    });
+    knowledgeStates.push({ candidate, reviewed, adopted });
+    if (finding.references.ruleId === "mask-sliver-min") {
+      adoptedKnowledgeForLibraryPatch = adopted;
+    }
+    await fabFeedbackEventLog.append(
+      createKnowledgeCandidateCreatedEvent({
+        eventId: `event:knowledge:candidate:prototype-1:${finding.findingId}`,
+        occurredAt: "2026-01-01T00:00:00.000Z",
+        actor: "fixture:fab-report-prototype-1-jlcpcb",
+        projectId: fixture.fixtureId,
+        baseRevision: 0,
+        resultRevision: 0,
+        knowledgeItem: candidate,
+      }),
+    );
+    await fabFeedbackEventLog.append(
+      createKnowledgeTransitionedEvent({
+        eventId: `event:knowledge:reviewed:prototype-1:${finding.findingId}`,
+        occurredAt: "2026-01-01T00:00:00.000Z",
+        actor: "fixture:fab-report-prototype-1-jlcpcb",
+        projectId: fixture.fixtureId,
+        baseRevision: 0,
+        resultRevision: 0,
+        knowledgeItem: reviewed,
+        previousStatus: "candidate",
+      }),
+    );
+    await fabFeedbackEventLog.append(
+      createKnowledgeTransitionedEvent({
+        eventId: `event:knowledge:adopted:prototype-1:${finding.findingId}`,
+        occurredAt: "2026-01-01T00:00:00.000Z",
+        actor: "fixture:fab-report-prototype-1-jlcpcb",
+        projectId: fixture.fixtureId,
+        baseRevision: 0,
+        resultRevision: 0,
+        knowledgeItem: adopted,
+        previousStatus: "reviewed",
+      }),
+    );
+  }
+  await writeFile(
+    join(artifactRoot, "knowledge.json"),
+    `${JSON.stringify(
+      {
+        knowledgeStates,
+        events: await fabFeedbackEventLog.readAll(),
+      },
+      null,
+      2,
+    )}\n`,
+  );
+  pass(20, {
+    candidateCount: knowledgeStates.length,
+    adoptedIds: knowledgeStates.map((state) => state.adopted.id),
+    artifact: "knowledge.json",
+  });
+
+  enter(20);
+  const passingFindings = fabFeedback.findings
+    .filter((finding) => finding.verdict === "pass")
+    .sort((left, right) => left.findingId.localeCompare(right.findingId));
+  if (passingFindings.length === 0) {
+    throw new Error("verification-failed: fab feedback produced no passing findings");
+  }
+  const knowledgeStates = [];
+  for (const finding of passingFindings) {
+    const candidate = createKnowledgeCandidate({
+      finding,
+      report: fabFeedbackReport,
+      sourceEventId: "event:fab-feedback:prototype-1-jlcpcb-001",
+      designRevision: fabFeedbackReport.target.designRevision,
+      derivationInputHash: fabFeedback.evidence.value.derivationInputHash,
+      derivationOutputHash: fabFeedback.evidence.value.derivationOutputHash,
+      createdAt: "2026-01-01T00:00:00.000Z",
+    });
+    const reviewed = transitionKnowledgeItem(candidate, {
+      status: "reviewed",
+      now: "2026-01-01T00:00:00.000Z",
+    });
+    const adopted = transitionKnowledgeItem(reviewed, {
+      status: "adopted",
+      now: "2026-01-01T00:00:00.000Z",
+    });
+    knowledgeStates.push({ candidate, reviewed, adopted });
+    await fabFeedbackEventLog.append(
+      createKnowledgeCandidateCreatedEvent({
+        eventId: `event:knowledge:candidate:prototype-1:${finding.findingId}`,
+        occurredAt: "2026-01-01T00:00:00.000Z",
+        actor: "fixture:fab-report-prototype-1-jlcpcb",
+        projectId: fixture.fixtureId,
+        baseRevision: 0,
+        resultRevision: 0,
+        knowledgeItem: candidate,
+      }),
+    );
+    await fabFeedbackEventLog.append(
+      createKnowledgeTransitionedEvent({
+        eventId: `event:knowledge:reviewed:prototype-1:${finding.findingId}`,
+        occurredAt: "2026-01-01T00:00:00.000Z",
+        actor: "fixture:fab-report-prototype-1-jlcpcb",
+        projectId: fixture.fixtureId,
+        baseRevision: 0,
+        resultRevision: 0,
+        knowledgeItem: reviewed,
+        previousStatus: "candidate",
+      }),
+    );
+    await fabFeedbackEventLog.append(
+      createKnowledgeTransitionedEvent({
+        eventId: `event:knowledge:adopted:prototype-1:${finding.findingId}`,
+        occurredAt: "2026-01-01T00:00:00.000Z",
+        actor: "fixture:fab-report-prototype-1-jlcpcb",
+        projectId: fixture.fixtureId,
+        baseRevision: 0,
+        resultRevision: 0,
+        knowledgeItem: adopted,
+        previousStatus: "reviewed",
+      }),
+    );
+  }
+  await writeFile(
+    join(artifactRoot, "knowledge.json"),
+    `${JSON.stringify(
+      {
+        knowledgeStates,
+        events: await fabFeedbackEventLog.readAll(),
+      },
+      null,
+      2,
+    )}\n`,
+  );
+  pass(20, {
+    candidateCount: knowledgeStates.length,
+    adoptedIds: knowledgeStates.map((state) => state.adopted.id),
     artifact: "knowledge.json",
   });
 
@@ -843,11 +1105,6 @@ try {
     libraryPatch.operations,
   );
   if (patchedBoardContent === unpatchedBoardContent) {
-    await writeLibraryPatchFailure(
-      "library patch did not change the projected board",
-      { boardInputHash: unpatchedBoardHash },
-      unpatchedBoardHash,
-    );
     throw new Error("verification-failed: library patch did not change the projected board");
   }
   if (
@@ -855,11 +1112,6 @@ try {
       `ACD_LibraryOverlay" "pad-mask-clearance=${libraryPatch.operations[0]?.requiredValueMm}`,
     )
   ) {
-    await writeLibraryPatchFailure(
-      "projected board lacks the library correction",
-      { boardInputHash: unpatchedBoardHash },
-      unpatchedBoardHash,
-    );
     throw new Error("verification-failed: projected board lacks the library correction");
   }
   const patchedPads = parseFootprintSource(libraryPatch.footprintId, patchedBoardContent).filter(
@@ -869,14 +1121,6 @@ try {
     patchedPads.length === 0 ||
     patchedPads.some((pad) => pad.solderMaskMargin !== libraryPatch.operations[0]?.requiredValueMm)
   ) {
-    await writeLibraryPatchFailure(
-      "patched board pads lack declared solder mask margin",
-      {
-        boardInputHash: unpatchedBoardHash,
-        patchedPadCount: patchedPads.length,
-      },
-      unpatchedBoardHash,
-    );
     throw new Error("verification-failed: patched board pads lack declared solder mask margin");
   }
   const patchedBoardHash = hash(patchedBoardContent);
@@ -946,7 +1190,7 @@ try {
     drc,
     ...(failureEvidence ? { failureEvidence } : {}),
   };
-  const adoptedLibraryPatch = adoptVerifiedLibraryPatch(libraryPatch, verification);
+  adoptedLibraryPatch = adoptVerifiedLibraryPatch(libraryPatch, verification);
   if (adoptedLibraryPatch.status !== "adopted") {
     await writeLibraryPatchFailure(
       "library patch verification did not pass",
@@ -981,6 +1225,101 @@ try {
     libraryRevision: adoptedLibraryPatch.libraryRevision,
     snapshotManifestHash: adoptedLibraryPatch.snapshotManifestHash,
     artifact: "library-patch.json",
+  });
+
+  enter(22);
+  if (!adoptedLibraryPatch || !adoptedKnowledgeForLibraryPatch) {
+    throw new Error(
+      "verification-failed: adopted library patch is unavailable for knowledge application",
+    );
+  }
+  const adoptedKnowledgeItems = knowledgeStates.map((state) => state.adopted);
+  const targetKnowledgeContext = createTargetDesignKnowledgeContext({
+    designRevision: "prototype-2",
+    fabProfileId: fabFeedbackReport.fabProfileId,
+    footprintIds: [
+      ...new Set(
+        [
+          ...(await readFile(join(projectRoot, "routed.kicad_pcb"), "utf8")).matchAll(
+            /\(footprint "([^"]+)"/g,
+          ),
+        ].map((match) => match[1]),
+      ),
+    ].sort(),
+    ruleIds: targetDesignRuleIds,
+    classifications: targetDesignClassifications,
+    reproductionConditions: targetDesignReproductionConditions,
+  });
+  const applicationResult = evaluateKnowledgeApplications(
+    adoptedKnowledgeItems,
+    targetKnowledgeContext,
+  );
+  const appliedResult = recordKnowledgeApplications(
+    applicationResult,
+    applicationResult.applicableKnowledgeIds.map((knowledgeId) => ({
+      knowledgeId,
+      ...(knowledgeId === adoptedKnowledgeForLibraryPatch.knowledgeId
+        ? { libraryRevision: adoptedLibraryPatch!.libraryRevision }
+        : {}),
+    })),
+  );
+  assertKnowledgeApplicationsComplete(appliedResult, "projection");
+  const applicationProjectRoot = join(artifactRoot, "knowledge-application-project");
+  await projectToKicad(fixture, applicationProjectRoot, {
+    libraryRevision: adoptedLibraryPatch.libraryRevision,
+    patches: [adoptedLibraryPatch],
+  });
+  const projectionArtifactId = "artifact:phase1-golden:knowledge-application-project";
+  const appliedEvents = await Promise.all(
+    appliedResult.decisions
+      .filter(
+        (decision) =>
+          decision.applied &&
+          decision.lifecycleStatus === "adopted" &&
+          (decision.status === "pass" || decision.status === "unknown"),
+      )
+      .map((decision, index) =>
+        createKnowledgeAppliedEvent({
+          eventId: `event:knowledge:applied:prototype-2:${decision.knowledgeId}`,
+          occurredAt: "2026-01-02T00:00:00.000Z",
+          actor: "fixture:knowledge-application",
+          projectId: fixture.fixtureId,
+          baseRevision: 0,
+          resultRevision: index + 1,
+          payload: {
+            knowledgeItemId: decision.knowledgeItemId,
+            targetProjectId: fixture.fixtureId,
+            targetRevision: 2,
+            appliedAt: "2026-01-02T00:00:00.000Z",
+            ...(decision.libraryRevision ? { libraryRevision: decision.libraryRevision } : {}),
+            projectionArtifactId,
+          },
+        }),
+      ),
+  );
+  await writeFile(
+    join(artifactRoot, "knowledge-application.json"),
+    `${JSON.stringify(
+      {
+        targetContext: targetKnowledgeContext,
+        decisions: appliedResult.decisions,
+        libraryRevisions: appliedResult.libraryRevisions,
+        projection: {
+          artifactId: projectionArtifactId,
+          libraryRevision: adoptedLibraryPatch.libraryRevision,
+        },
+        events: appliedEvents,
+      },
+      null,
+      2,
+    )}\n`,
+  );
+  pass(22, {
+    decisions: appliedResult.decisions.length,
+    appliedKnowledge: appliedResult.applicableKnowledgeIds,
+    libraryRevision: adoptedLibraryPatch.libraryRevision,
+    projectionArtifactId,
+    artifact: "knowledge-application.json",
   });
 
   const missing = missingExecutedGates(

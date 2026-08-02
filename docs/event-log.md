@@ -44,7 +44,8 @@ Phase 0では少なくとも次を扱います。
   決定論的なintake結果
 - `knowledge.candidate.created`：fab intakeから生成したcandidate KnowledgeItem
 - `knowledge.transitioned`：KnowledgeItemの状態またはscopeの遷移
-- `knowledge.applied`：採用済みKnowledgeItemを設計revisionへ適用した記録
+- `knowledge.applied`：採用済みKnowledgeItemを設計revisionへ適用した記録。payloadは対象KnowledgeItem、
+  resolved library revision、projection artifactを含み、KnowledgeItem→library→projectionの追跡を可能にする。
 
 イベント種別ごとのpayload schemaとerror codeは実装時に追加し、未知の種別は
 削除せず`unknown event`として保存してreplayを停止します。
