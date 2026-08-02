@@ -619,14 +619,14 @@ ACDへの反映：各ゲート・各チェックに「このチェックを外�
 
 本書で提案した機能・プロセスのうち、Schema・ADR・フェーズ境界に関わるものは決定していません。以下はADR候補です。
 
-- ディレーティング基準表、環境プロファイル、設計プロファイル（`hobby`／`small-production`／`high-reliability`等）をSchemaのどの位置で表現するか。`Constraint`の属性で足りるか、独立Entityが必要か。
-- ルール評価の結果を`pass`／`要詳細解析`／`fail`の三値にする場合、既存の`VerificationResult`の状態モデルとどう整合させるか。有効域（validity domain）をルール表のどこに持たせるか。
-- 前提条件（assumption）を設計graphの一級要素にするか。`Rationale.assumptions`の拡張で足りるか。
-- as-built構成の復元とas-designedとの突合を、どのフェーズのどのゲートに置くか。
-- エージェント／ツールの適格性（モデル版・プロンプト版・タスク種別ごとの合格記録と有効期限）を、`Evidence`のprovenanceの一部にするか、独立した記録にするか。
-- 単一故障点検査、スニークパス検査、電源ツリー保護整合検査、冗長経路の共有検出を、ERC／トポロジーゲートの一部にするか独立ゲートにするか。
-- ワーストケース解析をシミュレーション忠実度ラダーのどのレベルに位置づけるか。公称値解析との関係。
-- レビュー由来の未決指摘を保持し、closeを妨げるキューをどこに持つか。
+- [`ADR-0010`](adr/0010-design-profile-and-rule-tables.md)：ディレーティング基準表、環境プロファイル、設計プロファイル（`hobby`／`small-production`／`high-reliability`等）をSchemaのどの位置で表現するか。`Constraint`の属性で足りるか、独立Entityが必要か。Proposed（未決定）。
+- [`ADR-0011`](adr/0011-three-valued-rule-evaluation-and-validity-domain.md)：ルール評価の結果を`pass`／`要詳細解析`／`fail`の三値にする場合、既存の`VerificationResult`の状態モデルとどう整合させるか。有効域（validity domain）をルール表のどこに持たせるか。Proposed（未決定）。
+- [`ADR-0012`](adr/0012-assumptions-as-first-class.md)：前提条件（assumption）を設計graphの一級要素にするか。`Rationale.assumptions`の拡張で足りるか。Proposed（未決定）。
+- [`ADR-0014`](adr/0014-as-built-reconciliation.md)：as-built構成の復元とas-designedとの突合を、どのフェーズのどのゲートに置くか。Proposed（未決定）。
+- [`ADR-0013`](adr/0013-agent-and-tool-qualification-records.md)：エージェント／ツールの適格性（モデル版・プロンプト版・タスク種別ごとの合格記録と有効期限）を、`Evidence`のprovenanceの一部にするか、独立した記録にするか。Proposed（未決定）。
+- [`ADR-0015`](adr/0015-structural-safety-checks-placement.md)：単一故障点検査、スニークパス検査、電源ツリー保護整合検査、冗長経路の共有検出を、ERC／トポロジーゲートの一部にするか独立ゲートにするか。Proposed（未決定）。
+- [`ADR-0016`](adr/0016-worst-case-analysis-fidelity.md)：ワーストケース解析をシミュレーション忠実度ラダーのどのレベルに位置づけるか。公称値解析との関係。Proposed（未決定）。
+- [`ADR-0017`](adr/0017-open-review-findings-queue.md)：レビュー由来の未決指摘を保持し、closeを妨げるキューをどこに持つか。Proposed（未決定）。
 - 上記のうちどれをPhase 2（検証と設計根拠）へ、どれをPhase 3（知識ループ）以降へ割り当てるか。フェーズ境界の変更はREADMEの権威範囲であり、本書では決めません。
 
 ## 関連文書
