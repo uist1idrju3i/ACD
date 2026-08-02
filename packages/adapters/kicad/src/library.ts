@@ -14,8 +14,18 @@ export type FootprintPad = {
   y: number;
   width: number;
   height: number;
+  rotation?: number;
   drill?: number;
   layers: string[];
+};
+
+export type FootprintBounds = {
+  minX: number;
+  maxX: number;
+  minY: number;
+  maxY: number;
+  source: "courtyard" | "pad-bbox-fallback";
+  regions?: Array<Omit<FootprintBounds, "source" | "regions">>;
 };
 
 const blockAt = (text: string, start: number): string => {
@@ -62,7 +72,9 @@ export const parseFootprintSource = (footprintName: string, source: string): Foo
     if (start < 0) break;
     const block = blockAt(source, start);
     const header = block.match(/^\(pad "([^"]+)" ([^\s]+) ([^\s]+)/);
-    const at = block.match(/\(at\s+(-?\d+(?:\.\d+)?)\s+(-?\d+(?:\.\d+)?)(?:\s+-?\d+(?:\.\d+)?)?\)/);
+    const at = block.match(
+      /\(at\s+(-?\d+(?:\.\d+)?)\s+(-?\d+(?:\.\d+)?)(?:\s+(-?\d+(?:\.\d+)?))?\)/,
+    );
     const size = block.match(/\(size\s+(-?\d+(?:\.\d+)?)\s+(-?\d+(?:\.\d+)?)/);
     const hasDrill = /\(drill(?:\s|\))/.test(block);
     const drill = block.match(/\(drill\s+(-?\d+(?:\.\d+)?)\s*\)/);
@@ -92,6 +104,7 @@ export const parseFootprintSource = (footprintName: string, source: string): Foo
       y: Number(at[2]),
       width: Number(size[1]),
       height: Number(size[2]),
+      ...(at[3] ? { rotation: Number(at[3]) } : {}),
       ...(drill?.[1] ? { drill: Number(drill[1]) } : {}),
       layers: layerText.match(/"[^"]+"/g)?.map((layer) => layer.slice(1, -1)) ?? [],
     });
@@ -109,4 +122,83 @@ export const parseFootprintPads = (footprintName: string): FootprintPad[] => {
   const source = snapshotFiles[entry.path as keyof typeof snapshotFiles];
   if (!source) throw new KicadLibraryError(`missing footprint snapshot ${entry.path}`);
   return parseFootprintSource(footprintName, source);
+};
+
+export const parseFootprintCourtyardSource = (
+  footprintName: string,
+  source: string,
+): FootprintBounds | undefined => {
+  const values: Array<[number, number]> = [];
+  const regions: Array<Omit<FootprintBounds, "source" | "regions">> = [];
+  const shapePattern =
+    /\((?:fp_rect|fp_line)[\s\S]*?\(start\s+(-?\d+(?:\.\d+)?)\s+(-?\d+(?:\.\d+)?)\)[\s\S]*?\(end\s+(-?\d+(?:\.\d+)?)\s+(-?\d+(?:\.\d+)?)[\s\S]*?\(layer\s+"F\.CrtYd"\)/g;
+  for (const match of source.matchAll(shapePattern)) {
+    values.push([Number(match[1]), Number(match[2])], [Number(match[3]), Number(match[4])]);
+  }
+  const rectPattern =
+    /\(fp_rect[\s\S]*?\(start\s+(-?\d+(?:\.\d+)?)\s+(-?\d+(?:\.\d+)?)\)[\s\S]*?\(end\s+(-?\d+(?:\.\d+)?)\s+(-?\d+(?:\.\d+)?)[\s\S]*?\(layer\s+"F\.CrtYd"\)/g;
+  for (const match of source.matchAll(rectPattern)) {
+    values.push([Number(match[1]), Number(match[2])], [Number(match[3]), Number(match[4])]);
+  }
+  let polyCursor = 0;
+  while (true) {
+    const start = source.indexOf("(fp_poly", polyCursor);
+    if (start < 0) break;
+    const block = blockAt(source, start);
+    if (/\(layer\s+"F\.CrtYd"\)/.test(block)) {
+      const points = [...block.matchAll(/\(xy\s+(-?\d+(?:\.\d+)?)\s+(-?\d+(?:\.\d+)?)\)/g)].map(
+        (point) => [Number(point[1]), Number(point[2])] as [number, number],
+      );
+      for (const point of points) {
+        values.push(point);
+      }
+      const ys = [...new Set(points.map(([, y]) => y))].sort((a, b) => a - b);
+      for (let index = 0; index < ys.length - 1; index += 1) {
+        const minY = ys[index]!;
+        const maxY = ys[index + 1]!;
+        const midY = (minY + maxY) / 2;
+        const crossings: number[] = [];
+        for (const [startX, startY] of points.map(
+          (point, pointIndex) => [point, points[(pointIndex + 1) % points.length]!] as const,
+        )) {
+          const [x1, y1] = startX;
+          const [x2, y2] = startY;
+          if (y1 !== y2 && midY >= Math.min(y1, y2) && midY < Math.max(y1, y2)) {
+            crossings.push(x1 + ((midY - y1) * (x2 - x1)) / (y2 - y1));
+          }
+        }
+        crossings.sort((a, b) => a - b);
+        for (let crossing = 0; crossing + 1 < crossings.length; crossing += 2) {
+          regions.push({
+            minX: crossings[crossing]!,
+            maxX: crossings[crossing + 1]!,
+            minY,
+            maxY,
+          });
+        }
+      }
+    }
+    polyCursor = start + block.length;
+  }
+  if (values.length === 0) return undefined;
+  const xs = values.map(([x]) => x);
+  const ys = values.map(([, y]) => y);
+  return {
+    minX: Math.min(...xs),
+    maxX: Math.max(...xs),
+    minY: Math.min(...ys),
+    maxY: Math.max(...ys),
+    source: "courtyard",
+    ...(regions.length > 0 ? { regions } : {}),
+  };
+};
+
+export const parseFootprintCourtyard = (footprintName: string): FootprintBounds | undefined => {
+  const entry = snapshotManifest.files.find(
+    (candidate) => candidate.kind === "footprint" && candidate.id === footprintName,
+  );
+  if (!entry) throw new KicadLibraryError(`missing footprint manifest entry ${footprintName}`);
+  const source = snapshotFiles[entry.path as keyof typeof snapshotFiles];
+  if (!source) throw new KicadLibraryError(`missing footprint snapshot ${entry.path}`);
+  return parseFootprintCourtyardSource(footprintName, source);
 };

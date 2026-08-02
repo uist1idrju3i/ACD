@@ -16,10 +16,10 @@
     ],
     "board": {
       "layers": 2,
-      "widthMm": 50,
-      "heightMm": 40,
+      "widthMm": 60,
+      "heightMm": 45,
       "thicknessMm": 1.6,
-      "outline": "rectangle:50x40"
+      "outline": "rectangle:60x45"
     },
     "electrical": {
       "supplyVoltageV": 5,
@@ -33,10 +33,10 @@
     ],
     "provenance": {
       "source": "fixture",
-      "version": "phase1-golden-3",
+      "version": "phase1-golden-2",
       "license": "BSD-3-Clause",
       "contentHash": null,
-      "pendingReason": "fixture-owned provenance snapshot is pending; source is controlled by this fixture"
+      "pendingReason": "fixture-owned provenance snapshot is pending; source is controlled by this fixture. Board enlarged from 50x40mm to 60x45mm for routing headroom. The ESP32-WROOM-32E antenna courtyard overhangs the top edge; routing profile is 0.25mm track, 0.127mm clearance, 0.8/0.4mm via."
     }
   },
   "parts": [
@@ -1433,134 +1433,134 @@
       {
         "partId": "part:j1",
         "allowedLayers": ["F.Cu"],
-        "xMm": 4,
-        "yMm": 20,
-        "rotationDeg": 90
+        "xMm": 8,
+        "yMm": 23,
+        "rotationDeg": 0
       },
       {
         "partId": "part:u1",
         "allowedLayers": ["F.Cu"],
-        "xMm": 25,
-        "yMm": 20,
+        "xMm": 30,
+        "yMm": 8,
         "rotationDeg": 0
       },
       {
         "partId": "part:u2",
         "allowedLayers": ["F.Cu"],
-        "xMm": 40,
-        "yMm": 10,
+        "xMm": 48,
+        "yMm": 8,
         "rotationDeg": 0
       },
       {
         "partId": "part:u3",
         "allowedLayers": ["F.Cu"],
-        "xMm": 12,
-        "yMm": 10,
+        "xMm": 8,
+        "yMm": 8,
         "rotationDeg": 0
       },
       {
         "partId": "part:j2",
         "allowedLayers": ["F.Cu"],
-        "xMm": 45,
-        "yMm": 30,
+        "xMm": 42,
+        "yMm": 28,
         "rotationDeg": 90
       },
       {
         "partId": "part:r1",
         "allowedLayers": ["F.Cu"],
-        "xMm": 18,
-        "yMm": 10,
+        "xMm": 17.5,
+        "yMm": 27,
         "rotationDeg": 0
       },
       {
         "partId": "part:r2",
         "allowedLayers": ["F.Cu"],
-        "xMm": 18,
-        "yMm": 14,
+        "xMm": 17.5,
+        "yMm": 33,
         "rotationDeg": 0
       },
       {
         "partId": "part:r3",
         "allowedLayers": ["F.Cu"],
-        "xMm": 31,
-        "yMm": 28,
+        "xMm": 30,
+        "yMm": 38,
         "rotationDeg": 0
       },
       {
         "partId": "part:c1",
         "allowedLayers": ["F.Cu"],
-        "xMm": 32,
-        "yMm": 10,
+        "xMm": 45,
+        "yMm": 15,
         "rotationDeg": 0
       },
       {
         "partId": "part:c2",
         "allowedLayers": ["F.Cu"],
-        "xMm": 40,
-        "yMm": 14,
+        "xMm": 52,
+        "yMm": 18,
         "rotationDeg": 0
       },
       {
         "partId": "part:c3",
         "allowedLayers": ["F.Cu"],
         "xMm": 8,
-        "yMm": 10,
+        "yMm": 15,
         "rotationDeg": 0
       },
       {
         "partId": "part:d1",
         "allowedLayers": ["F.Cu"],
-        "xMm": 36,
-        "yMm": 28,
+        "xMm": 35,
+        "yMm": 38,
         "rotationDeg": 0
       },
       {
         "partId": "part:sw1",
         "allowedLayers": ["F.Cu"],
-        "xMm": 10,
-        "yMm": 30,
+        "xMm": 6,
+        "yMm": 33,
         "rotationDeg": 0
       },
       {
         "partId": "part:sw2",
         "allowedLayers": ["F.Cu"],
-        "xMm": 18,
-        "yMm": 30,
+        "xMm": 6,
+        "yMm": 41,
         "rotationDeg": 0
       },
       {
         "partId": "part:r6",
         "allowedLayers": ["F.Cu"],
-        "xMm": 10,
-        "yMm": 14,
+        "xMm": 22,
+        "yMm": 23,
         "rotationDeg": 0
       },
       {
         "partId": "part:r7",
         "allowedLayers": ["F.Cu"],
-        "xMm": 14,
-        "yMm": 14,
+        "xMm": 26,
+        "yMm": 23,
         "rotationDeg": 0
       },
       {
         "partId": "part:c4",
         "allowedLayers": ["F.Cu"],
-        "xMm": 8,
-        "yMm": 16,
+        "xMm": 18,
+        "yMm": 18,
         "rotationDeg": 0
       },
       {
         "partId": "part:c5",
         "allowedLayers": ["F.Cu"],
-        "xMm": 45,
-        "yMm": 10,
+        "xMm": 56,
+        "yMm": 20,
         "rotationDeg": 0
       },
       {
         "partId": "part:r5",
         "allowedLayers": ["F.Cu"],
-        "xMm": 43,
-        "yMm": 16,
+        "xMm": 52,
+        "yMm": 14,
         "rotationDeg": 0
       }
     ]
