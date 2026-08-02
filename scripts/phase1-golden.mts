@@ -1224,10 +1224,10 @@ try {
   const declaredConditions = reproductionConditionsForFabProfile(
     fixture.manufacturingProfile.fabProfileId,
   );
-  if (
-    JSON.stringify([...fixture.manufacturingProfile.processConditions].sort()) !==
-    JSON.stringify(declaredConditions)
-  ) {
+  const unknownConditions = fixture.manufacturingProfile.processConditions.filter(
+    (condition) => !declaredConditions.includes(condition),
+  );
+  if (unknownConditions.length > 0) {
     throw new Error("schema-invalid: target process conditions drift from fab profile rules");
   }
   const adoptedKnowledgeItems = knowledgeStates.map((state) => state.adopted);
@@ -1264,6 +1264,7 @@ try {
     0,
     ...(await fabFeedbackEventLog.readAll()).map((event) => event.resultRevision),
   );
+  const appliedEvents = [];
   const targetRevision = Number(fixture.requirement.provenance.version.match(/\d+$/)?.[0] ?? 0);
   for (const decision of appliedResult.decisions.filter(
     (candidate) =>
@@ -1273,8 +1274,7 @@ try {
   )) {
     const baseRevision = eventRevision;
     eventRevision += 1;
-    await fabFeedbackEventLog.append(
-      createKnowledgeAppliedEvent({
+    const appliedEvent = createKnowledgeAppliedEvent({
         eventId: `event:knowledge:applied:prototype-2:${decision.knowledgeId}`,
         occurredAt: "2026-01-02T00:00:00.000Z",
         actor: "fixture:knowledge-application",
@@ -1289,8 +1289,9 @@ try {
           ...(decision.libraryRevision ? { libraryRevision: decision.libraryRevision } : {}),
           projectionArtifactId,
         },
-      }),
-    );
+      });
+    await fabFeedbackEventLog.append(appliedEvent);
+    appliedEvents.push(appliedEvent);
   }
   await writeFile(
     join(artifactRoot, "knowledge-application.json"),

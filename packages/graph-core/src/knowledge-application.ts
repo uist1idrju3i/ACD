@@ -67,7 +67,9 @@ const decisionForItem = (
 ): KnowledgeApplicationDecision => {
   const applicability = evaluateKnowledgeApplicability(item, context);
   const profileId = item.appliesWhen.find((condition) => condition.field === "fabProfileId")?.value;
-  const ruleId = item.appliesWhen.find((condition) => condition.field === "ruleId")?.value;
+  const ruleId =
+    item.appliesWhen.find((condition) => condition.field === "ruleId")?.value ??
+    item.provenance.find((entry) => entry.ruleId)?.ruleId;
   const rule =
     profileId && ruleId
       ? rulesForFabProfile(profileId)?.rules.find((candidate) => candidate.ruleId === ruleId)

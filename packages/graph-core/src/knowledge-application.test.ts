@@ -115,7 +115,7 @@ describe("knowledge application", () => {
           operator: "equals",
           value: "footprint:Resistor_SMD:R_0603_1608Metric",
         },
-        { field: "ruleId", operator: "equals", value: "copper-clearance-min" },
+        { field: "ruleId", operator: "equals", value: "unmodeled-rule" },
       ],
     });
     const result = evaluateKnowledgeApplications([noCorrection], context);

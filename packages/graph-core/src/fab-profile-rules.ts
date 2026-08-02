@@ -58,6 +58,7 @@ export const fabProfileRules: FabProfileRules[] = [
         excludesWhen: [
           { field: "fabProfileId", operator: "notEquals", value: "fab:jlcpcb-class-2layer" },
         ],
+        applicationExemption: "no-correction-required",
         correction: { target: "pad-mask-clearance", requiredValueMm: 0.1, padNumber: "1" },
       },
       {
@@ -72,6 +73,7 @@ export const fabProfileRules: FabProfileRules[] = [
         excludesWhen: [
           { field: "fabProfileId", operator: "notEquals", value: "fab:jlcpcb-class-2layer" },
         ],
+        applicationExemption: "no-correction-required",
       },
       {
         ruleId: "silkscreen-edge",
@@ -85,6 +87,7 @@ export const fabProfileRules: FabProfileRules[] = [
         excludesWhen: [
           { field: "fabProfileId", operator: "notEquals", value: "fab:jlcpcb-class-2layer" },
         ],
+        applicationExemption: "no-correction-required",
       },
       {
         ruleId: "pad-geometry",
