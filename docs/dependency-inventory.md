@@ -4,7 +4,10 @@
 
 Phase 0で追加した直接依存のライセンスと用途を記録します。pnpm lockfileの
 transitive dependencyもレビュー対象とし、CIでSBOM／ライセンス検査を追加する
-までは、依存追加時にlockfileとこの一覧を同時に確認します。
+までは、依存追加時にlockfileとこの一覧を同時に確認します。CIの
+`pnpm license:check`は`pnpm licenses list --json`の全transitive dependencyを
+検査し、許可リスト外、copyleft、またはunknown licenseで失敗します。許可リストは
+MIT、Apache-2.0、BSD-2-Clause、BSD-3-Clause、ISC、0BSD、Python-2.0です。
 
 | 依存                        | 版       | SPDX       | 用途                                   |
 | --------------------------- | -------- | ---------- | -------------------------------------- |

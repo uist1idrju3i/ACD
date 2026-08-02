@@ -9,6 +9,7 @@
     "typecheck": "pnpm --recursive --if-present typecheck",
     "test": "vitest run",
     "lint": "eslint .",
+    "license:check": "node scripts/check-licenses.mjs",
     "format:check": "prettier --check .",
     "schema:validate": "pnpm --filter @acd/schema schema:validate",
     "schema:generate": "pnpm --filter @acd/schema schema:generate",
