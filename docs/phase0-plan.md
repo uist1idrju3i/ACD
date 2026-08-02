@@ -1,6 +1,6 @@
 # Phase 0実装計画
 
-**ステータス：Draft（Schema、graph-core、KiCad投影spikeを実装済み）**
+**ステータス：Draft（完了条件1〜7をCIで再現可能。残存制約は「実装状況」参照）**
 
 ## 目的と権威範囲
 
@@ -24,47 +24,77 @@ Phase 0は、次の全てを同じCI環境で再現できた時点で完了と�
 7. 正常系と意図的失敗系のgolden taskをreplayし、期待結果とエラー分類を比較
    できる。
 
+## 実装状況
+
+完了条件1〜7は次の実装で再現できます。
+
+| 条件 | 実装                                                                                           | 実行コマンド                                |
+| ---- | ---------------------------------------------------------------------------------------------- | ------------------------------------------- |
+| 1、2 | `schemas/`、`packages/schema`                                                                  | `pnpm schema:validate`、`pnpm typegen-sync` |
+| 3    | `packages/graph-core/src/semantic.ts`、`packages/graph-core/src/board.ts`                      | `pnpm test`                                 |
+| 4、5 | `packages/graph-core/src/patch.ts`、`verification.ts`、`event-log.ts`                          | `pnpm test`、`pnpm golden`                  |
+| 6    | `fixtures/design-graphs/normal-2layer.json`、`packages/adapters/kicad/src/graph-projection.ts` | `pnpm kicad:spike`、`pnpm golden`           |
+| 7    | `scripts/golden-run.mts`、`fixtures/golden/*.json`                                             | `pnpm golden`                               |
+
+`normal-2layer` fixtureは、Project、Requirement、BoardStackup、Part、Footprint、
+Component、Pin、Net、Layoutを持つ20×15 mmの2層基板です。graph-coreの
+`readBoardModel`がpad対応、net所属、配置、stackupの参照整合性を検査し、KiCad
+adapterが同一グラフから`.kicad_pro`／`.kicad_sch`／`.kicad_pcb`を投影します。
+`pnpm golden`はfixture 6本を実replayし、netlist読み戻し（schematic netlistと
+IPC-D-356）、ERC/DRC、Gerber/drill、再投影による正規化artifact hash一致、
+patch conflict、stale result、再オープン失敗の停止をevidenceとして
+`artifacts/golden/`へ保存します。
+
+### 残存制約
+
+- Footprintのpad geometryはfixture内の簡略値（0603系1.2 mm角、1x02コネクタ
+  2 mmピッチ）であり、KiCad公式footprintの実geometryではありません。fixtureの
+  `uncertainty`に記録し、公式ライブラリ抽出はPhase 1のライブラリ作業で行います。
+- 配線はfixtureが持つ固定track/viaであり、routerは実装していません（Phase 0の
+  範囲外）。
+- 回路図投影はlabelベースのnet接続で、wire描画・階層シートは扱いません。
+
 ## マイルストーン
 
-### M0：fixturesと開発基盤
+### M0：fixturesと開発基盤（完了）
 
 - 正常な最小2層基板fixtureを作る
 - 意図的ERC/DRC失敗、patch conflict、stale result、再オープン失敗の入力を
   作る
 - pnpm workspace、Node.js LTS、型チェック・テスト・lintの契約を置く
 
-### M1：Schema検証と型生成
+### M1：Schema検証と型生成（完了）
 
 - `schemas/design-graph.schema.json`から型を生成する
 - AJV runtime validationを実行する
 - Schema validだが意味的に不正なfixtureをsemantic validatorで拒否する
 
-### M2：graph-core semantic validator
+### M2：graph-core semantic validator（完了）
 
 - Entity ID、Entity type、revision、参照先存在を検査する
 - Projectとentitiesの整合性を検査する
 - Phase 0では影響伝播の完全な型付きリンク規則を実装せず、未定義の影響は
   広い再検証へフォールバックする
 
-### M3：patch／replay
+### M3：patch／replay（完了）
 
 - [`patch-revision.md`](patch-revision.md)に従いRFC 6902操作を適用する
 - snapshot、patch JSONL、イベントの再生結果を比較する
 - conflict、重複送信、途中停止からの再開を検証する
 
-### M4：KiCad投影adapter
+### M4：KiCad投影adapter（完了）
 
 - graph fixtureから最小`.kicad_pro`、`.kicad_pcb`、必要な回路図投影を生成する
 - adapterの入出力、tool version、入力hash、出力hashを記録する
 - 回路図IPCを前提にしない
 
-### M5：`kicad-cli` CI
+### M5：`kicad-cli` CI（完了）
 
 - [`kicad-ci-profile.md`](kicad-ci-profile.md)の固定環境で再オープン、ERC/DRC、
   Gerber/drillを実行する
 - capability probeとstdout/stderr、終了コード、成果物hashを保存する
 
-### M6：golden task
+### M6：golden task（完了）
 
 - [`golden-tasks.md`](golden-tasks.md)の全fixtureをreplayする
 - 合否、停止理由、stale、conflict、artifact hashの期待値を比較する

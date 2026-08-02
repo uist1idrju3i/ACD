@@ -10,6 +10,7 @@
   },
   "scenario": {
     "description": "Intentional schematic rule violation",
-    "mutation": "add-unconnected-input"
+    "mutation": "duplicate-power-output-driver",
+    "injection": "pin:flg2-1 is moved from net:gnd to net:vcc so that two power outputs drive the same net"
   }
 }

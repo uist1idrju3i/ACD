@@ -81,4 +81,5 @@ fabの受入は、(1) ポータルまたは製造業者からaccepted/approved�
 - [`design-graph.md`](design-graph.md)：証拠、根拠、不確実性の表現
 - [`pipeline.md`](pipeline.md)：ゲートを呼び出す6ステップ
 - [`testing.md`](testing.md)：ゴールデンタスクと実機評価
+- [`reliability-practices.md`](reliability-practices.md)：信頼性・安全性設計プラクティス
 - [`../README.md`](../README.md#設計原則)

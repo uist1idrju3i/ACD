@@ -27,6 +27,11 @@ pnpm schema:generate
 pnpm golden
 ```
 
+`pnpm golden`は[`docs/kicad-ci-profile.md`](docs/kicad-ci-profile.md)の固定KiCad
+imageをDocker経由で実行し、`fixtures/golden/`の全fixtureをreplayします。Docker
+を使えない環境では、Schema・semantic・fixture期待値のみを検査する
+`pnpm golden:unit`を使い、KiCad gateは未実行であることを報告に明記します。
+
 各コマンドは失敗時に非ゼロ終了し、入力版、fixture、tool version、失敗分類を
 出力します。`schema:generate`の生成差分、`schema:validate`の不正fixture、
 `golden`の期待差分を黙って更新してはいけません。
