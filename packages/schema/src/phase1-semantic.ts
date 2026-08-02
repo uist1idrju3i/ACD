@@ -73,7 +73,9 @@ export const validatePhase1FixtureReferences = (fixture: Phase1Fixture): string[
   for (const rationale of fixture.rationales ?? []) {
     for (const target of rationale.appliesTo) {
       if (!validTargets.has(target)) {
-        errors.push(`reference-integrity: rationale ${rationale.id} references unknown target ${target}`);
+        errors.push(
+          `reference-integrity: rationale ${rationale.id} references unknown target ${target}`,
+        );
       }
     }
   }

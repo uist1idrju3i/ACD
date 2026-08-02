@@ -38,7 +38,9 @@ const unknownConditions = fixture.manufacturingProfile!.processConditions.filter
   (condition) => !knownConditions.has(condition),
 );
 if (unknownConditions.length > 0) {
-  throw new Error(`schema-invalid: target process conditions drift: ${unknownConditions.join(", ")}`);
+  throw new Error(
+    `schema-invalid: target process conditions drift: ${unknownConditions.join(", ")}`,
+  );
 }
 const patchArtifact = JSON.parse(
   await readFile(join(artifactRoot, "library-patch.json"), "utf8"),
@@ -125,9 +127,7 @@ const measuredMaskSliver = (board: string, footprintName: string): number => {
 const detectMaskSliver = (
   board: string,
 ): { violates: boolean; measuredMm: number; minimumMm: number } => {
-  const rule = profileRules.rules.find(
-    (candidate) => candidate.ruleId === "mask-sliver-min",
-  );
+  const rule = profileRules.rules.find((candidate) => candidate.ruleId === "mask-sliver-min");
   if (!rule?.minimumSliverMm) {
     throw new Error("schema-invalid: mask-sliver rule lacks numeric minimum");
   }
