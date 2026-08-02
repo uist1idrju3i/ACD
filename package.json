@@ -17,7 +17,8 @@
     "typegen-sync": "pnpm --filter @acd/schema schema:check",
     "golden": "vitest run fixtures packages",
     "kicad:spike": "bash scripts/kicad-spike.sh",
-    "phase1:smoke": "pnpm --filter @acd/adapter-kicad build && tsx scripts/phase1-smoke.mts"
+    "kicad:library:verify": "tsx scripts/verify-kicad-library.mts",
+    "phase1:smoke": "pnpm kicad:library:verify && pnpm --filter @acd/adapter-kicad build && tsx scripts/phase1-smoke.mts"
   },
   "devDependencies": {
     "@eslint/js": "9.30.1",

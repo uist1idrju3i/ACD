@@ -1,0 +1,15 @@
+ACD KiCad library snapshot attribution
+
+The symbol and footprint files in this directory are extracted from the official
+KiCad libraries:
+
+  https://gitlab.com/kicad/libraries/kicad-symbols
+  https://gitlab.com/kicad/libraries/kicad-footprints
+
+License: CC-BY-SA-4.0-with-exception
+KiCad container: kicad/kicad:10.0, version 10.0.5
+Container digest:
+sha256:182c8005cb775a2c448a4c18681d489f1ff472a761885eba3e08b07e3c0564de
+
+This directory contains only the files used by the Phase 1 smoke fixture.
+See manifest.json for per-file source paths and SHA-256 content hashes.
