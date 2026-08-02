@@ -115,4 +115,4 @@ Step 1の要件インタビューでは、自由記述・回答・制約候補�
 - [`design-graph.md`](design-graph.md)：各ステップの正規入力・出力
 - [`verification-gates.md`](verification-gates.md)：自動ゲートと停止通知
 - [`agent-runtime.md`](agent-runtime.md)：チェックポイントとフィードバックの実行
-- [`../README.md`](../README.md#2-設計フロー--6つのステップ)
+- [`../README.md`](../README.md#2-設計フロー-6つのステップ)
