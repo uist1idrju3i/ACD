@@ -4,7 +4,7 @@
 
 ## 目的と権威範囲
 
-本書はREADMEの「設計原則」と「0 データモデル」を具体化します。ACDの正規成果物は回路図ではなく、意図・制約・電気接続・物理成果物・根拠を持つ型付き設計グラフです。機械可読なPhase-0契約は [`../schemas/design-graph.schema.json`](../schemas/design-graph.schema.json) です。
+本書はREADMEの「設計原則」と「0 データモデル」を具体化します。ACDの正規成果物は回路図ではなく、意図・制約・電気接続・物理成果物・根拠を持つ型付き設計グラフです。機械可読なPhase-0契約は [`../schemas/design-graph.schema.json`](../schemas/design-graph.schema.json) です。今回追加したEntity型以外の固有フィールドのSchema厳密度は、フェーズごとに段階的に強化し、判断は後続の設計更新で行います。
 
 ## 基本契約
 
@@ -33,9 +33,12 @@
 | `FirmwarePackage` | ピン割り当て、ペリフェラル設定、HALスタブ、ビルド情報 | components, test items |
 | `TestItem` | 仮想・実機の試験項目と合否 | rationale, measurement evidence |
 | `Rationale` | 判断理由、代替案、仮定、リスク | evidence, test items |
-| `Evidence` | データシート、fabルール、シミュレーション、測定 | source locator, observed value |
-| `KnowledgeItem` | 再利用可能な標準、修正、経験則 | source events, scope |
-| `TaskLedgerEntry` | 実行状態、依存、予算、停止、完了条件 | graph revision, checkpoint |
+| `Evidence` | データシート、fabルール、シミュレーション、測定 | evidence kind, observations, provenance |
+| `KnowledgeItem` | 再利用可能な標準、修正、経験則 | source events, scope, confidentiality, content |
+| `TaskLedgerEntry` | 実行状態、依存、予算、停止、完了条件 | graph revision, checkpoint, retry budget |
+| `VerificationResult` | 検証ゲートの入力、結果、所見 | gate, status, tool version, evidence |
+| `Approval` | 人間または認可主体による範囲付き承認 | approval ID, scope, expiry |
+| `Waiver` | 検証警告・免除の理由と期限 | gate, risk, approval ID, expiry |
 
 ## 設計根拠
 
@@ -53,9 +56,17 @@
 
 ## 出所と不確実性
 
-出所リンクは、データシートのページ・表、fabの設計ルール、シミュレーションの入力と結果、実測器・測定条件・時刻、在庫APIの応答など、再取得できるロケータを持ちます。部品、フットプリント、ネット、ルールは出所なしに確定状態へ進めません。
+`provenance`は「どこから来たか」を表すソースメタデータです。たとえば、部品選定のデータシートURLとページ番号、fabルールの版、在庫APIの応答ハッシュを記録します。
+
+`Evidence`は、そのソースまたは検査で観測された事実・検証成果物です。たとえば、指定リビジョンの基板で測定した3.31 V、測定条件、測定器、時刻、合否、対応する測定ファイルを`Evidence`として保存し、データシートのページを`provenance`として参照します。部品、フットプリント、ネット、ルールは出所なしに確定状態へ進めません。
 
 `uncertainty`には、少なくとも状態（`unknown`、`assumed`、`inferred`、`verified`）、説明、影響範囲、解消方法、期限を記録します。黙った補完は禁止です。
+
+機械制約は既存の`Constraint`で表します。たとえば、`source.kind = "mechanical"`、`source.locator = "enclosure://case-a/rev-3"`、`attributes = { "constraint": "maxComponentHeight", "value": 8, "unit": "mm" }`のように、筐体・取付穴・外形・keepout・コネクタ位置・最大高さを記録します。`Layout.attributes`にはboard outline、mounting holes、keepoutsを、`BoardStackup.attributes`には基板厚・部品高さ包絡・機械クリアランスを保持できます。専用`MechanicalInterface` Entityは、IDXや複数部品の所有権同期が必要になるまで将来候補とします。
+
+## 将来のエンティティ候補
+
+卓上製造機や導電性インク印刷を扱うPhase 8では、機体、材料、校正、層・線幅・電流能力を束ねる`PrinterProfile`または`ManufacturingProfile`が必要になる可能性があります。現時点ではEntity enumへ追加せず、`BoardStackup`と`Constraint`で表現できるかを比較する将来候補とします。
 
 ## パッチとリビジョン
 

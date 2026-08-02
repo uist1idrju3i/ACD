@@ -1,19 +1,38 @@
-# KiCad相互運用
+# EDA／MCAD相互運用（KiCad境界）
 
 **ステータス：Draft**
 
 ## 目的と権威範囲
 
-READMEの「オープンなエンジンとフォーマット」およびロードマップの「借りられるものは借りる」を、KiCadとの境界として定義します。ACDの正は設計グラフであり、KiCad回路図は生成された投影です。
+READMEの「オープンなエンジンとフォーマット」およびロードマップの「借りられるものは借りる」を、EDA／MCADとの境界として定義します。ACDの正は設計グラフであり、KiCad回路図とMCAD形状は生成された投影です。
 
 ## 出力・入力ターゲット
 
 - KiCadプロジェクト（回路図、PCB、ライブラリ参照）
 - Gerber X2、drill、BOM、pick-and-place
 - IPC-2581
+- STEP、glTF/GLB、DXFによるMCAD向け形状・2D境界
+- IDFv3（レガシーな基板・部品外形交換）
+- IDX（ProSTEP iViPの増分交換）は将来候補
 - 必要に応じてSpecctra DSN/SESによるfreerouting交換
 
-具体的なKiCadバージョン、ライブラリ固定方法、IPC APIの対応範囲は未決定です。
+KiCadの`kicad-cli`は3DモデルをSTEP、GLB、BREP、STL等へ出力できます。IDFv3は基板外形、カットアウト、穴、部品外形などの基本機械情報を扱いますが、全ての機械意味論を表現するものではありません。IDXの初期対応とSTEPのみの初期対応のどちらを採用するかは未決定です。
+
+具体的な最低対応KiCadバージョン、ライブラリ固定方法、IPC APIの対応範囲は未決定（[ADR-0007](adr/0007-kicad-minimum-version.md)で決定）です。KiCad [10.0](https://github.com/KiCad/kicad-source-mirror/releases/tag/10.0.0)は2026年3月にリリースされ、9.xは積極的メンテナンス対象外です。公式ソースでは[2026年3月にSWIG/wxPython旧Python統合が削除](https://github.com/KiCad/kicad-source-mirror/commit/65a442b1d2bf153be7979de8926ab71fd095f4bd)され、IPC APIが今後の経路とされています。公式[`kicad-python`](https://docs.kicad.org/kicad-python-main/kicad.html)では`get_schematic()`がKiCad 11追加として記載されるため、回路図IPCはバージョン別能力として扱います。
+
+## 能力マトリクス
+
+| 経路 | KiCad 10基準 | KiCad 11以降 | ACDでの用途・境界 |
+|---|---|---|---|
+| `kicad-cli` | バッチERC/DRC、再読込、Gerber等のエクスポート | 同じ責務を継続 | CI・ゲート・再現可能な出力。稼働中エディタの編集経路ではない |
+| IPC API（PCB） | 稼働中PCBエディタの取得・検査・ガード付き可逆変更 | 継続利用 | リアルタイム編集、対象・差分・Undo/Redoを監査 |
+| IPC API（回路図） | 対応範囲は未決定（ADR-0007で決定）。利用可能な場合も能力検出する | `kicad-python`文書で回路図取得APIがKiCad 11追加と記載 | 生成グラフを正とし、回路図投影の補助経路として利用 |
+| ACD生成S式 | ACDが生成した`.kicad_sch`/`.kicad_pcb`をatomic write | 同じ再オープン検証を実行 | KiCad APIが不足する場合の生成経路。直接編集ではなく、ハッシュ・リビジョン付き |
+| 既存KiCadプロジェクト取込 | ファイル解析と変換損失を記録 | IPC取得が使える場合は二重検証 | KiCadを正に昇格させず、設計グラフへのimport投影とする |
+| STEP/glTF/DXF/IDF | KiCad/ACDからMCAD向け形状・外形を出力 | 同じ形状を再読込し、単位・座標系・外形・穴・高さを照合 | MCADレビューと機械ゲートの交換境界。意味論・所有権は別途グラフで保持 |
+| IDX | 初期対応は未決定 | 対応する場合はbaseline、accept/reject、変更所有権、コメントを保持 | 増分ECAD↔MCAD同期の将来候補。完全なround-tripを現時点で保証しない |
+
+`kicad-cli`はバッチ検証・エクスポート、IPC APIは稼働中エディタの検査・ガード付き変更、ACD生成S式は投影ファイルの生成に限定します。いずれの経路でも再オープン、ERC/DRC、成果物ハッシュを検証します。
 
 ## 二重検証
 

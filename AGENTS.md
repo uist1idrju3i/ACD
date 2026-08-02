@@ -22,7 +22,7 @@ This file defines the working contract for coding agents contributing to ACD.
 4. Prefer small, focused changes. Preserve existing user changes.
 5. Treat the typed design graph as canonical; schematic, KiCad, Gerber, and firmware artifacts are projections or outputs.
 6. Keep jidoka behavior: deterministic gates decide, abnormal runs stop and notify, and defective artifacts do not flow downstream.
-7. Keep human review optional by default. Require explicit approval IDs for configured approvals, waivers, budget overruns, and irreversible operations.
+7. Keep human review optional by default. Orders within the total budget cap (board fabrication, components, assembly, shipping, and taxes) may execute automatically without an approval ID after the pre-order final gate passes. Require explicit approval IDs for budget overruns, waivers, other configured approvals, and irreversible operations outside this budget-capped ordering exception.
 8. Keep artifact generation pull-based and budget-capped.
 
 ## Phase do-not-do list

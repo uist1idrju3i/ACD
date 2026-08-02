@@ -21,7 +21,7 @@
     "id": { "type": "string", "pattern": "^[A-Za-z][A-Za-z0-9._:-]*$" },
     "entityType": {
       "type": "string",
-      "enum": ["Project", "Requirement", "Constraint", "FunctionalBlock", "Component", "Part", "Footprint", "Net", "Pin", "Layout", "BoardStackup", "ManufacturingPackage", "FirmwarePackage", "TestItem", "Rationale", "Evidence", "KnowledgeItem", "TaskLedgerEntry"]
+      "enum": ["Project", "Requirement", "Constraint", "FunctionalBlock", "Component", "Part", "Footprint", "Net", "Pin", "Layout", "BoardStackup", "ManufacturingPackage", "FirmwarePackage", "TestItem", "Rationale", "Evidence", "KnowledgeItem", "TaskLedgerEntry", "VerificationResult", "Approval", "Waiver"]
     },
     "provenance": {
       "type": "object",
@@ -43,6 +43,7 @@
       "properties": {
         "state": { "type": "string", "enum": ["unknown", "assumed", "inferred", "verified", "rejected"] },
         "description": { "type": "string", "minLength": 1 },
+        "impactScope": { "type": "string", "enum": ["low", "medium", "high", "order-relevant"] },
         "resolution": { "type": "string" },
         "dueAt": { "type": "string", "format": "date-time" }
       },
@@ -57,6 +58,129 @@
         "locator": { "type": "string" }
       },
       "additionalProperties": false
+    },
+    "evidence": {
+      "type": "object",
+      "required": ["id", "type", "revision", "evidenceKind", "observedAt", "observations", "provenance"],
+      "properties": {
+        "id": { "$ref": "#/$defs/id" },
+        "type": { "const": "Evidence" },
+        "revision": { "type": "integer", "minimum": 0 },
+        "evidenceKind": { "type": "string", "enum": ["datasheet", "fab-feedback", "simulation", "measurement", "sourcing", "tool-output", "human-observation", "other"] },
+        "observedAt": { "type": "string", "format": "date-time" },
+        "observations": { "type": "array", "minItems": 1, "items": { "type": "object", "required": ["claim"], "properties": { "claim": { "type": "string", "minLength": 1 }, "value": {}, "unit": { "type": "string" }, "pass": { "type": "boolean" } }, "additionalProperties": true } },
+        "provenance": { "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/provenance" } },
+        "uncertainty": { "$ref": "#/$defs/uncertainty" }
+      },
+      "additionalProperties": true
+    },
+    "knowledgeItem": {
+      "type": "object",
+      "required": ["id", "type", "revision", "scope", "sourceEventIds", "provenance", "content", "status"],
+      "properties": {
+        "id": { "$ref": "#/$defs/id" },
+        "type": { "const": "KnowledgeItem" },
+        "revision": { "type": "integer", "minimum": 0 },
+        "scope": { "type": "string", "enum": ["project-local", "library-wide"], "description": "library-wide currently means a user-personal library reused by the same user; organization and community sharing are out of scope." },
+        "sourceEventIds": { "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/id" } },
+        "provenance": { "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/provenance" } },
+        "content": { "type": "string", "minLength": 1 },
+        "status": { "type": "string", "enum": ["candidate", "reviewed", "adopted", "deprecated"] },
+        "confidentiality": { "type": "string", "enum": ["project-confidential", "organization-confidential", "shareable"] },
+        "appliesWhen": { "type": "array", "items": { "type": "string" } },
+        "excludesWhen": { "type": "array", "items": { "type": "string" } },
+        "changedDecisionIds": { "type": "array", "items": { "$ref": "#/$defs/id" } }
+      },
+      "additionalProperties": true
+    },
+    "taskLedgerEntry": {
+      "type": "object",
+      "required": ["id", "type", "revision", "purpose", "status", "acceptanceCriteria", "retryBudget", "budget", "checkpointIds"],
+      "properties": {
+        "id": { "$ref": "#/$defs/id" },
+        "type": { "const": "TaskLedgerEntry" },
+        "revision": { "type": "integer", "minimum": 0 },
+        "purpose": { "type": "string", "minLength": 1 },
+        "status": { "type": "string", "enum": ["pending", "running", "blocked", "completed", "failed", "cancelled"] },
+        "acceptanceCriteria": { "type": "array", "minItems": 1, "items": { "type": "string" } },
+        "retryBudget": { "type": "integer", "minimum": 0 },
+        "budget": { "$ref": "#/$defs/budget" },
+        "checkpointIds": { "type": "array", "items": { "$ref": "#/$defs/id" } },
+        "dependencyIds": { "type": "array", "items": { "$ref": "#/$defs/id" } },
+        "lane": { "type": "string" },
+        "approvalId": { "$ref": "#/$defs/id" },
+        "stopReason": { "type": "string" },
+        "artifactIds": { "type": "array", "items": { "$ref": "#/$defs/id" } }
+      },
+      "additionalProperties": true
+    },
+    "budget": {
+      "description": "A budget for a task or order. For scope total-order-cost, amount is the complete order cap including board fabrication, components, assembly, shipping, taxes, and any enclosure or mechanical-part orders.",
+      "type": "object",
+      "required": ["scope"],
+      "properties": {
+        "scope": { "type": "string", "enum": ["execution", "total-order-cost"], "description": "total-order-cost includes board fabrication, components, assembly, shipping, taxes, and any enclosure or mechanical-part orders." },
+        "timeSeconds": { "type": "number", "minimum": 0 },
+        "tokens": { "type": "integer", "minimum": 0 },
+        "toolCalls": { "type": "integer", "minimum": 0 },
+        "amount": { "type": "number", "minimum": 0 },
+        "currency": { "type": "string", "minLength": 1 }
+      },
+      "additionalProperties": false,
+      "allOf": [
+        {
+          "if": { "properties": { "scope": { "const": "total-order-cost" } } },
+          "then": { "required": ["amount", "currency"] }
+        }
+      ]
+    },
+    "verificationResult": {
+      "type": "object",
+      "required": ["id", "type", "revision", "gate", "status", "inputRevision", "toolVersion", "checkedAt"],
+      "properties": {
+        "id": { "$ref": "#/$defs/id" },
+        "type": { "const": "VerificationResult" },
+        "revision": { "type": "integer", "minimum": 0 },
+        "gate": { "type": "string", "minLength": 1 },
+        "status": { "type": "string", "enum": ["passed", "failed", "blocked", "waived"] },
+        "inputRevision": { "type": "integer", "minimum": 0 },
+        "toolVersion": { "type": "string", "minLength": 1 },
+        "checkedAt": { "type": "string", "format": "date-time" },
+        "findingIds": { "type": "array", "items": { "$ref": "#/$defs/id" } },
+        "evidenceIds": { "type": "array", "items": { "$ref": "#/$defs/id" } }
+      },
+      "additionalProperties": true
+    },
+    "approval": {
+      "type": "object",
+      "required": ["id", "type", "revision", "approvalId", "scope", "approvedBy", "approvedAt"],
+      "properties": {
+        "id": { "$ref": "#/$defs/id" },
+        "type": { "const": "Approval" },
+        "revision": { "type": "integer", "minimum": 0 },
+        "approvalId": { "type": "string", "minLength": 1 },
+        "scope": { "type": "string", "minLength": 1 },
+        "approvedBy": { "type": "string", "minLength": 1 },
+        "approvedAt": { "type": "string", "format": "date-time" },
+        "expiresAt": { "type": "string", "format": "date-time" },
+        "condition": { "type": "string" }
+      },
+      "additionalProperties": true
+    },
+    "waiver": {
+      "type": "object",
+      "required": ["id", "type", "revision", "gate", "reason", "risk", "approvalId", "expiresAt"],
+      "properties": {
+        "id": { "$ref": "#/$defs/id" },
+        "type": { "const": "Waiver" },
+        "revision": { "type": "integer", "minimum": 0 },
+        "gate": { "type": "string", "minLength": 1 },
+        "reason": { "type": "string", "minLength": 1 },
+        "risk": { "type": "string", "minLength": 1 },
+        "approvalId": { "$ref": "#/$defs/id" },
+        "expiresAt": { "type": "string", "format": "date-time" }
+      },
+      "additionalProperties": true
     },
     "rationale": {
       "type": "object",
@@ -85,9 +209,21 @@
         "rationale": { "$ref": "#/$defs/rationale" },
         "uncertainty": { "$ref": "#/$defs/uncertainty" },
         "links": { "type": "array", "items": { "$ref": "#/$defs/id" } },
-        "attributes": { "type": "object", "additionalProperties": true }
+        "attributes": {
+          "type": "object",
+          "description": "Entity-specific attributes. Constraint may represent mechanical/enclosure constraints such as board outline, mounting holes, keepouts, connector positions, or maximum component height. Layout may carry outline/holes/keepouts; BoardStackup may carry board thickness, height envelope, and mechanical clearance.",
+          "additionalProperties": true
+        }
       },
-      "additionalProperties": true
+      "additionalProperties": true,
+      "allOf": [
+        { "if": { "properties": { "type": { "const": "Evidence" } } }, "then": { "$ref": "#/$defs/evidence" } },
+        { "if": { "properties": { "type": { "const": "KnowledgeItem" } } }, "then": { "$ref": "#/$defs/knowledgeItem" } },
+        { "if": { "properties": { "type": { "const": "TaskLedgerEntry" } } }, "then": { "$ref": "#/$defs/taskLedgerEntry" } },
+        { "if": { "properties": { "type": { "const": "VerificationResult" } } }, "then": { "$ref": "#/$defs/verificationResult" } },
+        { "if": { "properties": { "type": { "const": "Approval" } } }, "then": { "$ref": "#/$defs/approval" } },
+        { "if": { "properties": { "type": { "const": "Waiver" } } }, "then": { "$ref": "#/$defs/waiver" } }
+      ]
     },
     "project": {
       "allOf": [
@@ -103,7 +239,7 @@
     },
     "patch": {
       "type": "object",
-      "required": ["patchId", "baseRevision", "operations", "createdAt"],
+      "required": ["patchId", "baseRevision", "resultRevision", "operations", "createdAt"],
       "properties": {
         "patchId": { "$ref": "#/$defs/id" },
         "baseRevision": { "type": "integer", "minimum": 0 },
