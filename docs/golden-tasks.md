@@ -1,6 +1,3 @@
-**ステータス：Phase 1完了（main）。smoke Gate 1〜11、golden Gate 1〜12が合格。
-Gate 13 contractは実装済みだが、physical evidenceはhardware測定待ち。**
-
 ## WP3実装境界
 
 golden fixtureは決定論的placement後、公式symbolとfootprintを用いてschematicおよび
@@ -13,7 +10,9 @@ fixtureの実部品MPNはAMS1117-3.3であり、この代替判断はmapping pro
 
 # Golden task fixture
 
-**ステータス：Draft（Phase 0の6 fixtureは`pnpm golden`でreplay済み）**
+**ステータス：Phase 1完了（main）。smoke Gate 1〜11、golden Gate 1〜12が合格。
+Gate 13 contractは実装済みだが、physical evidenceはhardware測定待ち。Phase 0の6 fixtureは
+`pnpm golden`でreplay済み。**
 
 ## 目的と権威範囲
 

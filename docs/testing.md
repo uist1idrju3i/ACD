@@ -56,14 +56,17 @@ Phase-5では、Wokwi類の仮想ハードウェアで、FWパッケージのビ
 
 1. `fixtures/phase1/physical-evidence-pending.json`を複製または編集し、対象boardの
    revision、PCB/BOM artifact hash、assembly recordを実機に合わせる。
-2. `provenance.mode`を`real`に変更し、`instruments`を1件以上記録する。各instrumentは
-   有効な校正状態（`calibrationStatus: "valid"`）でなければならない。
-3. 測定条件（電源、環境、測定方法など）を`conditions`へ記録し、各TestItemへ
+2. `provenance.mode`を`real`、トップレベル`status`を`passed`、`assembly.status`を
+   `assembled`に変更する。
+3. `instruments`を1件以上記録する。各instrumentは有効な校正状態
+   （`calibrationStatus: "valid"`）でなければならない。
+4. 測定条件（電源、環境、測定方法など）を`conditions`へ記録し、各TestItemへ
    `observed`、`expected`、`pass`、`uncertainty`を記録する。
-4. 次を実行する。
+5. 次を実行する。既定fixture以外を検証する場合は、任意のJSON pathを渡せる。
 
    ```sh
    pnpm phase1:gate13
+   pnpm phase1:gate13 path/to/physical-evidence.json
    ```
 
    simulated／pending、未校正instrument、条件欠落、観測値欠落、または不合格TestItemは
