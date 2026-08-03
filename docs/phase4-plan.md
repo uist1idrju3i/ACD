@@ -44,7 +44,7 @@ FWパッケージと仮想実機はPhase 5、自働発注はPhase 6、cron型の
 | ADR-0024 | 長時間ランの所有者と永続化形式   | [ADR-0024](adr/0024-long-running-run-ownership-and-persistence.md)：ランはworker processが所有し、台帳・checkpointはappend-only JSONL（`.acd/runs/<runId>/`）で保持する。ブラウザは再接続して状態を見る端末に限定し、IndexedDB／OPFSはPhase 4では採用しない                                                                                                                         | WP1、WP2、WP6 |
 | ADR-0025 | checkpointの粒度と無効化条件     | [ADR-0025](adr/0025-checkpoint-granularity-and-invalidation.md)：checkpointはgate境界単位。input revision／hash、tool／model／library／container version、provenance、measurement-system qualification、fab／manufacturing profile、参照KnowledgeItem statusのいずれかが変わったcheckpointはstaleとして再実行する（再利用しない）。完了条件の受入測定はworker process強制終了とする | WP2、WP3      |
 | ADR-0026 | 高速チェックのWASM対象と実装言語 | [ADR-0026](adr/0026-fast-check-wasm-scope-and-language.md)：対象は幾何系の高速チェック（pad間クリアランス、mask sliver、courtyard重なり）に限定。native TS実装を正とし、WASMは同一入力で同一結果を返すparityテスト付きの高速経路として追加する。言語は未決定（Rust推奨）                                                                                                            | WP7           |
-| ADR-0027 | ブラウザUIの技術選択と範囲       | [ADR-0027](adr/0027-browser-ui-scope-and-technology.md)：read-onlyの投影ビューア（2D）、リビジョン差分レビュー、タスク台帳／停止理由の表示までをPhase 4の受入対象とし、編集UI、3Dビューア、タブレット最適化は範囲外とする。UIフレームワークは未決定                                                                                                                                 | WP6           |
+| ADR-0027 | ブラウザUIの技術選択と範囲       | [ADR-0027](adr/0027-browser-ui-scope-and-technology.md)：README §7更新後のPhase 4受入対象をread-onlyの投影ビューア（2D）、リビジョン差分レビュー、タスク台帳／停止理由の表示に限定し、編集UI、3Dビューア、タブレット最適化は後続フェーズへ移す。UIフレームワークは未決定                                                                                                            | WP6           |
 
 ## Work packages
 
@@ -185,9 +185,8 @@ FWパッケージと仮想実機はPhase 5、自働発注はPhase 6、cron型の
 - ブラウザ切断・再接続でランが継続していることを表示できる（ランの所有者はworker）。
 - 実ブラウザをPlaywrightで強制終了し、再接続後もworkerがランを継続していることを
   表示できるUI回帰を追加する。
-- README §7の3Dビューア／タブレット対応をPhase 4受入からread-only 2Dへ絞り込むことは、
-  READMEの権威に対する範囲変更であり、READMEを更新するか、3D／タブレットを後続フェーズへ
-  移すかはユーザー判断待ちの未決定事項としてADR-0027に記録する。
+- README §7更新後のPhase 4範囲として、3Dビューア／タブレット対応は後続フェーズへ移し、
+  Phase 4ではread-only 2Dビューアを受け入れる（[`ADR-0027`](adr/0027-browser-ui-scope-and-technology.md)）。
 
 **受入基準**
 
@@ -199,9 +198,8 @@ FWパッケージと仮想実機はPhase 5、自働発注はPhase 6、cron型の
 **やらないこと**
 
 - 編集UI、対話的な設計変更（Phase 4受入対象外）。
-- 3Dビューアの本格実装、タブレット最適化は、README §7の記載に対する範囲の絞り込みを
-  含むため、READMEを更新するか後続フェーズへ移すかのユーザー判断が完了するまで未決定
-  とする（[`ADR-0027`](adr/0027-browser-ui-scope-and-technology.md)）。
+- 3Dビューアの本格実装、タブレット最適化は、更新済みREADME §7のPhase 4範囲外として
+  後続フェーズで扱う（[`ADR-0027`](adr/0027-browser-ui-scope-and-technology.md)）。
 
 ### WP7：高速チェックのWASM化
 
