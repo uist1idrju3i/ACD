@@ -36,6 +36,7 @@ import {
   unresolvedTestPlanFindings,
   type FixturePatchOperation,
   type RecordedProposal,
+  compareIds,
 } from "../packages/graph-core/src/index.js";
 import {
   FixtureFabFeedbackReader,
@@ -50,13 +51,13 @@ import {
   validatePhase1FixtureReferences,
 } from "../packages/schema/src/index.js";
 import { loadSchemaValidator } from "../packages/schema/src/index.js";
-import type { Phase1Fixture } from "../packages/schema/src/generated/phase1-fixture.js";
+import type { ACDPhase1Fixture } from "../packages/schema/src/generated/phase1-fixture.js";
 import preOrder from "./pre-order.ts";
 
 const root = resolve(import.meta.dirname, "..");
 const fixture = JSON.parse(
   await readFile(join(root, "fixtures/phase1/golden-esp32.json"), "utf8"),
-) as Phase1Fixture;
+) as ACDPhase1Fixture;
 const artifactRoot = join(root, "artifacts/phase1-golden");
 const projectRoot = join(artifactRoot, "project");
 const digest =
@@ -163,7 +164,7 @@ try {
       !line.lifecycle ||
       line.availability === "unknown" ||
       line.lifecycle === "unknown" ||
-      line.lifecycle === "EOL"
+      line.lifecycle === "eol"
     ) {
       throw new Error(`order-relevant BOM unknown for ${line.partId}`);
     }
@@ -277,8 +278,12 @@ try {
   await writeFile(join(artifactRoot, "repair-loop.json"), `${JSON.stringify(repairs, null, 2)}\n`);
   pass(17, {
     cases: repairs.length,
-    repaired: repairs.filter((entry) => entry.status === "repaired").length,
-    rejectedProposals: repairs.reduce((total, entry) => total + Number(entry.rejected ?? 0), 0),
+    repaired: repairs.filter((entry) => (entry as { status?: string }).status === "repaired")
+      .length,
+    rejectedProposals: repairs.reduce(
+      (total, entry) => total + Number((entry as { rejected?: number }).rejected ?? 0),
+      0,
+    ),
     recordingsHash: hash(JSON.stringify(recordings.proposals)),
     artifact: "repair-loop.json",
   });
