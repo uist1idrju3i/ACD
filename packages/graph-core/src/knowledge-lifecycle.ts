@@ -112,12 +112,15 @@ const lifecycleOrder: Record<KnowledgeStatus, number> = {
 };
 
 const assertPromotionMetadata = (item: KnowledgeItem): void => {
+  const hasReproductionCondition = item.appliesWhen.some(
+    (entry) => entry.field === "reproductionCondition",
+  );
   if (
     item.sourceEventIds.length === 0 ||
     item.provenance.length === 0 ||
     item.appliesWhen.length === 0 ||
     item.excludesWhen.length === 0 ||
-    !item.appliesWhen.some((entry) => entry.field === "reproductionCondition")
+    !hasReproductionCondition
   ) {
     throw new GraphCoreError(
       "schema-invalid",
