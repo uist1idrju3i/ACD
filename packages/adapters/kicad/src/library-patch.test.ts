@@ -36,11 +36,15 @@ const adoptedKnowledge = (): KnowledgeItem => ({
       derivationOutputHash: "sha256:" + "c".repeat(64),
     },
   ],
-  content: "mask-clearance: solder mask sliver near R1",
+  content: "mask-clearance: solder mask sliver near J1",
   status: "adopted",
   appliesWhen: [
     { field: "fabProfileId", operator: "equals", value: "fab:jlcpcb-class-2layer" },
-    { field: "footprintId", operator: "equals", value: "R_0603_1608Metric" },
+    {
+      field: "footprintId",
+      operator: "equals",
+      value: "USB_C_Receptacle_GCT_USB4135-GF-A_6P_TopMnt_Horizontal",
+    },
     { field: "ruleId", operator: "equals", value: "mask-sliver-min" },
   ],
   excludesWhen: [
@@ -94,7 +98,7 @@ describe("KiCad library overlay patches", () => {
 
   it("materializes the correction into the board input used for verification", () => {
     const patch = createLibraryPatchCandidate(adoptedKnowledge());
-    const board = `(kicad_pcb (footprint "R_0603_1608Metric" (pad "1" smd roundrect (size 0.8 0.95))))`;
+    const board = `(kicad_pcb (footprint "USB_C_Receptacle_GCT_USB4135-GF-A_6P_TopMnt_Horizontal" (pad "A5" smd roundrect (size 0.8 0.95))))`;
     const patchedBoard = materializeLibraryPatchInBoardSource(
       board,
       patch.footprintId,
@@ -108,8 +112,8 @@ describe("KiCad library overlay patches", () => {
   it("materializes a library overlay into every matching footprint instance", () => {
     const patch = createLibraryPatchCandidate(adoptedKnowledge());
     const board = [
-      '(kicad_pcb (footprint "R_0603_1608Metric" (pad "1" smd roundrect (size 0.8 0.95))))',
-      '(footprint "R_0603_1608Metric" (pad "1" smd roundrect (size 0.8 0.95)))',
+      `(kicad_pcb (footprint "${patch.footprintId}" (pad "1" smd roundrect (size 0.8 0.95))))`,
+      `(footprint "${patch.footprintId}" (pad "1" smd roundrect (size 0.8 0.95)))`,
     ].join("\n");
     const patched = materializeLibraryPatchInBoardSource(
       board,

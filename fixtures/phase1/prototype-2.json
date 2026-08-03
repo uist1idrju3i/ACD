@@ -1,0 +1,2481 @@
+{
+  "schemaVersion": "1.0.0-draft",
+  "fixtureId": "fixture:phase3-prototype-2",
+  "fixtureKind": "golden",
+  "manufacturingProfile": {
+    "fabProfileId": "fab:jlcpcb-class-2layer",
+    "processConditions": [
+      "0.30mm minimum mask sliver",
+      "0.127mm copper clearance profile",
+      "2-layer",
+      "HASL",
+      "board-edge silkscreen exclusion"
+    ]
+  },
+  "requirement": {
+    "id": "requirement:phase3-prototype-2",
+    "name": "Prototype 2 sensor breakout and relay controller",
+    "functionalBlocks": ["power-input", "sensor-bridge", "relay-output", "status-indicator"],
+    "board": {
+      "layers": 2,
+      "widthMm": 60,
+      "heightMm": 45,
+      "thicknessMm": 1.6,
+      "outline": "rectangle:60x45"
+    },
+    "electrical": {
+      "supplyVoltageV": 5,
+      "maxCurrentMa": 500,
+      "interfaces": ["I2C sensor", "relay output"]
+    },
+    "acceptanceCriteria": [
+      "Gate 1 schema and reference integrity pass for the golden fixture",
+      "Official symbol and footprint mappings are hash-pinned",
+      "Golden placement and routing remain deferred to WP3/WP4"
+    ],
+    "acceptanceVerifiedBy": ["gate:fixture-schema", "gate:component-selection", "gate:routing"],
+    "provenance": {
+      "source": "fixture",
+      "version": "prototype-2",
+      "license": "BSD-3-Clause",
+      "contentHash": null,
+      "pendingReason": "Distinct prototype-2 fixture with different board dimensions, functional blocks, part-instance IDs, and relay-control topology; retains R1 0603 resistor footprint for knowledge-loop measurement."
+    }
+  },
+  "parts": [
+    {
+      "id": "part:p2-j1",
+      "reference": "J1",
+      "kind": "connector",
+      "mpn": "USB4135-GF-A",
+      "manufacturer": "GCT",
+      "quantity": 1,
+      "package": "USB-C 6-pin receptacle",
+      "provenance": {
+        "source": "fixture",
+        "version": "prototype-2-fixture",
+        "license": "BSD-3-Clause",
+        "contentHash": null,
+        "pendingReason": "fixture-owned provenance snapshot is pending; source is controlled by this fixture"
+      }
+    },
+    {
+      "id": "part:p2-u1",
+      "reference": "U1",
+      "kind": "module",
+      "mpn": "ESP32-WROOM-32E-N4",
+      "manufacturer": "Espressif",
+      "quantity": 1,
+      "package": "ESP32-WROOM-32E",
+      "provenance": {
+        "source": "fixture",
+        "version": "prototype-2-fixture",
+        "license": "BSD-3-Clause",
+        "contentHash": null,
+        "pendingReason": "fixture-owned provenance snapshot is pending; source is controlled by this fixture"
+      }
+    },
+    {
+      "id": "part:p2-u2",
+      "reference": "U2",
+      "kind": "sensor",
+      "mpn": "BME280",
+      "manufacturer": "Bosch Sensortec",
+      "quantity": 1,
+      "package": "LGA-8 2.5x2.5mm",
+      "provenance": {
+        "source": "fixture",
+        "version": "prototype-2-fixture",
+        "license": "BSD-3-Clause",
+        "contentHash": null,
+        "pendingReason": "fixture-owned provenance snapshot is pending; source is controlled by this fixture"
+      }
+    },
+    {
+      "id": "part:p2-u3",
+      "reference": "U3",
+      "kind": "regulator",
+      "mpn": "AMS1117-3.3",
+      "manufacturer": "Advanced Monolithic Systems",
+      "quantity": 1,
+      "package": "SOT-223-3",
+      "parameters": {
+        "source": "datasheet:AMS1117-3.3 (fixture-owned annotation)",
+        "outputVoltageV": 3.3,
+        "inputCapacitanceMinUf": 10,
+        "outputCapacitanceMinUf": 22
+      },
+      "provenance": {
+        "source": "fixture",
+        "version": "prototype-2-fixture",
+        "license": "BSD-3-Clause",
+        "contentHash": null,
+        "pendingReason": "fixture-owned provenance snapshot is pending; source is controlled by this fixture"
+      }
+    },
+    {
+      "id": "part:p2-j2",
+      "reference": "J2",
+      "kind": "connector",
+      "mpn": "M20-9990646",
+      "manufacturer": "Harwin",
+      "quantity": 1,
+      "package": "1x06 2.54mm header",
+      "provenance": {
+        "source": "fixture",
+        "version": "prototype-2-fixture",
+        "license": "BSD-3-Clause",
+        "contentHash": null,
+        "pendingReason": "fixture-owned provenance snapshot is pending; source is controlled by this fixture"
+      }
+    },
+    {
+      "id": "part:p2-r1",
+      "reference": "R1",
+      "kind": "resistor",
+      "mpn": "RC0603FR-0710KL",
+      "manufacturer": "Yageo",
+      "quantity": 1,
+      "package": "0603",
+      "parameters": {
+        "source": "mpn:RC0603FR-0710KL",
+        "resistanceOhm": 10000
+      },
+      "provenance": {
+        "source": "fixture",
+        "version": "prototype-2-fixture",
+        "license": "BSD-3-Clause",
+        "contentHash": null,
+        "pendingReason": "fixture-owned provenance snapshot is pending; source is controlled by this fixture"
+      }
+    },
+    {
+      "id": "part:p2-r2",
+      "reference": "R2",
+      "kind": "resistor",
+      "mpn": "RC0603FR-0710KL",
+      "manufacturer": "Yageo",
+      "quantity": 1,
+      "package": "0603",
+      "parameters": {
+        "source": "mpn:RC0603FR-0710KL",
+        "resistanceOhm": 10000
+      },
+      "provenance": {
+        "source": "fixture",
+        "version": "prototype-2-fixture",
+        "license": "BSD-3-Clause",
+        "contentHash": null,
+        "pendingReason": "fixture-owned provenance snapshot is pending; source is controlled by this fixture"
+      }
+    },
+    {
+      "id": "part:p2-r3",
+      "reference": "R3",
+      "kind": "resistor",
+      "mpn": "RC0603FR-07330RL",
+      "manufacturer": "Yageo",
+      "quantity": 1,
+      "package": "0603",
+      "parameters": {
+        "source": "mpn:RC0603FR-07330RL",
+        "resistanceOhm": 330
+      },
+      "provenance": {
+        "source": "fixture",
+        "version": "prototype-2-fixture",
+        "license": "BSD-3-Clause",
+        "contentHash": null,
+        "pendingReason": "fixture-owned provenance snapshot is pending; source is controlled by this fixture"
+      }
+    },
+    {
+      "id": "part:p2-c1",
+      "reference": "C1",
+      "kind": "capacitor",
+      "mpn": "CC0603ZRY5V8BB104",
+      "manufacturer": "Yageo",
+      "quantity": 1,
+      "package": "0603",
+      "parameters": {
+        "source": "mpn:CC0603ZRY5V8BB104",
+        "capacitanceUf": 0.1,
+        "ratedVoltageV": 50
+      },
+      "provenance": {
+        "source": "fixture",
+        "version": "prototype-2-fixture",
+        "license": "BSD-3-Clause",
+        "contentHash": null,
+        "pendingReason": "fixture-owned provenance snapshot is pending; source is controlled by this fixture"
+      }
+    },
+    {
+      "id": "part:p2-c2",
+      "reference": "C2",
+      "kind": "capacitor",
+      "mpn": "CC0603ZRY5V8BB104",
+      "manufacturer": "Yageo",
+      "quantity": 1,
+      "package": "0603",
+      "parameters": {
+        "source": "mpn:CC0603ZRY5V8BB104",
+        "capacitanceUf": 0.1,
+        "ratedVoltageV": 50
+      },
+      "provenance": {
+        "source": "fixture",
+        "version": "prototype-2-fixture",
+        "license": "BSD-3-Clause",
+        "contentHash": null,
+        "pendingReason": "fixture-owned provenance snapshot is pending; source is controlled by this fixture"
+      }
+    },
+    {
+      "id": "part:p2-c3",
+      "reference": "C3",
+      "kind": "capacitor",
+      "mpn": "CC0603ZRY5V8BB104",
+      "manufacturer": "Yageo",
+      "quantity": 1,
+      "package": "0603",
+      "parameters": {
+        "source": "mpn:CC0603ZRY5V8BB104",
+        "capacitanceUf": 0.1,
+        "ratedVoltageV": 50
+      },
+      "provenance": {
+        "source": "fixture",
+        "version": "prototype-2-fixture",
+        "license": "BSD-3-Clause",
+        "contentHash": null,
+        "pendingReason": "fixture-owned provenance snapshot is pending; source is controlled by this fixture"
+      }
+    },
+    {
+      "id": "part:p2-d1",
+      "reference": "D1",
+      "kind": "led",
+      "mpn": "LTST-C190KRKT",
+      "manufacturer": "Lite-On",
+      "quantity": 1,
+      "package": "0603",
+      "parameters": {
+        "source": "datasheet:LTST-C190KRKT (fixture-owned annotation)",
+        "forwardVoltageV": 2.0,
+        "forwardCurrentMinMa": 1,
+        "forwardCurrentMaxMa": 20
+      },
+      "provenance": {
+        "source": "fixture",
+        "version": "prototype-2-fixture",
+        "license": "BSD-3-Clause",
+        "contentHash": null,
+        "pendingReason": "fixture-owned provenance snapshot is pending; source is controlled by this fixture"
+      }
+    },
+    {
+      "id": "part:p2-sw1",
+      "reference": "SW1",
+      "kind": "other",
+      "mpn": "EVQ-P2K02Q",
+      "manufacturer": "Panasonic",
+      "quantity": 1,
+      "package": "SMD tactile switch",
+      "provenance": {
+        "source": "fixture",
+        "version": "prototype-2-fixture",
+        "license": "BSD-3-Clause",
+        "contentHash": null,
+        "pendingReason": "fixture-owned provenance snapshot is pending; source is controlled by this fixture"
+      }
+    },
+    {
+      "id": "part:p2-sw2",
+      "reference": "SW2",
+      "kind": "other",
+      "mpn": "EVQ-P2K02Q",
+      "manufacturer": "Panasonic",
+      "quantity": 1,
+      "package": "SMD tactile switch",
+      "provenance": {
+        "source": "fixture",
+        "version": "prototype-2-fixture",
+        "license": "BSD-3-Clause",
+        "contentHash": null,
+        "pendingReason": "fixture-owned provenance snapshot is pending; source is controlled by this fixture"
+      }
+    },
+    {
+      "id": "part:p2-r6",
+      "reference": "R6",
+      "kind": "resistor",
+      "mpn": "RC0603FR-075K1L",
+      "manufacturer": "Yageo",
+      "quantity": 1,
+      "package": "0603",
+      "parameters": {
+        "source": "mpn:RC0603FR-075K1L",
+        "resistanceOhm": 5100
+      },
+      "provenance": {
+        "source": "fixture",
+        "version": "prototype-2-fixture",
+        "license": "BSD-3-Clause",
+        "contentHash": null,
+        "pendingReason": "fixture-owned provenance snapshot is pending; source is controlled by this fixture"
+      }
+    },
+    {
+      "id": "part:p2-r7",
+      "reference": "R7",
+      "kind": "resistor",
+      "mpn": "RC0603FR-075K1L",
+      "manufacturer": "Yageo",
+      "quantity": 1,
+      "package": "0603",
+      "parameters": {
+        "source": "mpn:RC0603FR-075K1L",
+        "resistanceOhm": 5100
+      },
+      "provenance": {
+        "source": "fixture",
+        "version": "prototype-2-fixture",
+        "license": "BSD-3-Clause",
+        "contentHash": null,
+        "pendingReason": "fixture-owned provenance snapshot is pending; source is controlled by this fixture"
+      }
+    },
+    {
+      "id": "part:p2-c4",
+      "reference": "C4",
+      "kind": "capacitor",
+      "mpn": "CL21A106KOQNNNE",
+      "manufacturer": "Samsung Electro-Mechanics",
+      "quantity": 1,
+      "package": "0805",
+      "parameters": {
+        "source": "mpn:CL21A106KOQNNNE",
+        "capacitanceUf": 10,
+        "ratedVoltageV": 16
+      },
+      "provenance": {
+        "source": "fixture",
+        "version": "prototype-2-fixture",
+        "license": "BSD-3-Clause",
+        "contentHash": null,
+        "pendingReason": "fixture-owned provenance snapshot is pending; source is controlled by this fixture"
+      }
+    },
+    {
+      "id": "part:p2-c5",
+      "reference": "C5",
+      "kind": "capacitor",
+      "mpn": "CL21A226MQQNNNE",
+      "manufacturer": "Samsung Electro-Mechanics",
+      "quantity": 1,
+      "package": "0805",
+      "parameters": {
+        "source": "mpn:CL21A226MQQNNNE",
+        "capacitanceUf": 22,
+        "ratedVoltageV": 6.3
+      },
+      "provenance": {
+        "source": "fixture",
+        "version": "prototype-2-fixture",
+        "license": "BSD-3-Clause",
+        "contentHash": null,
+        "pendingReason": "fixture-owned provenance snapshot is pending; source is controlled by this fixture"
+      }
+    },
+    {
+      "id": "part:p2-r5",
+      "reference": "R5",
+      "kind": "resistor",
+      "mpn": "RC0603FR-0710KL",
+      "manufacturer": "Yageo",
+      "quantity": 1,
+      "package": "0603",
+      "parameters": {
+        "source": "mpn:RC0603FR-0710KL",
+        "resistanceOhm": 10000
+      },
+      "provenance": {
+        "source": "fixture",
+        "version": "prototype-2-fixture",
+        "license": "BSD-3-Clause",
+        "contentHash": null,
+        "pendingReason": "fixture-owned provenance snapshot is pending; source is controlled by this fixture"
+      }
+    },
+    {
+      "id": "part:p2-r8",
+      "reference": "R8",
+      "kind": "resistor",
+      "mpn": "RC0603FR-074K7L",
+      "manufacturer": "Yageo",
+      "quantity": 1,
+      "package": "0603",
+      "parameters": {
+        "source": "mpn:RC0603FR-074K7L",
+        "resistanceOhm": 4700
+      },
+      "provenance": {
+        "source": "fixture",
+        "version": "prototype-2-fixture",
+        "license": "BSD-3-Clause",
+        "contentHash": null,
+        "pendingReason": "fixture-owned provenance snapshot is pending; source is controlled by this fixture"
+      }
+    },
+    {
+      "id": "part:p2-r9",
+      "reference": "R9",
+      "kind": "resistor",
+      "mpn": "RC0603FR-074K7L",
+      "manufacturer": "Yageo",
+      "quantity": 1,
+      "package": "0603",
+      "parameters": {
+        "source": "mpn:RC0603FR-074K7L",
+        "resistanceOhm": 4700
+      },
+      "provenance": {
+        "source": "fixture",
+        "version": "prototype-2-fixture",
+        "license": "BSD-3-Clause",
+        "contentHash": null,
+        "pendingReason": "fixture-owned provenance snapshot is pending; source is controlled by this fixture"
+      }
+    }
+  ],
+  "mappings": [
+    {
+      "partId": "part:p2-j1",
+      "symbolLibraryId": "Connector",
+      "symbolName": "USB_C_Receptacle_PowerOnly_6P",
+      "footprintLibraryId": "Connector_USB",
+      "footprintName": "USB_C_Receptacle_GCT_USB4135-GF-A_6P_TopMnt_Horizontal",
+      "pinPads": [
+        {
+          "pin": "A5",
+          "pad": "A5",
+          "electricalType": "bidirectional"
+        },
+        {
+          "pin": "A9",
+          "pad": "A9",
+          "electricalType": "power-input"
+        },
+        {
+          "pin": "A12",
+          "pad": "A12",
+          "electricalType": "passive"
+        },
+        {
+          "pin": "B5",
+          "pad": "B5",
+          "electricalType": "bidirectional"
+        },
+        {
+          "pin": "B9",
+          "pad": "B9",
+          "electricalType": "power-input"
+        },
+        {
+          "pin": "B12",
+          "pad": "B12",
+          "electricalType": "passive"
+        },
+        {
+          "pin": "SH",
+          "pad": "SH",
+          "electricalType": "passive"
+        }
+      ],
+      "provenance": {
+        "source": "KiCad official libraries",
+        "version": "10.0.5",
+        "license": "CC-BY-SA-4.0-with-exception",
+        "contentHash": "sha256:beaaa41f4b1e53a8ca77ba55443631e22862ca17e23a6afc6e7c88b39ebb893d"
+      }
+    },
+    {
+      "partId": "part:p2-u1",
+      "symbolLibraryId": "RF_Module",
+      "symbolName": "ESP32-WROOM-32E",
+      "footprintLibraryId": "RF_Module",
+      "footprintName": "ESP32-WROOM-32E",
+      "pinPads": [
+        {
+          "pin": "2",
+          "pad": "2",
+          "electricalType": "power-input"
+        },
+        {
+          "pin": "3",
+          "pad": "3",
+          "electricalType": "input"
+        },
+        {
+          "pin": "4",
+          "pad": "4",
+          "electricalType": "input"
+        },
+        {
+          "pin": "5",
+          "pad": "5",
+          "electricalType": "input"
+        },
+        {
+          "pin": "6",
+          "pad": "6",
+          "electricalType": "input"
+        },
+        {
+          "pin": "7",
+          "pad": "7",
+          "electricalType": "input"
+        },
+        {
+          "pin": "8",
+          "pad": "8",
+          "electricalType": "bidirectional"
+        },
+        {
+          "pin": "9",
+          "pad": "9",
+          "electricalType": "bidirectional"
+        },
+        {
+          "pin": "10",
+          "pad": "10",
+          "electricalType": "bidirectional"
+        },
+        {
+          "pin": "11",
+          "pad": "11",
+          "electricalType": "bidirectional"
+        },
+        {
+          "pin": "12",
+          "pad": "12",
+          "electricalType": "bidirectional"
+        },
+        {
+          "pin": "13",
+          "pad": "13",
+          "electricalType": "bidirectional"
+        },
+        {
+          "pin": "14",
+          "pad": "14",
+          "electricalType": "bidirectional"
+        },
+        {
+          "pin": "16",
+          "pad": "16",
+          "electricalType": "bidirectional"
+        },
+        {
+          "pin": "17",
+          "pad": "17",
+          "electricalType": "no-connect"
+        },
+        {
+          "pin": "18",
+          "pad": "18",
+          "electricalType": "no-connect"
+        },
+        {
+          "pin": "19",
+          "pad": "19",
+          "electricalType": "no-connect"
+        },
+        {
+          "pin": "20",
+          "pad": "20",
+          "electricalType": "no-connect"
+        },
+        {
+          "pin": "21",
+          "pad": "21",
+          "electricalType": "no-connect"
+        },
+        {
+          "pin": "22",
+          "pad": "22",
+          "electricalType": "no-connect"
+        },
+        {
+          "pin": "23",
+          "pad": "23",
+          "electricalType": "bidirectional"
+        },
+        {
+          "pin": "24",
+          "pad": "24",
+          "electricalType": "bidirectional"
+        },
+        {
+          "pin": "25",
+          "pad": "25",
+          "electricalType": "bidirectional"
+        },
+        {
+          "pin": "26",
+          "pad": "26",
+          "electricalType": "bidirectional"
+        },
+        {
+          "pin": "27",
+          "pad": "27",
+          "electricalType": "bidirectional"
+        },
+        {
+          "pin": "28",
+          "pad": "28",
+          "electricalType": "bidirectional"
+        },
+        {
+          "pin": "29",
+          "pad": "29",
+          "electricalType": "bidirectional"
+        },
+        {
+          "pin": "30",
+          "pad": "30",
+          "electricalType": "bidirectional"
+        },
+        {
+          "pin": "31",
+          "pad": "31",
+          "electricalType": "bidirectional"
+        },
+        {
+          "pin": "32",
+          "pad": "32",
+          "electricalType": "no-connect"
+        },
+        {
+          "pin": "33",
+          "pad": "33",
+          "electricalType": "bidirectional"
+        },
+        {
+          "pin": "34",
+          "pad": "34",
+          "electricalType": "bidirectional"
+        },
+        {
+          "pin": "35",
+          "pad": "35",
+          "electricalType": "bidirectional"
+        },
+        {
+          "pin": "36",
+          "pad": "36",
+          "electricalType": "bidirectional"
+        },
+        {
+          "pin": "37",
+          "pad": "37",
+          "electricalType": "bidirectional"
+        },
+        {
+          "pin": "GND",
+          "pad": "1",
+          "electricalType": "power-input"
+        },
+        {
+          "pin": "GND",
+          "pad": "15",
+          "electricalType": "power-input"
+        },
+        {
+          "pin": "GND",
+          "pad": "38",
+          "electricalType": "power-input"
+        },
+        {
+          "pin": "GND",
+          "pad": "39",
+          "electricalType": "power-input"
+        }
+      ],
+      "provenance": {
+        "source": "KiCad official libraries",
+        "version": "10.0.5",
+        "license": "CC-BY-SA-4.0-with-exception",
+        "contentHash": "sha256:b0690fed21a0929c7c43fb16f03ba0e6e5eaf9cf4eb36743f57651bfa00153d6"
+      }
+    },
+    {
+      "partId": "part:p2-u2",
+      "symbolLibraryId": "Sensor",
+      "symbolName": "BME280",
+      "footprintLibraryId": "Package_LGA",
+      "footprintName": "Bosch_LGA-8_2.5x2.5mm_P0.65mm_ClockwisePinNumbering",
+      "pinPads": [
+        {
+          "pin": "1",
+          "pad": "1",
+          "electricalType": "power-input"
+        },
+        {
+          "pin": "2",
+          "pad": "2",
+          "electricalType": "input"
+        },
+        {
+          "pin": "3",
+          "pad": "3",
+          "electricalType": "bidirectional"
+        },
+        {
+          "pin": "4",
+          "pad": "4",
+          "electricalType": "input"
+        },
+        {
+          "pin": "5",
+          "pad": "5",
+          "electricalType": "bidirectional"
+        },
+        {
+          "pin": "6",
+          "pad": "6",
+          "electricalType": "power-input"
+        },
+        {
+          "pin": "7",
+          "pad": "7",
+          "electricalType": "power-input"
+        },
+        {
+          "pin": "8",
+          "pad": "8",
+          "electricalType": "power-input"
+        }
+      ],
+      "provenance": {
+        "source": "KiCad official libraries",
+        "version": "10.0.5",
+        "license": "CC-BY-SA-4.0-with-exception",
+        "contentHash": "sha256:14464b7a437e7efb0fa9947b89a7d3825242f3ed82d649fe2ca45fad5d3dda86"
+      }
+    },
+    {
+      "partId": "part:p2-u3",
+      "symbolLibraryId": "Regulator_Linear",
+      "symbolName": "AP1117-15",
+      "footprintLibraryId": "Package_TO_SOT_SMD",
+      "footprintName": "SOT-223-3_TabPin2",
+      "pinPads": [
+        {
+          "pin": "1",
+          "pad": "1",
+          "electricalType": "power-input"
+        },
+        {
+          "pin": "2",
+          "pad": "2",
+          "electricalType": "power-output"
+        },
+        {
+          "pin": "3",
+          "pad": "3",
+          "electricalType": "power-input"
+        }
+      ],
+      "provenance": {
+        "source": "KiCad official libraries",
+        "version": "10.0.5",
+        "license": "CC-BY-SA-4.0-with-exception",
+        "contentHash": "sha256:8ae5f03e2c16377abed15e51af6864e23a934e1457b97fb7ea930e17fa99f11d"
+      }
+    },
+    {
+      "partId": "part:p2-j2",
+      "symbolLibraryId": "Connector_Generic",
+      "symbolName": "Conn_01x06",
+      "footprintLibraryId": "Connector_PinHeader_2.54mm",
+      "footprintName": "PinHeader_1x06_P2.54mm_Vertical",
+      "pinPads": [
+        {
+          "pin": "1",
+          "pad": "1",
+          "electricalType": "passive"
+        },
+        {
+          "pin": "2",
+          "pad": "2",
+          "electricalType": "passive"
+        },
+        {
+          "pin": "3",
+          "pad": "3",
+          "electricalType": "passive"
+        },
+        {
+          "pin": "4",
+          "pad": "4",
+          "electricalType": "passive"
+        },
+        {
+          "pin": "5",
+          "pad": "5",
+          "electricalType": "passive"
+        },
+        {
+          "pin": "6",
+          "pad": "6",
+          "electricalType": "passive"
+        }
+      ],
+      "provenance": {
+        "source": "KiCad official libraries",
+        "version": "10.0.5",
+        "license": "CC-BY-SA-4.0-with-exception",
+        "contentHash": "sha256:5f2993c50dbd5024384bf6fa972fcd10d40d0837039e1e371b326a27d9f5b8b7"
+      }
+    },
+    {
+      "partId": "part:p2-r1",
+      "symbolLibraryId": "Device",
+      "symbolName": "R",
+      "footprintLibraryId": "Resistor_SMD",
+      "footprintName": "R_0603_1608Metric",
+      "pinPads": [
+        {
+          "pin": "1",
+          "pad": "1",
+          "electricalType": "passive"
+        },
+        {
+          "pin": "2",
+          "pad": "2",
+          "electricalType": "passive"
+        }
+      ],
+      "provenance": {
+        "source": "KiCad official libraries",
+        "version": "10.0.5",
+        "license": "CC-BY-SA-4.0-with-exception",
+        "contentHash": "sha256:7190ac4a00125b807e54129ef0d87d87f2a658eeb74d025a7028203419b09f23"
+      }
+    },
+    {
+      "partId": "part:p2-r2",
+      "symbolLibraryId": "Device",
+      "symbolName": "R",
+      "footprintLibraryId": "Resistor_SMD",
+      "footprintName": "R_0603_1608Metric",
+      "pinPads": [
+        {
+          "pin": "1",
+          "pad": "1",
+          "electricalType": "passive"
+        },
+        {
+          "pin": "2",
+          "pad": "2",
+          "electricalType": "passive"
+        }
+      ],
+      "provenance": {
+        "source": "KiCad official libraries",
+        "version": "10.0.5",
+        "license": "CC-BY-SA-4.0-with-exception",
+        "contentHash": "sha256:7190ac4a00125b807e54129ef0d87d87f2a658eeb74d025a7028203419b09f23"
+      }
+    },
+    {
+      "partId": "part:p2-r3",
+      "symbolLibraryId": "Device",
+      "symbolName": "R",
+      "footprintLibraryId": "Resistor_SMD",
+      "footprintName": "R_0603_1608Metric",
+      "pinPads": [
+        {
+          "pin": "1",
+          "pad": "1",
+          "electricalType": "passive"
+        },
+        {
+          "pin": "2",
+          "pad": "2",
+          "electricalType": "passive"
+        }
+      ],
+      "provenance": {
+        "source": "KiCad official libraries",
+        "version": "10.0.5",
+        "license": "CC-BY-SA-4.0-with-exception",
+        "contentHash": "sha256:7190ac4a00125b807e54129ef0d87d87f2a658eeb74d025a7028203419b09f23"
+      }
+    },
+    {
+      "partId": "part:p2-c1",
+      "symbolLibraryId": "Device",
+      "symbolName": "C",
+      "footprintLibraryId": "Capacitor_SMD",
+      "footprintName": "C_0603_1608Metric",
+      "pinPads": [
+        {
+          "pin": "1",
+          "pad": "1",
+          "electricalType": "passive"
+        },
+        {
+          "pin": "2",
+          "pad": "2",
+          "electricalType": "passive"
+        }
+      ],
+      "provenance": {
+        "source": "KiCad official libraries",
+        "version": "10.0.5",
+        "license": "CC-BY-SA-4.0-with-exception",
+        "contentHash": "sha256:fe0dbfefbb181a0466f93a8de52d84ba7b00fcd9acdbb69575f4128a0af4e405"
+      }
+    },
+    {
+      "partId": "part:p2-c2",
+      "symbolLibraryId": "Device",
+      "symbolName": "C",
+      "footprintLibraryId": "Capacitor_SMD",
+      "footprintName": "C_0603_1608Metric",
+      "pinPads": [
+        {
+          "pin": "1",
+          "pad": "1",
+          "electricalType": "passive"
+        },
+        {
+          "pin": "2",
+          "pad": "2",
+          "electricalType": "passive"
+        }
+      ],
+      "provenance": {
+        "source": "KiCad official libraries",
+        "version": "10.0.5",
+        "license": "CC-BY-SA-4.0-with-exception",
+        "contentHash": "sha256:fe0dbfefbb181a0466f93a8de52d84ba7b00fcd9acdbb69575f4128a0af4e405"
+      }
+    },
+    {
+      "partId": "part:p2-c3",
+      "symbolLibraryId": "Device",
+      "symbolName": "C",
+      "footprintLibraryId": "Capacitor_SMD",
+      "footprintName": "C_0603_1608Metric",
+      "pinPads": [
+        {
+          "pin": "1",
+          "pad": "1",
+          "electricalType": "passive"
+        },
+        {
+          "pin": "2",
+          "pad": "2",
+          "electricalType": "passive"
+        }
+      ],
+      "provenance": {
+        "source": "KiCad official libraries",
+        "version": "10.0.5",
+        "license": "CC-BY-SA-4.0-with-exception",
+        "contentHash": "sha256:fe0dbfefbb181a0466f93a8de52d84ba7b00fcd9acdbb69575f4128a0af4e405"
+      }
+    },
+    {
+      "partId": "part:p2-d1",
+      "symbolLibraryId": "Device",
+      "symbolName": "LED",
+      "footprintLibraryId": "LED_SMD",
+      "footprintName": "LED_0603_1608Metric",
+      "pinPads": [
+        {
+          "pin": "1",
+          "pad": "1",
+          "electricalType": "passive"
+        },
+        {
+          "pin": "2",
+          "pad": "2",
+          "electricalType": "passive"
+        }
+      ],
+      "provenance": {
+        "source": "KiCad official libraries",
+        "version": "10.0.5",
+        "license": "CC-BY-SA-4.0-with-exception",
+        "contentHash": "sha256:7931ed1efba34cb13c8d74a60eb1dca4b0be57d950c38e08c3e7f007db500a1c"
+      }
+    },
+    {
+      "partId": "part:p2-sw1",
+      "symbolLibraryId": "Switch",
+      "symbolName": "SW_Push",
+      "footprintLibraryId": "Button_Switch_SMD",
+      "footprintName": "SW_SPST_EVQP2_ShortPushTravel_H2.1mm",
+      "pinPads": [
+        {
+          "pin": "1",
+          "pad": "1",
+          "electricalType": "passive"
+        },
+        {
+          "pin": "2",
+          "pad": "2",
+          "electricalType": "passive"
+        }
+      ],
+      "provenance": {
+        "source": "KiCad official libraries",
+        "version": "10.0.5",
+        "license": "CC-BY-SA-4.0-with-exception",
+        "contentHash": "sha256:a317bc527e5222726dc61c864cfddc8f02c29f78205dc6deae8ecb4566d2e383"
+      }
+    },
+    {
+      "partId": "part:p2-sw2",
+      "symbolLibraryId": "Switch",
+      "symbolName": "SW_Push",
+      "footprintLibraryId": "Button_Switch_SMD",
+      "footprintName": "SW_SPST_EVQP2_ShortPushTravel_H2.1mm",
+      "pinPads": [
+        {
+          "pin": "1",
+          "pad": "1",
+          "electricalType": "passive"
+        },
+        {
+          "pin": "2",
+          "pad": "2",
+          "electricalType": "passive"
+        }
+      ],
+      "provenance": {
+        "source": "KiCad official libraries",
+        "version": "10.0.5",
+        "license": "CC-BY-SA-4.0-with-exception",
+        "contentHash": "sha256:a317bc527e5222726dc61c864cfddc8f02c29f78205dc6deae8ecb4566d2e383"
+      }
+    },
+    {
+      "partId": "part:p2-r6",
+      "symbolLibraryId": "Device",
+      "symbolName": "R",
+      "footprintLibraryId": "Resistor_SMD",
+      "footprintName": "R_0603_1608Metric",
+      "pinPads": [
+        {
+          "pin": "1",
+          "pad": "1",
+          "electricalType": "passive"
+        },
+        {
+          "pin": "2",
+          "pad": "2",
+          "electricalType": "passive"
+        }
+      ],
+      "provenance": {
+        "source": "KiCad official libraries",
+        "version": "10.0.5",
+        "license": "CC-BY-SA-4.0-with-exception",
+        "contentHash": "sha256:7190ac4a00125b807e54129ef0d87d87f2a658eeb74d025a7028203419b09f23"
+      }
+    },
+    {
+      "partId": "part:p2-r7",
+      "symbolLibraryId": "Device",
+      "symbolName": "R",
+      "footprintLibraryId": "Resistor_SMD",
+      "footprintName": "R_0603_1608Metric",
+      "pinPads": [
+        {
+          "pin": "1",
+          "pad": "1",
+          "electricalType": "passive"
+        },
+        {
+          "pin": "2",
+          "pad": "2",
+          "electricalType": "passive"
+        }
+      ],
+      "provenance": {
+        "source": "KiCad official libraries",
+        "version": "10.0.5",
+        "license": "CC-BY-SA-4.0-with-exception",
+        "contentHash": "sha256:7190ac4a00125b807e54129ef0d87d87f2a658eeb74d025a7028203419b09f23"
+      }
+    },
+    {
+      "partId": "part:p2-c4",
+      "symbolLibraryId": "Device",
+      "symbolName": "C",
+      "footprintLibraryId": "Capacitor_SMD",
+      "footprintName": "C_0805_2012Metric",
+      "pinPads": [
+        {
+          "pin": "1",
+          "pad": "1",
+          "electricalType": "passive"
+        },
+        {
+          "pin": "2",
+          "pad": "2",
+          "electricalType": "passive"
+        }
+      ],
+      "provenance": {
+        "source": "KiCad official libraries",
+        "version": "10.0.5",
+        "license": "CC-BY-SA-4.0-with-exception",
+        "contentHash": "sha256:62775a51fe74ba7f1b572de327bdbd3fc92582721b2abcaa47787865590d89cb"
+      }
+    },
+    {
+      "partId": "part:p2-c5",
+      "symbolLibraryId": "Device",
+      "symbolName": "C",
+      "footprintLibraryId": "Capacitor_SMD",
+      "footprintName": "C_0805_2012Metric",
+      "pinPads": [
+        {
+          "pin": "1",
+          "pad": "1",
+          "electricalType": "passive"
+        },
+        {
+          "pin": "2",
+          "pad": "2",
+          "electricalType": "passive"
+        }
+      ],
+      "provenance": {
+        "source": "KiCad official libraries",
+        "version": "10.0.5",
+        "license": "CC-BY-SA-4.0-with-exception",
+        "contentHash": "sha256:62775a51fe74ba7f1b572de327bdbd3fc92582721b2abcaa47787865590d89cb"
+      }
+    },
+    {
+      "partId": "part:p2-r5",
+      "symbolLibraryId": "Device",
+      "symbolName": "R",
+      "footprintLibraryId": "Resistor_SMD",
+      "footprintName": "R_0603_1608Metric",
+      "pinPads": [
+        {
+          "pin": "1",
+          "pad": "1",
+          "electricalType": "passive"
+        },
+        {
+          "pin": "2",
+          "pad": "2",
+          "electricalType": "passive"
+        }
+      ],
+      "provenance": {
+        "source": "KiCad official libraries",
+        "version": "10.0.5",
+        "license": "CC-BY-SA-4.0-with-exception",
+        "contentHash": "sha256:7190ac4a00125b807e54129ef0d87d87f2a658eeb74d025a7028203419b09f23"
+      }
+    },
+    {
+      "partId": "part:p2-r8",
+      "symbolLibraryId": "Device",
+      "symbolName": "R",
+      "footprintLibraryId": "Resistor_SMD",
+      "footprintName": "R_0603_1608Metric",
+      "pinPads": [
+        {
+          "pin": "1",
+          "pad": "1",
+          "electricalType": "passive"
+        },
+        {
+          "pin": "2",
+          "pad": "2",
+          "electricalType": "passive"
+        }
+      ],
+      "provenance": {
+        "source": "KiCad official libraries",
+        "version": "10.0.5",
+        "license": "CC-BY-SA-4.0-with-exception",
+        "contentHash": "sha256:7190ac4a00125b807e54129ef0d87d87f2a658eeb74d025a7028203419b09f23"
+      }
+    },
+    {
+      "partId": "part:p2-r9",
+      "symbolLibraryId": "Device",
+      "symbolName": "R",
+      "footprintLibraryId": "Resistor_SMD",
+      "footprintName": "R_0603_1608Metric",
+      "pinPads": [
+        {
+          "pin": "1",
+          "pad": "1",
+          "electricalType": "passive"
+        },
+        {
+          "pin": "2",
+          "pad": "2",
+          "electricalType": "passive"
+        }
+      ],
+      "provenance": {
+        "source": "KiCad official libraries",
+        "version": "10.0.5",
+        "license": "CC-BY-SA-4.0-with-exception",
+        "contentHash": "sha256:7190ac4a00125b807e54129ef0d87d87f2a658eeb74d025a7028203419b09f23"
+      }
+    }
+  ],
+  "nets": [
+    {
+      "id": "net:p2-5v",
+      "name": "+5V",
+      "class": "power",
+      "nominalVoltageV": 5,
+      "pins": [
+        {
+          "partId": "part:p2-j1",
+          "pin": "A9"
+        },
+        {
+          "partId": "part:p2-j1",
+          "pin": "B9"
+        },
+        {
+          "partId": "part:p2-u3",
+          "pin": "3"
+        },
+        {
+          "partId": "part:p2-c3",
+          "pin": "1"
+        },
+        {
+          "partId": "part:p2-c4",
+          "pin": "1"
+        }
+      ]
+    },
+    {
+      "id": "net:p2-3v3",
+      "name": "3V3",
+      "class": "power",
+      "nominalVoltageV": 3.3,
+      "pins": [
+        {
+          "partId": "part:p2-u1",
+          "pin": "2"
+        },
+        {
+          "partId": "part:p2-u2",
+          "pin": "6"
+        },
+        {
+          "partId": "part:p2-u2",
+          "pin": "8"
+        },
+        {
+          "partId": "part:p2-u2",
+          "pin": "2"
+        },
+        {
+          "partId": "part:p2-u3",
+          "pin": "2"
+        },
+        {
+          "partId": "part:p2-r1",
+          "pin": "1"
+        },
+        {
+          "partId": "part:p2-r2",
+          "pin": "1"
+        },
+        {
+          "partId": "part:p2-c1",
+          "pin": "1"
+        },
+        {
+          "partId": "part:p2-c2",
+          "pin": "1"
+        },
+        {
+          "partId": "part:p2-j2",
+          "pin": "1"
+        },
+        {
+          "partId": "part:p2-c5",
+          "pin": "1"
+        },
+        {
+          "partId": "part:p2-r8",
+          "pin": "2"
+        },
+        {
+          "partId": "part:p2-r9",
+          "pin": "2"
+        }
+      ]
+    },
+    {
+      "id": "net:p2-gnd",
+      "name": "GND",
+      "class": "ground",
+      "pins": [
+        {
+          "partId": "part:p2-j1",
+          "pin": "A12"
+        },
+        {
+          "partId": "part:p2-j1",
+          "pin": "B12"
+        },
+        {
+          "partId": "part:p2-j1",
+          "pin": "SH"
+        },
+        {
+          "partId": "part:p2-u1",
+          "pin": "GND"
+        },
+        {
+          "partId": "part:p2-u2",
+          "pin": "1"
+        },
+        {
+          "partId": "part:p2-u2",
+          "pin": "7"
+        },
+        {
+          "partId": "part:p2-u3",
+          "pin": "1"
+        },
+        {
+          "partId": "part:p2-j2",
+          "pin": "2"
+        },
+        {
+          "partId": "part:p2-c1",
+          "pin": "2"
+        },
+        {
+          "partId": "part:p2-c2",
+          "pin": "2"
+        },
+        {
+          "partId": "part:p2-c3",
+          "pin": "2"
+        },
+        {
+          "partId": "part:p2-d1",
+          "pin": "2"
+        },
+        {
+          "partId": "part:p2-sw1",
+          "pin": "2"
+        },
+        {
+          "partId": "part:p2-sw2",
+          "pin": "2"
+        },
+        {
+          "partId": "part:p2-r6",
+          "pin": "2"
+        },
+        {
+          "partId": "part:p2-r7",
+          "pin": "2"
+        },
+        {
+          "partId": "part:p2-c4",
+          "pin": "2"
+        },
+        {
+          "partId": "part:p2-c5",
+          "pin": "2"
+        },
+        {
+          "partId": "part:p2-r5",
+          "pin": "2"
+        }
+      ]
+    },
+    {
+      "id": "net:p2-i2c-sda",
+      "name": "I2C_SDA",
+      "class": "signal",
+      "role": "i2c",
+      "pins": [
+        {
+          "partId": "part:p2-u1",
+          "pin": "33"
+        },
+        {
+          "partId": "part:p2-u2",
+          "pin": "3"
+        },
+        {
+          "partId": "part:p2-j2",
+          "pin": "5"
+        },
+        {
+          "partId": "part:p2-r8",
+          "pin": "1"
+        }
+      ]
+    },
+    {
+      "id": "net:p2-i2c-scl",
+      "name": "I2C_SCL",
+      "class": "clock",
+      "role": "i2c",
+      "pins": [
+        {
+          "partId": "part:p2-u1",
+          "pin": "36"
+        },
+        {
+          "partId": "part:p2-u2",
+          "pin": "4"
+        },
+        {
+          "partId": "part:p2-j2",
+          "pin": "6"
+        },
+        {
+          "partId": "part:p2-r9",
+          "pin": "1"
+        }
+      ]
+    },
+    {
+      "id": "net:p2-uart-rx",
+      "name": "UART_RX",
+      "class": "signal",
+      "role": "uart",
+      "pins": [
+        {
+          "partId": "part:p2-u1",
+          "pin": "34"
+        },
+        {
+          "partId": "part:p2-j2",
+          "pin": "4"
+        }
+      ]
+    },
+    {
+      "id": "net:p2-uart-tx",
+      "name": "UART_TX",
+      "class": "signal",
+      "role": "uart",
+      "pins": [
+        {
+          "partId": "part:p2-u1",
+          "pin": "35"
+        },
+        {
+          "partId": "part:p2-j2",
+          "pin": "3"
+        }
+      ]
+    },
+    {
+      "id": "net:p2-en",
+      "name": "EN",
+      "class": "signal",
+      "role": "bootstrap",
+      "pins": [
+        {
+          "partId": "part:p2-u1",
+          "pin": "3"
+        },
+        {
+          "partId": "part:p2-r1",
+          "pin": "2"
+        },
+        {
+          "partId": "part:p2-sw1",
+          "pin": "1"
+        }
+      ]
+    },
+    {
+      "id": "net:p2-io0",
+      "name": "IO0",
+      "class": "signal",
+      "role": "bootstrap",
+      "pins": [
+        {
+          "partId": "part:p2-u1",
+          "pin": "25"
+        },
+        {
+          "partId": "part:p2-r2",
+          "pin": "2"
+        },
+        {
+          "partId": "part:p2-sw2",
+          "pin": "1"
+        }
+      ]
+    },
+    {
+      "id": "net:p2-led-a",
+      "name": "LED_A",
+      "class": "signal",
+      "role": "led",
+      "pins": [
+        {
+          "partId": "part:p2-u1",
+          "pin": "24"
+        },
+        {
+          "partId": "part:p2-r3",
+          "pin": "1"
+        }
+      ]
+    },
+    {
+      "id": "net:p2-led-k",
+      "name": "LED_K",
+      "class": "signal",
+      "role": "led",
+      "pins": [
+        {
+          "partId": "part:p2-r3",
+          "pin": "2"
+        },
+        {
+          "partId": "part:p2-d1",
+          "pin": "1"
+        }
+      ]
+    },
+    {
+      "id": "net:p2-usb-cc1",
+      "name": "USB_CC1",
+      "class": "signal",
+      "role": "usb-cc",
+      "pins": [
+        {
+          "partId": "part:p2-j1",
+          "pin": "A5"
+        },
+        {
+          "partId": "part:p2-r6",
+          "pin": "1"
+        }
+      ]
+    },
+    {
+      "id": "net:p2-usb-cc2",
+      "name": "USB_CC2",
+      "class": "signal",
+      "role": "usb-cc",
+      "pins": [
+        {
+          "partId": "part:p2-j1",
+          "pin": "B5"
+        },
+        {
+          "partId": "part:p2-r7",
+          "pin": "1"
+        }
+      ]
+    },
+    {
+      "id": "net:p2-relay-control",
+      "name": "RELAY_CTRL",
+      "class": "signal",
+      "pins": [
+        {
+          "partId": "part:p2-u1",
+          "pin": "17"
+        },
+        {
+          "partId": "part:p2-r5",
+          "pin": "1"
+        }
+      ]
+    }
+  ],
+  "placementConstraints": {
+    "seed": 42,
+    "components": [
+      {
+        "partId": "part:p2-j1",
+        "allowedLayers": ["F.Cu"],
+        "xMm": 8,
+        "yMm": 23,
+        "rotationDeg": 0
+      },
+      {
+        "partId": "part:p2-u1",
+        "allowedLayers": ["F.Cu"],
+        "xMm": 30,
+        "yMm": 8,
+        "rotationDeg": 0
+      },
+      {
+        "partId": "part:p2-u2",
+        "allowedLayers": ["F.Cu"],
+        "xMm": 48,
+        "yMm": 8,
+        "rotationDeg": 0
+      },
+      {
+        "partId": "part:p2-u3",
+        "allowedLayers": ["F.Cu"],
+        "xMm": 8,
+        "yMm": 8,
+        "rotationDeg": 0
+      },
+      {
+        "partId": "part:p2-j2",
+        "allowedLayers": ["F.Cu"],
+        "xMm": 42,
+        "yMm": 28,
+        "rotationDeg": 90
+      },
+      {
+        "partId": "part:p2-r1",
+        "allowedLayers": ["F.Cu"],
+        "xMm": 17.5,
+        "yMm": 27,
+        "rotationDeg": 0
+      },
+      {
+        "partId": "part:p2-r2",
+        "allowedLayers": ["F.Cu"],
+        "xMm": 17.5,
+        "yMm": 33,
+        "rotationDeg": 0
+      },
+      {
+        "partId": "part:p2-r3",
+        "allowedLayers": ["F.Cu"],
+        "xMm": 30,
+        "yMm": 38,
+        "rotationDeg": 0
+      },
+      {
+        "partId": "part:p2-c1",
+        "allowedLayers": ["F.Cu"],
+        "xMm": 45,
+        "yMm": 15,
+        "rotationDeg": 0
+      },
+      {
+        "partId": "part:p2-c2",
+        "allowedLayers": ["F.Cu"],
+        "xMm": 52,
+        "yMm": 18,
+        "rotationDeg": 0
+      },
+      {
+        "partId": "part:p2-c3",
+        "allowedLayers": ["F.Cu"],
+        "xMm": 8,
+        "yMm": 15,
+        "rotationDeg": 0
+      },
+      {
+        "partId": "part:p2-d1",
+        "allowedLayers": ["F.Cu"],
+        "xMm": 35,
+        "yMm": 38,
+        "rotationDeg": 0
+      },
+      {
+        "partId": "part:p2-sw1",
+        "allowedLayers": ["F.Cu"],
+        "xMm": 6,
+        "yMm": 33,
+        "rotationDeg": 0
+      },
+      {
+        "partId": "part:p2-sw2",
+        "allowedLayers": ["F.Cu"],
+        "xMm": 6,
+        "yMm": 41,
+        "rotationDeg": 0
+      },
+      {
+        "partId": "part:p2-r6",
+        "allowedLayers": ["F.Cu"],
+        "xMm": 22,
+        "yMm": 23,
+        "rotationDeg": 0
+      },
+      {
+        "partId": "part:p2-r7",
+        "allowedLayers": ["F.Cu"],
+        "xMm": 26,
+        "yMm": 23,
+        "rotationDeg": 0
+      },
+      {
+        "partId": "part:p2-c4",
+        "allowedLayers": ["F.Cu"],
+        "xMm": 18,
+        "yMm": 18,
+        "rotationDeg": 0
+      },
+      {
+        "partId": "part:p2-c5",
+        "allowedLayers": ["F.Cu"],
+        "xMm": 56,
+        "yMm": 20,
+        "rotationDeg": 0
+      },
+      {
+        "partId": "part:p2-r5",
+        "allowedLayers": ["F.Cu"],
+        "xMm": 52,
+        "yMm": 14,
+        "rotationDeg": 0
+      },
+      {
+        "partId": "part:p2-r8",
+        "allowedLayers": ["F.Cu"],
+        "xMm": 47,
+        "yMm": 21,
+        "rotationDeg": 0
+      },
+      {
+        "partId": "part:p2-r9",
+        "allowedLayers": ["F.Cu"],
+        "xMm": 51,
+        "yMm": 21,
+        "rotationDeg": 0
+      }
+    ]
+  },
+  "bom": [
+    {
+      "partId": "part:p2-j1",
+      "referenceDesignators": ["J1"],
+      "quantity": 1,
+      "mpn": "USB4135-GF-A",
+      "manufacturer": "GCT",
+      "supplier": "Digi-Key",
+      "sku": "2073-USB4135-GF-ACT-ND",
+      "availability": "in-stock",
+      "lifecycle": "active",
+      "provenance": {
+        "source": "fixture-provided AVL",
+        "version": "phase1-golden-1",
+        "license": "BSD-3-Clause",
+        "contentHash": null,
+        "pendingReason": "AVL source is fixture-provided; distributor availability must be rechecked before ordering"
+      },
+      "unitPrice": 0.35,
+      "currency": "USD"
+    },
+    {
+      "partId": "part:p2-u1",
+      "referenceDesignators": ["U1"],
+      "quantity": 1,
+      "mpn": "ESP32-WROOM-32E-N4",
+      "manufacturer": "Espressif",
+      "supplier": "Digi-Key",
+      "sku": "1965-ESP32-WROOM-32E-N4CT-ND",
+      "availability": "in-stock",
+      "lifecycle": "active",
+      "provenance": {
+        "source": "fixture-provided AVL",
+        "version": "phase1-golden-1",
+        "license": "BSD-3-Clause",
+        "contentHash": null,
+        "pendingReason": "AVL source is fixture-provided; distributor availability must be rechecked before ordering"
+      },
+      "unitPrice": 0.35,
+      "currency": "USD"
+    },
+    {
+      "partId": "part:p2-u2",
+      "referenceDesignators": ["U2"],
+      "quantity": 1,
+      "mpn": "BME280",
+      "manufacturer": "Bosch Sensortec",
+      "supplier": "Digi-Key",
+      "sku": "828-1065-1-ND",
+      "availability": "in-stock",
+      "lifecycle": "active",
+      "provenance": {
+        "source": "fixture-provided AVL",
+        "version": "phase1-golden-1",
+        "license": "BSD-3-Clause",
+        "contentHash": null,
+        "pendingReason": "AVL source is fixture-provided; distributor availability must be rechecked before ordering"
+      },
+      "unitPrice": 0.35,
+      "currency": "USD"
+    },
+    {
+      "partId": "part:p2-u3",
+      "referenceDesignators": ["U3"],
+      "quantity": 1,
+      "mpn": "AMS1117-3.3",
+      "manufacturer": "Advanced Monolithic Systems",
+      "supplier": "Digi-Key",
+      "sku": "AMS1117-3.3CT-ND",
+      "availability": "in-stock",
+      "lifecycle": "active",
+      "provenance": {
+        "source": "fixture-provided AVL",
+        "version": "phase1-golden-1",
+        "license": "BSD-3-Clause",
+        "contentHash": null,
+        "pendingReason": "AVL source is fixture-provided; distributor availability must be rechecked before ordering"
+      },
+      "unitPrice": 0.35,
+      "currency": "USD"
+    },
+    {
+      "partId": "part:p2-j2",
+      "referenceDesignators": ["J2"],
+      "quantity": 1,
+      "mpn": "M20-9990646",
+      "manufacturer": "Harwin",
+      "supplier": "Mouser",
+      "sku": "855-M20-9990646",
+      "availability": "in-stock",
+      "lifecycle": "active",
+      "provenance": {
+        "source": "fixture-provided AVL",
+        "version": "phase1-golden-1",
+        "license": "BSD-3-Clause",
+        "contentHash": null,
+        "pendingReason": "AVL source is fixture-provided; distributor availability must be rechecked before ordering"
+      },
+      "unitPrice": 0.35,
+      "currency": "USD"
+    },
+    {
+      "partId": "part:p2-r1",
+      "referenceDesignators": ["R1"],
+      "quantity": 1,
+      "mpn": "RC0603FR-0710KL",
+      "manufacturer": "Yageo",
+      "supplier": "Digi-Key",
+      "sku": "13-RC0603FR-0710KLCT-ND",
+      "availability": "in-stock",
+      "lifecycle": "active",
+      "provenance": {
+        "source": "fixture-provided AVL",
+        "version": "phase1-golden-1",
+        "license": "BSD-3-Clause",
+        "contentHash": null,
+        "pendingReason": "AVL source is fixture-provided; distributor availability must be rechecked before ordering"
+      },
+      "unitPrice": 0.35,
+      "currency": "USD"
+    },
+    {
+      "partId": "part:p2-r2",
+      "referenceDesignators": ["R2"],
+      "quantity": 1,
+      "mpn": "RC0603FR-0710KL",
+      "manufacturer": "Yageo",
+      "supplier": "Digi-Key",
+      "sku": "13-RC0603FR-0710KLCT-ND",
+      "availability": "in-stock",
+      "lifecycle": "active",
+      "provenance": {
+        "source": "fixture-provided AVL",
+        "version": "phase1-golden-1",
+        "license": "BSD-3-Clause",
+        "contentHash": null,
+        "pendingReason": "AVL source is fixture-provided; distributor availability must be rechecked before ordering"
+      },
+      "unitPrice": 0.35,
+      "currency": "USD"
+    },
+    {
+      "partId": "part:p2-r3",
+      "referenceDesignators": ["R3"],
+      "quantity": 1,
+      "mpn": "RC0603FR-07330RL",
+      "manufacturer": "Yageo",
+      "supplier": "Digi-Key",
+      "sku": "13-RC0603FR-07330RLCT-ND",
+      "availability": "in-stock",
+      "lifecycle": "active",
+      "provenance": {
+        "source": "fixture-provided AVL",
+        "version": "phase1-golden-1",
+        "license": "BSD-3-Clause",
+        "contentHash": null,
+        "pendingReason": "AVL source is fixture-provided; distributor availability must be rechecked before ordering"
+      },
+      "unitPrice": 0.35,
+      "currency": "USD"
+    },
+    {
+      "partId": "part:p2-c1",
+      "referenceDesignators": ["C1"],
+      "quantity": 1,
+      "mpn": "CC0603ZRY5V8BB104",
+      "manufacturer": "Yageo",
+      "supplier": "Digi-Key",
+      "sku": "311-1347-1-ND",
+      "availability": "in-stock",
+      "lifecycle": "active",
+      "provenance": {
+        "source": "fixture-provided AVL",
+        "version": "phase1-golden-1",
+        "license": "BSD-3-Clause",
+        "contentHash": null,
+        "pendingReason": "AVL source is fixture-provided; distributor availability must be rechecked before ordering"
+      },
+      "unitPrice": 0.35,
+      "currency": "USD"
+    },
+    {
+      "partId": "part:p2-c2",
+      "referenceDesignators": ["C2"],
+      "quantity": 1,
+      "mpn": "CC0603ZRY5V8BB104",
+      "manufacturer": "Yageo",
+      "supplier": "Digi-Key",
+      "sku": "311-1347-1-ND",
+      "availability": "in-stock",
+      "lifecycle": "active",
+      "provenance": {
+        "source": "fixture-provided AVL",
+        "version": "phase1-golden-1",
+        "license": "BSD-3-Clause",
+        "contentHash": null,
+        "pendingReason": "AVL source is fixture-provided; distributor availability must be rechecked before ordering"
+      },
+      "unitPrice": 0.35,
+      "currency": "USD"
+    },
+    {
+      "partId": "part:p2-c3",
+      "referenceDesignators": ["C3"],
+      "quantity": 1,
+      "mpn": "CC0603ZRY5V8BB104",
+      "manufacturer": "Yageo",
+      "supplier": "Digi-Key",
+      "sku": "311-1347-1-ND",
+      "availability": "in-stock",
+      "lifecycle": "active",
+      "provenance": {
+        "source": "fixture-provided AVL",
+        "version": "phase1-golden-1",
+        "license": "BSD-3-Clause",
+        "contentHash": null,
+        "pendingReason": "AVL source is fixture-provided; distributor availability must be rechecked before ordering"
+      },
+      "unitPrice": 0.35,
+      "currency": "USD"
+    },
+    {
+      "partId": "part:p2-d1",
+      "referenceDesignators": ["D1"],
+      "quantity": 1,
+      "mpn": "LTST-C190KRKT",
+      "manufacturer": "Lite-On",
+      "supplier": "Digi-Key",
+      "sku": "160-1415-1-ND",
+      "availability": "in-stock",
+      "lifecycle": "active",
+      "provenance": {
+        "source": "fixture-provided AVL",
+        "version": "phase1-golden-1",
+        "license": "BSD-3-Clause",
+        "contentHash": null,
+        "pendingReason": "AVL source is fixture-provided; distributor availability must be rechecked before ordering"
+      },
+      "unitPrice": 0.35,
+      "currency": "USD"
+    },
+    {
+      "partId": "part:p2-sw1",
+      "referenceDesignators": ["SW1"],
+      "quantity": 1,
+      "mpn": "EVQ-P2K02Q",
+      "manufacturer": "Panasonic",
+      "supplier": "Digi-Key",
+      "sku": "P10880SCT-ND",
+      "availability": "in-stock",
+      "lifecycle": "active",
+      "provenance": {
+        "source": "fixture-provided AVL",
+        "version": "phase1-golden-1",
+        "license": "BSD-3-Clause",
+        "contentHash": null,
+        "pendingReason": "AVL source is fixture-provided; distributor availability must be rechecked before ordering"
+      },
+      "unitPrice": 0.35,
+      "currency": "USD"
+    },
+    {
+      "partId": "part:p2-sw2",
+      "referenceDesignators": ["SW2"],
+      "quantity": 1,
+      "mpn": "EVQ-P2K02Q",
+      "manufacturer": "Panasonic",
+      "supplier": "Digi-Key",
+      "sku": "P10880SCT-ND",
+      "availability": "in-stock",
+      "lifecycle": "active",
+      "provenance": {
+        "source": "fixture-provided AVL",
+        "version": "phase1-golden-1",
+        "license": "BSD-3-Clause",
+        "contentHash": null,
+        "pendingReason": "AVL source is fixture-provided; distributor availability must be rechecked before ordering"
+      },
+      "unitPrice": 0.35,
+      "currency": "USD"
+    },
+    {
+      "partId": "part:p2-r6",
+      "referenceDesignators": ["R6"],
+      "quantity": 1,
+      "mpn": "RC0603FR-075K1L",
+      "manufacturer": "Yageo",
+      "supplier": "Digi-Key",
+      "sku": "13-RC0603FR-075K1LCT-ND",
+      "availability": "in-stock",
+      "lifecycle": "active",
+      "provenance": {
+        "source": "fixture-provided AVL",
+        "version": "phase1-golden-1",
+        "license": "BSD-3-Clause",
+        "contentHash": null,
+        "pendingReason": "fixture-owned provenance snapshot is pending; source is controlled by this fixture"
+      },
+      "unitPrice": 0.35,
+      "currency": "USD"
+    },
+    {
+      "partId": "part:p2-r7",
+      "referenceDesignators": ["R7"],
+      "quantity": 1,
+      "mpn": "RC0603FR-075K1L",
+      "manufacturer": "Yageo",
+      "supplier": "Digi-Key",
+      "sku": "13-RC0603FR-075K1LCT-ND",
+      "availability": "in-stock",
+      "lifecycle": "active",
+      "provenance": {
+        "source": "fixture-provided AVL",
+        "version": "phase1-golden-1",
+        "license": "BSD-3-Clause",
+        "contentHash": null,
+        "pendingReason": "fixture-owned provenance snapshot is pending; source is controlled by this fixture"
+      },
+      "unitPrice": 0.35,
+      "currency": "USD"
+    },
+    {
+      "partId": "part:p2-c4",
+      "referenceDesignators": ["C4"],
+      "quantity": 1,
+      "mpn": "CL21A106KOQNNNE",
+      "manufacturer": "Samsung Electro-Mechanics",
+      "supplier": "Digi-Key",
+      "sku": "1276-CL21A106KOQNNNE-ND",
+      "availability": "in-stock",
+      "lifecycle": "active",
+      "provenance": {
+        "source": "fixture-provided AVL",
+        "version": "phase1-golden-1",
+        "license": "BSD-3-Clause",
+        "contentHash": null,
+        "pendingReason": "fixture-owned provenance snapshot is pending; source is controlled by this fixture"
+      },
+      "unitPrice": 0.35,
+      "currency": "USD"
+    },
+    {
+      "partId": "part:p2-c5",
+      "referenceDesignators": ["C5"],
+      "quantity": 1,
+      "mpn": "CL21A226MQQNNNE",
+      "manufacturer": "Samsung Electro-Mechanics",
+      "supplier": "Digi-Key",
+      "sku": "1276-CL21A226MQQNNNE-ND",
+      "availability": "in-stock",
+      "lifecycle": "active",
+      "provenance": {
+        "source": "fixture-provided AVL",
+        "version": "phase1-golden-1",
+        "license": "BSD-3-Clause",
+        "contentHash": null,
+        "pendingReason": "fixture-owned provenance snapshot is pending; source is controlled by this fixture"
+      },
+      "unitPrice": 0.35,
+      "currency": "USD"
+    },
+    {
+      "partId": "part:p2-r5",
+      "referenceDesignators": ["R5"],
+      "quantity": 1,
+      "mpn": "RC0603FR-0710KL",
+      "manufacturer": "Yageo",
+      "supplier": "Digi-Key",
+      "sku": "13-RC0603FR-0710KLCT-ND",
+      "availability": "in-stock",
+      "lifecycle": "active",
+      "provenance": {
+        "source": "fixture",
+        "version": "phase1-golden-1",
+        "license": "BSD-3-Clause",
+        "contentHash": null,
+        "pendingReason": "fixture-owned provenance snapshot is pending; source is controlled by this fixture"
+      },
+      "unitPrice": 0.35,
+      "currency": "USD"
+    },
+    {
+      "partId": "part:p2-r8",
+      "referenceDesignators": ["R8"],
+      "quantity": 1,
+      "mpn": "RC0603FR-074K7L",
+      "manufacturer": "Yageo",
+      "supplier": "Digi-Key",
+      "sku": "13-RC0603FR-074K7LCT-ND",
+      "availability": "in-stock",
+      "lifecycle": "active",
+      "provenance": {
+        "source": "fixture-provided AVL",
+        "version": "phase1-golden-1",
+        "license": "BSD-3-Clause",
+        "contentHash": null,
+        "pendingReason": "AVL source is fixture-provided; distributor availability must be rechecked before ordering"
+      },
+      "unitPrice": 0.35,
+      "currency": "USD"
+    },
+    {
+      "partId": "part:p2-r9",
+      "referenceDesignators": ["R9"],
+      "quantity": 1,
+      "mpn": "RC0603FR-074K7L",
+      "manufacturer": "Yageo",
+      "supplier": "Digi-Key",
+      "sku": "13-RC0603FR-074K7LCT-ND",
+      "availability": "in-stock",
+      "lifecycle": "active",
+      "provenance": {
+        "source": "fixture-provided AVL",
+        "version": "phase1-golden-1",
+        "license": "BSD-3-Clause",
+        "contentHash": null,
+        "pendingReason": "AVL source is fixture-provided; distributor availability must be rechecked before ordering"
+      },
+      "unitPrice": 0.35,
+      "currency": "USD"
+    }
+  ],
+  "orderConstraints": {
+    "budgetCap": 50,
+    "currency": "USD",
+    "fabQuote": {
+      "description": "placeholder 2-layer 60x45mm PCB fabrication",
+      "unitPrice": 12,
+      "currency": "USD",
+      "provenance": {
+        "source": "fixture-provided quote",
+        "version": "phase1-golden-1",
+        "license": "CC0-1.0",
+        "contentHash": null,
+        "pendingReason": "placeholder quote is fixture-provided and must be refreshed before ordering"
+      }
+    }
+  },
+  "rationales": [
+    {
+      "id": "rationale:board-and-supply",
+      "origin": "human",
+      "decision": "60x45mm 2-layer board fed from a single 5V USB-C supply with a 500mA budget, so the golden task stays routable with the pinned Freerouting profile.",
+      "appliesTo": ["requirement:phase3-prototype-2"],
+      "alternativesConsidered": [
+        {
+          "option": "50x40mm outline",
+          "rejectedBecause": "left no routing headroom around the ESP32 antenna keepout"
+        },
+        {
+          "option": "4-layer stackup",
+          "rejectedBecause": "raises fabrication cost above the order budget cap for a demo board"
+        }
+      ],
+      "assumptions": [
+        {
+          "statement": "Total load stays below the 500mA supplied by a USB-C sink with Rd termination.",
+          "status": "confirmed",
+          "evidenceLink": "gate:electrical-lint"
+        }
+      ],
+      "tuningNeeded": false,
+      "provenance": {
+        "source": "fixture-owned design rationale",
+        "version": "phase1-golden-3",
+        "license": "BSD-3-Clause",
+        "contentHash": null,
+        "pendingReason": "rationale is fixture-owned and is not verification evidence"
+      },
+      "risks": [
+        {
+          "description": "The ESP32 antenna courtyard overhangs the board edge.",
+          "severity": "medium",
+          "mitigation": "Antenna region is declared as a routing keepout and checked by DRC."
+        }
+      ]
+    },
+    {
+      "id": "rationale:usb-power-input",
+      "origin": "human",
+      "decision": "USB-C receptacle as a 5V sink with 5.1k Rd on both CC pins and a 10uF bulk capacitor.",
+      "appliesTo": ["block:power-input", "part:p2-j1", "part:p2-r6", "part:p2-r7", "part:p2-c4"],
+      "alternativesConsidered": [
+        {
+          "option": "USB micro-B",
+          "rejectedBecause": "obsolete connector and no CC-based current negotiation"
+        },
+        {
+          "option": "Single CC resistor",
+          "rejectedBecause": "breaks reversible cable orientation"
+        }
+      ],
+      "assumptions": [
+        {
+          "statement": "A 5.1k Rd on each CC pin advertises the default USB Type-C sink current.",
+          "status": "confirmed",
+          "evidenceLink": "gate:electrical-lint"
+        }
+      ],
+      "tuningNeeded": false,
+      "provenance": {
+        "source": "fixture-owned design rationale",
+        "version": "phase1-golden-3",
+        "license": "BSD-3-Clause",
+        "contentHash": null,
+        "pendingReason": "rationale is fixture-owned and is not verification evidence"
+      }
+    },
+    {
+      "id": "rationale:3v3-regulation",
+      "origin": "human",
+      "decision": "AMS1117-3.3 linear regulator with 10uF input and 22uF output bulk capacitance.",
+      "appliesTo": ["block:power-input", "part:p2-u3", "part:p2-c5", "part:p2-c3"],
+      "alternativesConsidered": [
+        {
+          "option": "Switching regulator",
+          "rejectedBecause": "adds SI and EMC verification beyond the Phase 2 boundary"
+        },
+        {
+          "option": "LDO without bulk output capacitor",
+          "rejectedBecause": "the datasheet requires output bulk capacitance for stability"
+        }
+      ],
+      "assumptions": [
+        {
+          "statement": "Regulator dropout is acceptable because the ESP32 peak current is supplied from bulk capacitance.",
+          "status": "unconfirmed",
+          "testItemId": "test:regulator-output-voltage"
+        }
+      ],
+      "tuningNeeded": false,
+      "provenance": {
+        "source": "fixture-owned design rationale",
+        "version": "phase1-golden-3",
+        "license": "BSD-3-Clause",
+        "contentHash": null,
+        "pendingReason": "rationale is fixture-owned and is not verification evidence"
+      },
+      "risks": [
+        {
+          "description": "Linear regulation dissipates the 5V to 3.3V difference as heat.",
+          "severity": "low",
+          "mitigation": "SOT-223 package with copper pour; thermal analysis is out of the Phase 2 scope."
+        }
+      ]
+    },
+    {
+      "id": "rationale:esp32-compute",
+      "origin": "human",
+      "decision": "ESP32-WROOM-32E module with 100nF decoupling on each supply pin, so RF and firmware qualification stay inside the module vendor's scope.",
+      "appliesTo": ["block:sensor-bridge", "part:p2-u1", "part:p2-c1", "part:p2-c2"],
+      "alternativesConsidered": [
+        {
+          "option": "Bare ESP32 chip",
+          "rejectedBecause": "requires RF matching and certification work outside Phase 2"
+        },
+        {
+          "option": "No local decoupling",
+          "rejectedBecause": "leaves supply transients unbounded at the module pins"
+        }
+      ],
+      "assumptions": [
+        {
+          "statement": "Module-level certification covers the RF section, so the board only supplies power and IO.",
+          "status": "confirmed",
+          "evidenceLink": "provenance:esp32-wroom-32e-datasheet"
+        }
+      ],
+      "tuningNeeded": false,
+      "provenance": {
+        "source": "fixture-owned design rationale",
+        "version": "phase1-golden-3",
+        "license": "BSD-3-Clause",
+        "contentHash": null,
+        "pendingReason": "rationale is fixture-owned and is not verification evidence"
+      }
+    },
+    {
+      "id": "rationale:i2c-sensor",
+      "origin": "human",
+      "decision": "BME280 on I2C with 4.7k pull-ups on SDA and SCL and SDO tied low through 10k to fix the address.",
+      "appliesTo": ["block:sensor-bridge", "part:p2-u2", "part:p2-r8", "part:p2-r9", "part:p2-r5"],
+      "alternativesConsidered": [
+        {
+          "option": "Rely on internal pull-ups",
+          "rejectedBecause": "ESP32 and BME280 do not provide I2C bus pull-ups, so the bus would not settle"
+        },
+        {
+          "option": "SPI interface",
+          "rejectedBecause": "uses more IO than the header budget allows"
+        }
+      ],
+      "assumptions": [
+        {
+          "statement": "4.7k pull-ups keep the bus inside the 1k-10k window at 100kHz standard mode.",
+          "status": "confirmed",
+          "evidenceLink": "gate:electrical-lint"
+        },
+        {
+          "statement": "Bus rise time meets the I2C specification with the assembled trace capacitance.",
+          "status": "unconfirmed",
+          "testItemId": "test:i2c-rise-time"
+        }
+      ],
+      "tuningNeeded": false,
+      "provenance": {
+        "source": "fixture-owned design rationale",
+        "version": "phase1-golden-3",
+        "license": "BSD-3-Clause",
+        "contentHash": null,
+        "pendingReason": "rationale is fixture-owned and is not verification evidence"
+      }
+    },
+    {
+      "id": "rationale:uart-header",
+      "origin": "human",
+      "decision": "2.54mm 1x06 header exposing UART, 3V3 and GND for bring-up and flashing.",
+      "appliesTo": ["block:relay-output", "part:p2-j2"],
+      "alternativesConsidered": [
+        {
+          "option": "On-board USB-UART bridge",
+          "rejectedBecause": "adds a component and firmware dependency not needed for the golden task"
+        },
+        {
+          "option": "Test pads only",
+          "rejectedBecause": "cannot be probed with a standard serial cable during bring-up"
+        }
+      ],
+      "assumptions": [
+        {
+          "statement": "An external USB-UART adapter supplies the flashing signals.",
+          "status": "confirmed",
+          "evidenceLink": "requirement:phase1-golden-esp32"
+        }
+      ],
+      "tuningNeeded": false,
+      "provenance": {
+        "source": "fixture-owned design rationale",
+        "version": "phase1-golden-3",
+        "license": "BSD-3-Clause",
+        "contentHash": null,
+        "pendingReason": "rationale is fixture-owned and is not verification evidence"
+      }
+    },
+    {
+      "id": "rationale:status-led",
+      "origin": "human",
+      "decision": "Single red status LED driven from 3V3 through a 330 ohm series resistor, about 3.9mA.",
+      "appliesTo": ["block:status-indicator", "part:p2-d1", "part:p2-r3"],
+      "alternativesConsidered": [
+        {
+          "option": "No series resistor",
+          "rejectedBecause": "exceeds the LED forward current rating"
+        },
+        {
+          "option": "22 ohm series resistor",
+          "rejectedBecause": "drives about 59mA and destroys the LED"
+        }
+      ],
+      "assumptions": [
+        {
+          "statement": "3.9mA is visible enough for a status indicator in indoor light.",
+          "status": "unconfirmed",
+          "testItemId": "test:status-led-visibility"
+        }
+      ],
+      "tuningNeeded": true,
+      "provenance": {
+        "source": "fixture-owned design rationale",
+        "version": "phase1-golden-3",
+        "license": "BSD-3-Clause",
+        "contentHash": null,
+        "pendingReason": "rationale is fixture-owned and is not verification evidence"
+      }
+    },
+    {
+      "id": "rationale:boot-strapping",
+      "origin": "human",
+      "decision": "EN and IO0 pulled up through 10k with tactile switches to ground for reset and download mode.",
+      "appliesTo": [
+        "block:sensor-bridge",
+        "part:p2-r1",
+        "part:p2-r2",
+        "part:p2-sw1",
+        "part:p2-sw2"
+      ],
+      "alternativesConsidered": [
+        {
+          "option": "Auto-reset transistor circuit",
+          "rejectedBecause": "requires the USB-UART bridge that this board does not carry"
+        },
+        {
+          "option": "No pull-ups",
+          "rejectedBecause": "leaves the strapping pins floating and the boot mode undefined"
+        }
+      ],
+      "assumptions": [
+        {
+          "statement": "10k pull-ups hold the strapping pins high while the switches pull them low.",
+          "status": "confirmed",
+          "evidenceLink": "gate:electrical-lint"
+        }
+      ],
+      "tuningNeeded": false,
+      "provenance": {
+        "source": "fixture-owned design rationale",
+        "version": "phase1-golden-3",
+        "license": "BSD-3-Clause",
+        "contentHash": null,
+        "pendingReason": "rationale is fixture-owned and is not verification evidence"
+      }
+    }
+  ]
+}

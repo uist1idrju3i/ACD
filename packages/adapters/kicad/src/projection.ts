@@ -505,10 +505,23 @@ const renderGoldenSchematic = (fixture: Phase1Fixture): string => {
     });
   });
   const flagNets = ["+5V", "GND"];
+  const powerRegulator = fixture.parts.find((part) => part.reference === "U3")?.id;
+  const controller = fixture.parts.find((part) => part.reference === "U1")?.id;
+  if (!powerRegulator || !controller) {
+    throw new KicadProjectionError("golden schematic power components U3/U1 are missing");
+  }
   const flagPins: Array<[string, string]> = [
-    ["part:u3", "3"],
-    ["part:u1", "GND"],
+    [powerRegulator, "3"],
+    [controller, "GND"],
   ];
+  flagPins.forEach(([partId, pin], index) => {
+    const net = fixture.nets.find((candidate) => candidate.name === flagNets[index]);
+    if (!net?.pins.some((candidate) => candidate.partId === partId && candidate.pin === pin)) {
+      throw new KicadProjectionError(
+        `golden schematic flag pin ${partId}:${pin} is not on net ${flagNets[index]}`,
+      );
+    }
+  });
   const flagCoordinates = flagPins.map((entry, index) => {
     if (!entry) return [schematicGrid(70 + index * 35), schematicGrid(35)] as [number, number];
     const [partId, pin] = entry;

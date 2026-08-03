@@ -138,12 +138,13 @@ Phase 5、自働発注はPhase 6の範囲であり、本フェーズでは扱い
 
 ### WP5：2次試作のgolden taskと完了条件の測定
 
-**状態：未着手。**
+**状態：実装済み。**
 
 **作業**
 
-- 1次試作（`fixtures/phase1/golden-esp32.json`）と部品・footprintを共有する2次試作の
-  fixtureを追加し、1次試作で受けたDFM指摘と同種の欠陥を含み得る設計を対象にする。
+- 1次試作（`fixtures/phase1/golden-esp32.json`）と影響footprintを共有する、別トポロジーの
+  2次試作（`fixtures/phase1/prototype-2.json`）を追加し、1次試作で受けたDFM指摘と同種の
+  欠陥を検出する。
 - 知識ループなしの対照run（指摘が再発する）と、知識ループありのrun（自動回避される）を
   同一fixtureで比較できる回帰を作る。
 - 結果を`knowledge-loop.json`としてEvidence化する。
@@ -153,6 +154,13 @@ Phase 5、自働発注はPhase 6の範囲であり、本フェーズでは扱い
 - 知識ループなしのrunでは1次試作と同じ指摘が再現する。
 - 知識ループありのrunでは人手介入なしに回避され、回避根拠が知識版へ辿れる。
 - 両runが決定論的である。
+
+Gate 22では1次試作設計へのKnowledgeItem適用とlibrary revisionの追跡可能性を記録する。
+2次試作のcontrolとknowledge-enabledの対照測定は独立した
+`scripts/phase3-knowledge-loop.mts`が担当する。controlでは公式library revisionを使用し、
+target boardから同じfab-profile rule pathでmask-sliver findingを導出する。profileの最小値は
+0.30mmで、USB-C fine-pitch pad間の実測値を使用する。knowledge-enabledではadopted
+KnowledgeItemとWP3 overlay revisionを適用し、同findingが0件になることを検証する。
 
 ### WP6：電子部品ライブラリの本格整備
 
