@@ -124,9 +124,21 @@ export const recordKnowledgeApplications = (
   result: KnowledgeApplicationResult,
   applications: Array<{ knowledgeId: string; libraryRevision?: string }>,
 ): KnowledgeApplicationResult => {
+  /**
+   * Knowledge applications are keyed by knowledgeId; one application is allowed
+   * for each evaluated knowledge item in a result.
+   */
   const byKnowledgeId = new Map(
     applications.map((application) => [application.knowledgeId, application]),
   );
+  for (const application of applications) {
+    if (!result.decisions.some((decision) => decision.knowledgeId === application.knowledgeId)) {
+      throw new GraphCoreError(
+        "reference-integrity",
+        `knowledge application references unknown knowledge: ${application.knowledgeId}`,
+      );
+    }
+  }
   const decisions = result.decisions.map((decision) => {
     const application = byKnowledgeId.get(decision.knowledgeId);
     if (
