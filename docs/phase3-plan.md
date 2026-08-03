@@ -179,6 +179,8 @@ KnowledgeItemとWP3 overlay revisionを適用し、同findingが0件になるこ
   推測で補完しない。
 - 部品エントリにdatasheet参照、footprint候補、既知の注意（実装上の制約、修正履歴）を
   出所付きで持たせる。
+- `verified`のdatasheet参照・implementation noteは`provenance.contentHash`を必須とし、
+  `contentHash: null`のエントリは`unknown`として`pendingReason`付きで保持する。
 - ライセンス帰属（CC-BY-SA-4.0-with-exception）とNOTICEの範囲を拡張分にも維持する。
 
 **受入基準**

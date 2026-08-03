@@ -7,6 +7,7 @@ import {
   eventSchemaPath,
   fabFeedbackSchemaPath,
   libraryPatchSchemaPath,
+  componentLibrarySchemaPath,
   patchSchemaPath,
   phase1FixtureSchemaPath,
 } from "./paths.js";
@@ -18,7 +19,8 @@ export type SchemaName =
   | "fab-feedback"
   | "error-taxonomy"
   | "phase1-fixture"
-  | "library-patch";
+  | "library-patch"
+  | "component-library";
 
 const paths: Record<SchemaName, string> = {
   "design-graph": designGraphSchemaPath,
@@ -28,6 +30,7 @@ const paths: Record<SchemaName, string> = {
   "error-taxonomy": errorTaxonomySchemaPath,
   "phase1-fixture": phase1FixtureSchemaPath,
   "library-patch": libraryPatchSchemaPath,
+  "component-library": componentLibrarySchemaPath,
 };
 
 export const createSchemaValidator = (): Ajv2020 => {
