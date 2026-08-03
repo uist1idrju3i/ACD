@@ -48,7 +48,6 @@ import {
   type KnowledgeItem,
   type FixturePatchOperation,
   type RecordedProposal,
-  compareIds,
 } from "../packages/graph-core/src/index.js";
 import {
   FixtureFabFeedbackReader,
