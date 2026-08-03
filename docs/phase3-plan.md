@@ -53,7 +53,7 @@ Phase 5、自働発注はPhase 6の範囲であり、本フェーズでは扱い
 
 ### WP1：fabフィードバックの構造化取り込み（gate 19）
 
-**状態：実装済み。** gate契約はgate 19（`gate:fab-feedback-intake`、`runsAfter: gate:spice`）。
+**状態：未着手。** gate契約はgate 19（`gate:fab-feedback-intake`、`runsAfter: gate:spice`）。
 
 **作業**
 
