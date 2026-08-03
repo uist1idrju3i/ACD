@@ -6,4 +6,4 @@ export * from "./netlist.js";
 export * from "./placement.js";
 export * from "./errors.js";
 export * from "./library-patch.js";
-export { parseFootprintSource } from "./library.js";
+export { parseAllFootprintSources, parseFootprintSource } from "./library.js";
