@@ -1,0 +1,125 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://acd.example.invalid/schemas/fab-feedback.schema.json",
+  "title": "ACD Fab Feedback Report",
+  "type": "object",
+  "required": [
+    "schemaVersion",
+    "reportId",
+    "fabJobId",
+    "fabProfileId",
+    "source",
+    "target",
+    "rawReport",
+    "rawFindings"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "schemaVersion": { "type": "string", "const": "0.1.0-draft" },
+    "reportId": { "type": "string", "pattern": "^[A-Za-z][A-Za-z0-9._:-]*$" },
+    "fabJobId": { "type": "string", "minLength": 1 },
+    "fabProfileId": { "type": "string", "minLength": 1 },
+    "source": {
+      "type": "object",
+      "required": ["kind", "locator", "contentHash", "fixtureDerived"],
+      "additionalProperties": false,
+      "properties": {
+        "kind": { "enum": ["fixture", "live"] },
+        "locator": { "type": "string", "minLength": 1 },
+        "contentHash": {
+          "type": "string",
+          "pattern": "^sha256:[0-9a-f]{64}$",
+          "description": "Canonical hash of the fetched artifact named by locator; for fixtures, hash the JSON with this field blank."
+        },
+        "fixtureDerived": { "type": "boolean" },
+        "fixtureId": { "type": "string", "minLength": 1 }
+      },
+      "allOf": [
+        {
+          "if": { "properties": { "kind": { "const": "fixture" } } },
+          "then": {
+            "required": ["fixtureId"],
+            "properties": { "fixtureDerived": { "const": true } }
+          }
+        },
+        {
+          "if": { "properties": { "kind": { "const": "live" } } },
+          "then": { "properties": { "fixtureDerived": { "const": false } } }
+        }
+      ]
+    },
+    "target": {
+      "type": "object",
+      "required": ["projectId", "designRevision"],
+      "additionalProperties": false,
+      "properties": {
+        "projectId": { "type": "string", "pattern": "^[A-Za-z][A-Za-z0-9._:-]*$" },
+        "designRevision": { "type": "string", "minLength": 1 }
+      }
+    },
+    "rawReport": {
+      "type": "object",
+      "required": ["contentType", "content", "contentHash"],
+      "additionalProperties": false,
+      "properties": {
+        "contentType": { "type": "string", "minLength": 1 },
+        "content": { "type": "string" },
+        "contentHash": {
+          "type": "string",
+          "pattern": "^sha256:[0-9a-f]{64}$",
+          "description": "SHA-256 of the report body in content."
+        }
+      }
+    },
+    "rawFindings": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "$ref": "#/$defs/rawFinding" }
+    },
+    "derivation": {
+      "type": "object",
+      "required": ["method", "version", "inputHash", "outputHash"],
+      "additionalProperties": false,
+      "properties": {
+        "method": { "type": "string", "minLength": 1 },
+        "version": { "type": "string", "minLength": 1 },
+        "inputHash": { "type": "string", "pattern": "^sha256:[0-9a-f]{64}$" },
+        "outputHash": { "type": "string", "pattern": "^sha256:[0-9a-f]{64}$" }
+      }
+    }
+  },
+  "$defs": {
+    "reference": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "partId": { "type": "string", "minLength": 1 },
+        "netId": { "type": "string", "minLength": 1 },
+        "footprintId": { "type": "string", "minLength": 1 },
+        "coordinate": {
+          "type": "object",
+          "required": ["xMm", "yMm"],
+          "additionalProperties": false,
+          "properties": {
+            "xMm": { "type": "number" },
+            "yMm": { "type": "number" }
+          }
+        },
+        "ruleId": { "type": "string", "minLength": 1 }
+      }
+    },
+    "rawFinding": {
+      "type": "object",
+      "required": ["findingId", "originalText", "severityReported", "references"],
+      "additionalProperties": false,
+      "properties": {
+        "findingId": { "type": "string", "minLength": 1 },
+        "originalText": { "type": "string", "minLength": 1 },
+        "severityReported": {
+          "enum": ["info", "low", "medium", "high", "critical", "unknown"]
+        },
+        "references": { "$ref": "#/$defs/reference" }
+      }
+    }
+  }
+}

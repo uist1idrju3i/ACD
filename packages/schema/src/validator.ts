@@ -5,16 +5,24 @@ import {
   designGraphSchemaPath,
   errorTaxonomySchemaPath,
   eventSchemaPath,
+  fabFeedbackSchemaPath,
   patchSchemaPath,
   phase1FixtureSchemaPath,
 } from "./paths.js";
 
-export type SchemaName = "design-graph" | "patch" | "event" | "error-taxonomy" | "phase1-fixture";
+export type SchemaName =
+  | "design-graph"
+  | "patch"
+  | "event"
+  | "fab-feedback"
+  | "error-taxonomy"
+  | "phase1-fixture";
 
 const paths: Record<SchemaName, string> = {
   "design-graph": designGraphSchemaPath,
   patch: patchSchemaPath,
   event: eventSchemaPath,
+  "fab-feedback": fabFeedbackSchemaPath,
   "error-taxonomy": errorTaxonomySchemaPath,
   "phase1-fixture": phase1FixtureSchemaPath,
 };

@@ -17,6 +17,7 @@ import {
 import {
   applyFixturePatch,
   buildTestPlan,
+  createFabFeedbackReceivedEvent,
   evaluateDesignRationale,
   evaluateFixtureGates,
   failedFindings,
@@ -24,12 +25,19 @@ import {
   recordedProposer,
   repairLoopEvidence,
   runRepairLoop,
+  InMemoryEventLog,
   unresolvedFindings,
   unresolvedRationaleFindings,
   unresolvedTestPlanFindings,
   type FixturePatchOperation,
   type RecordedProposal,
 } from "../packages/graph-core/src/index.js";
+import {
+  FixtureFabFeedbackReader,
+  fabFeedbackUnknownError,
+  intakeFabFeedback,
+  referenceIndexFromPhase1Fixture,
+} from "../packages/adapters/fab-feedback/src/index.js";
 import {
   gateByOrder,
   loadGateMatrix,
@@ -328,6 +336,66 @@ try {
     rulesEvaluated: spice.rulesEvaluated.length,
     resultsHash: hash(JSON.stringify(spiceEvidence)),
     artifact: "spice/results.json",
+  });
+
+  enter(19);
+  const fabFeedbackReader = new FixtureFabFeedbackReader(
+    join(root, "fixtures/phase3/fab-report-prototype-1.json"),
+  );
+  const fabFeedbackReport = await fabFeedbackReader.read();
+  const fabFeedback = intakeFabFeedback(
+    fabFeedbackReport,
+    referenceIndexFromPhase1Fixture(fixture),
+  );
+  const fabFeedbackUnknown =
+    fabFeedback.verdict === "unknown"
+      ? fabFeedbackUnknownError(fabFeedback.evidence.value.unknownFindingIds)
+      : undefined;
+  const fabFeedbackEventLog = new InMemoryEventLog();
+  await fabFeedbackEventLog.append(
+    createFabFeedbackReceivedEvent({
+      eventId: "event:fab-feedback:prototype-1-jlcpcb-001",
+      occurredAt: "2026-01-01T00:00:00.000Z",
+      actor: "fixture:fab-report-prototype-1-jlcpcb",
+      projectId: fixture.fixtureId,
+      baseRevision: 0,
+      resultRevision: 0,
+      report: fabFeedbackReport,
+      intake: fabFeedback,
+    }),
+  );
+  await writeFile(
+    join(artifactRoot, "fab-feedback.json"),
+    `${JSON.stringify(
+      {
+        report: fabFeedbackReport,
+        intake: fabFeedback,
+        ...(fabFeedbackUnknown
+          ? {
+              unknown: {
+                code: fabFeedbackUnknown.code,
+                severity: fabFeedbackUnknown.severity,
+                action: fabFeedbackUnknown.context.action,
+                findingIds: fabFeedbackUnknown.context.findingIds,
+              },
+            }
+          : {}),
+        events: await fabFeedbackEventLog.readAll(),
+      },
+      null,
+      2,
+    )}\n`,
+  );
+  if (fabFeedback.verdict === "unknown") {
+    throw fabFeedbackUnknownError(fabFeedback.evidence.value.unknownFindingIds);
+  }
+  pass(19, {
+    reportId: fabFeedbackReport.reportId,
+    fixtureDerived: fabFeedbackReport.source.fixtureDerived,
+    findings: fabFeedback.findings.length,
+    derivationHash: fabFeedback.derivationHash,
+    evidence: fabFeedback.evidence,
+    artifact: "fab-feedback.json",
   });
 
   enter(6);

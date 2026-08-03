@@ -1,0 +1,58 @@
+{
+  "schemaVersion": "0.1.0-draft",
+  "reportId": "fab-report:prototype-1-negative",
+  "fabJobId": "job:prototype-1-negative",
+  "fabProfileId": "fab:jlcpcb-class-2layer",
+  "source": {
+    "kind": "fixture",
+    "locator": "fixtures/phase3/fab-report-negative.json",
+    "contentHash": "sha256:8addea4f471b8803a8c9b2c3e85b6d1023f3f21405164b36327f60c3f962b0b5",
+    "fixtureDerived": true,
+    "fixtureId": "fixture:fab-report-negative"
+  },
+  "target": {
+    "projectId": "fixture:phase1-golden-esp32",
+    "designRevision": "phase1-golden-2"
+  },
+  "rawReport": {
+    "contentType": "text/plain",
+    "content": "JLCPCB DFM REPORT - FIXTURE NEGATIVE CASES ONLY\nProject: prototype-1\n\n[NEG-UNKNOWN-REF] HIGH  Unknown component reference Z99 cannot be located.\nReference: Z99\n\n[NEG-DUP-ID] MEDIUM  Pad geometry warning at R1.\nReference: R1 / rule pad-geometry\n[NEG-DUP-ID] MEDIUM  Pad geometry warning repeated with the same finding ID.\nReference: R1 / rule pad-geometry\n\n[NEG-UNKNOWN-TEXT] LOW  Manufacturing says please check this thing somehow.\nReference: R1\n\nThis recorded text reproduces failure inputs and is not real fab evidence.",
+    "contentHash": "sha256:6003b233497a0b2eb5239f3bc7903b7cc00f861603a2590c0a63b2fd181f7618"
+  },
+  "rawFindings": [
+    {
+      "findingId": "NEG-UNKNOWN-REF",
+      "originalText": "Unknown component reference Z99 cannot be located.",
+      "severityReported": "high",
+      "references": {
+        "partId": "part:z99"
+      }
+    },
+    {
+      "findingId": "NEG-DUP-ID",
+      "originalText": "Pad geometry warning at R1.",
+      "severityReported": "medium",
+      "references": {
+        "partId": "part:r1",
+        "ruleId": "pad-geometry"
+      }
+    },
+    {
+      "findingId": "NEG-DUP-ID",
+      "originalText": "Pad geometry warning at R1.",
+      "severityReported": "medium",
+      "references": {
+        "partId": "part:r1",
+        "ruleId": "pad-geometry"
+      }
+    },
+    {
+      "findingId": "NEG-UNKNOWN-TEXT",
+      "originalText": "Manufacturing says please check this thing somehow.",
+      "severityReported": "unknown",
+      "references": {
+        "partId": "part:r1"
+      }
+    }
+  ]
+}

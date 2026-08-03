@@ -6,6 +6,8 @@ import {
   errorTaxonomyDataPath,
   errorTaxonomySchemaPath,
   eventSchemaPath,
+  fabFeedbackSamplePath,
+  fabFeedbackSchemaPath,
   gateMatrixDataPath,
   gateMatrixSchemaPath,
   gatesDocPath,
@@ -113,6 +115,27 @@ if (!physicalEvidenceValidator(physicalEvidenceSample)) {
 process.stdout.write(
   "validated physical evidence: fixtures/phase1/physical-evidence-pending.json\n",
 );
+
+const fabFeedbackValidator = await loadValidator(fabFeedbackSchemaPath);
+for (const [samplePath, label] of [
+  [fabFeedbackSamplePath, "fixtures/phase3/fab-report-prototype-1.json"],
+  [
+    repositoryRoot + "/fixtures/phase3/fab-report-negative.json",
+    "fixtures/phase3/fab-report-negative.json",
+  ],
+  [
+    repositoryRoot + "/fixtures/phase3/fab-report-unification.json",
+    "fixtures/phase3/fab-report-unification.json",
+  ],
+] as const) {
+  const sample = JSON.parse(await readFile(samplePath, "utf8")) as unknown;
+  if (!fabFeedbackValidator(sample)) {
+    throw new Error(
+      `fab feedback sample is invalid: ${formatValidationErrors(fabFeedbackValidator.errors)}`,
+    );
+  }
+  process.stdout.write(`validated fab feedback: ${label}\n`);
+}
 
 const phase1FixtureValidator = await loadValidator(phase1FixtureSchemaPath);
 for (const [fixturePath, label] of [

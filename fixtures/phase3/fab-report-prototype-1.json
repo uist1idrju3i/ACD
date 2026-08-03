@@ -1,0 +1,61 @@
+{
+  "schemaVersion": "0.1.0-draft",
+  "reportId": "fab-report:prototype-1-jlcpcb-001",
+  "fabJobId": "job:prototype-1-jlcpcb-001",
+  "fabProfileId": "fab:jlcpcb-class-2layer",
+  "source": {
+    "kind": "fixture",
+    "locator": "fixtures/phase3/fab-report-prototype-1.json",
+    "contentHash": "sha256:e662cea70096ccc451c7831a00bc0f292718ff57d1119215b754a8dbe5a6cae5",
+    "fixtureDerived": true,
+    "fixtureId": "fixture:fab-report-prototype-1-jlcpcb"
+  },
+  "target": {
+    "projectId": "fixture:phase1-golden-esp32",
+    "designRevision": "phase1-golden-2"
+  },
+  "rawReport": {
+    "contentType": "text/plain",
+    "content": "JLCPCB DFM REPORT - FIXTURE REPRODUCTION ONLY\nProject: prototype-1\nJob: job:prototype-1-jlcpcb-001\nProfile: 2 Layer / HASL / standard mask\n\n[DFM-001] HIGH  Solder mask sliver below minimum near R1 pad 1.\nReference: R1 / footprint Resistor_SMD:R_0603_1608Metric / rule mask-sliver-min\n\n[DFM-002] MEDIUM  Copper clearance below profile minimum on net:3v3 near U2.\nReference: U2 / net:3v3 / rule copper-clearance-min\n\n[DFM-003] LOW  Silkscreen reference overlaps the board edge near J2.\nReference: J2 / rule silkscreen-edge\n\nThis recorded text reproduces a JLCPCB-class report format and is not real fab evidence.",
+    "contentHash": "sha256:4d04e6a9d784dedbe73dce2c7cc1334ffa0e80be0372f84d467d380d6b8b06b5"
+  },
+  "rawFindings": [
+    {
+      "findingId": "JLC-DFM-001",
+      "originalText": "Solder mask sliver below minimum near R1 pad 1.",
+      "severityReported": "high",
+      "references": {
+        "partId": "part:r1",
+        "footprintId": "footprint:Resistor_SMD:R_0603_1608Metric",
+        "coordinate": {
+          "xMm": 21.2,
+          "yMm": 14.8
+        },
+        "ruleId": "mask-sliver-min"
+      }
+    },
+    {
+      "findingId": "JLC-DFM-002",
+      "originalText": "Copper clearance below profile minimum on net:3v3 near U2.",
+      "severityReported": "medium",
+      "references": {
+        "partId": "part:u2",
+        "netId": "net:3v3",
+        "ruleId": "copper-clearance-min"
+      }
+    },
+    {
+      "findingId": "JLC-DFM-003",
+      "originalText": "Silkscreen reference overlaps the board edge near J2.",
+      "severityReported": "low",
+      "references": {
+        "partId": "part:j2",
+        "coordinate": {
+          "xMm": 49.1,
+          "yMm": 39.4
+        },
+        "ruleId": "silkscreen-edge"
+      }
+    }
+  ]
+}
