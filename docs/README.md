@@ -42,11 +42,13 @@
     [`../schemas/gate-matrix.json`](../schemas/gate-matrix.json) —
     Phase 3実装計画、知識ループ、fabフィードバック取り込みとgate契約
     - [Phase 3振り返り](phase3-retrospective.md)：完了条件の実測結果、設計判断、Phase 4への課題
-14. [`error-taxonomy.md`](error-taxonomy.md) — エラー分類
-15. [`repo-structure.md`](repo-structure.md)、[`tool-contract.md`](tool-contract.md)、
+14. [`phase4-plan.md`](phase4-plan.md)、[`agent-runtime.md`](agent-runtime.md)、
+    [`architecture.md`](architecture.md) — Phase 4実行基盤、ブラウザUX、WASM境界の実装計画
+15. [`error-taxonomy.md`](error-taxonomy.md) — エラー分類
+16. [`repo-structure.md`](repo-structure.md)、[`tool-contract.md`](tool-contract.md)、
     [`dependency-inventory.md`](dependency-inventory.md)、[`kicad-interop.md`](kicad-interop.md)、
     [`testing.md`](testing.md) — 構成、ツール境界、依存関係、外部連携、評価
-16. [`adr/README.md`](adr/README.md) — ADR運用と既存の設計判断
+17. [`adr/README.md`](adr/README.md) — ADR運用と既存の設計判断
 
 ## ステータス凡例
 

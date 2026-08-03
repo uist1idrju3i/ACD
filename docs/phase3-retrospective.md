@@ -67,22 +67,40 @@ overlay markerだけではKiCadが使用するgeometryを変えません。libra
 全instanceの`solder_mask_margin`を実boardへ反映し、Gate 21が再読込後のpad geometryを
 確認します。公式snapshotは不変のまま保持します。
 
+## 実装過程で判明した構造的な欠陥と再発防止
+
+- `scripts/*.mts`がどのtsconfig projectにも含まれておらず、`compareIds`の未importが
+  `pnpm typecheck`の対象外となってCIをすり抜けた。`tsconfig.scripts.json`を追加し、
+  rootのtypecheckへ含めた。
+- 完了条件の判定がACD自身のoverlay markerの有無を見る循環になっていた。投影後のKiCad
+  pad geometryを再計算して判定し、reopen／DRC Evidenceで裏付ける方式へ変更した。
+- jidokaチェックの適用対象を停止条件と同じ述語から導出しており、原理的に発火しなかった。
+  artifactでoverlay library revisionを裏付けられる知識だけを`applied`として記録し、
+  失敗経路の回帰テストを追加した。
+- footprint識別子の形式差（library修飾名とbare名）により、知識が非該当と誤判定されていた。
+  識別子生成を共通化した。
+- board上のmatching footprint instanceを1件しか検証していなかった。
+  `parseAllFootprintSources`で全instanceを検証するよう変更した。
+- 「指摘なし」を表す`rawFindings: []`がschemaの`minItems: 1`に反し、runtime castで
+  回避されていた。schemaで空配列を明示的に許可し、intake前のschema検証を必須化した。
+
+CIが検査していない領域は、検査されていないのと同じである。
+
 ## Phase 4へ持ち越す既知のギャップ
 
 controlとknowledge-enabledの比較は、独立した第三者検証ではなく、同一の決定論的測定器を
 両runへ適用した対照実験である。
 
-- 実fab reportではなく、実fab形式を模したfixtureを入力にしている。
-- live sourcing APIやオンラインdatasheet取得は実装していない。
-- organization-wide knowledge sharingはPhase 3の範囲外である。
-- `fixtures/phase3/component-library.json`のcomponent recordsはprovenance付きで整備したが、
-  projectionがこのcomponent libraryを部品選択・投影へ消費するところまでは実装していない。
-- component recordの未取得datasheetや未検証属性は`unknown`として残しており、Phase 4以降で
-  検証経路を追加する必要がある。
-- Gate 22のreopen/DRC拡張はPhase 4の設計課題として残る。
-- overlay libraryがboardから直接参照されない点はPhase 4の設計課題として残る。
-- process conditionの片方向チェックで未宣言必須条件を`fail`ではなく`unknown`とするかは
-  Phase 4の設計課題として残る。
+| 残債                                                                                                                                                                           | 処置先                                                                                                                                                                                                                                              |
+| ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 実fab reportではなく、実fab形式を模したfixtureを入力にしている                                                                                                                 | 実fab adapterはPhase 4受入対象外のPhase 3残債。[`phase4-plan.md#wp9phase-3残債phase-4受入対象外`](phase4-plan.md#wp9phase-3残債phase-4受入対象外)で独立契約として扱い、入力源の判断は[`ADR-0021`](adr/0021-fab-feedback-intake-source.md)で管理する |
+| live sourcing APIやオンラインdatasheet取得は実装していない                                                                                                                     | 自働発注・外部sourcingはPhase 6範囲、定期的な検証・監視への展開はPhase 7範囲。Phase 4受入対象外とし、datasheet検証経路の追加は別契約として扱う                                                                                                      |
+| organization-wide knowledge sharingはPhase 3の範囲外である                                                                                                                     | Phase 4の受入対象外。Phase 3の境界を維持し、組織間共有は後続フェーズの独立判断とする                                                                                                                                                                |
+| `fixtures/phase3/component-library.json`のcomponent recordsはprovenance付きで整備したが、projectionがこのcomponent libraryを部品選択・投影へ消費するところまでは実装していない | Phase 3残債として[`phase4-plan.md#wp9phase-3残債phase-4受入対象外`](phase4-plan.md#wp9phase-3残債phase-4受入対象外)に記載し、Phase 4受入gateには含めない                                                                                            |
+| component recordの未取得datasheetや未検証属性は`unknown`として残している                                                                                                       | Phase 4受入対象外。検証経路は別契約またはADR化し、unknownを合格扱いにしない                                                                                                                                                                         |
+| Gate 22のreopen/DRC拡張は未実装である                                                                                                                                          | [`phase4-plan.md#wp9phase-3残債phase-4受入対象外`](phase4-plan.md#wp9phase-3残債phase-4受入対象外)の独立残債。Phase 4の完了条件には含めない                                                                                                         |
+| overlay libraryがboardから直接参照されない                                                                                                                                     | [`phase4-plan.md#wp9phase-3残債phase-4受入対象外`](phase4-plan.md#wp9phase-3残債phase-4受入対象外)でモデル変更の要否を扱う                                                                                                                          |
+| process conditionの片方向チェックで未宣言必須条件を`fail`ではなく`unknown`とするか未決定である                                                                                 | [`phase4-plan.md#wp9phase-3残債phase-4受入対象外`](phase4-plan.md#wp9phase-3残債phase-4受入対象外)で独立した契約変更として扱う                                                                                                                      |
 
 ## 参照
 

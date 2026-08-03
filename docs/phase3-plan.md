@@ -53,15 +53,16 @@ Phase 5、自働発注はPhase 6の範囲であり、本フェーズでは扱い
 
 ### WP1：fabフィードバックの構造化取り込み（gate 19）
 
-**状態：未着手。** gate契約はgate 19（`gate:fab-feedback-intake`、`runsAfter: gate:spice`）。
+**状態：実装済み。** gate契約はgate 19（`gate:fab-feedback-intake`、`runsAfter: gate:spice`）。
 
 **作業**
 
-- `schemas/fab-feedback.schema.json`を追加し、fab job ID、fab profile、対象設計revision、
-  対象part／net／座標、ルール、重大度、原文、構造化した問題分類、再現条件、信頼度を型付ける。
-- 記録済みfab report fixtureからの取り込みadapterを実装し、対象設計revisionとの
-  ID照合、既知指摘との重複判定、信頼度の下限を検査する。
-- 取り込みは`fab.feedback.received`イベントとして追記し、payload hashで固定する。
+- `schemas/fab-feedback.schema.json`でfab job ID、fab profile、対象設計revision、
+  対象part／net／座標、ルール、重大度、原文、構造化した問題分類、再現条件、信頼度を型付けし、
+  fixture adapterから取り込む。
+- 対象設計revisionとのID照合、同一fab job内の指摘の一意化、unknown指摘の停止、
+  typed adapter errorを実装する。
+- 取り込みは`fab.feedback.received`イベントとしてpayload hash付きで追記する。
 
 **受入基準**
 
@@ -230,5 +231,6 @@ KnowledgeItemとWP3 overlay revisionを適用し、同findingが0件になるこ
 - [`phase2-plan.md`](phase2-plan.md)
 - [`phase2-retrospective.md`](phase2-retrospective.md)
 - [`phase3-retrospective.md`](phase3-retrospective.md)
+- [`phase4-plan.md`](phase4-plan.md)
 - [`golden-tasks.md`](golden-tasks.md)
 - [`../schemas/gate-matrix.schema.json`](../schemas/gate-matrix.schema.json)
