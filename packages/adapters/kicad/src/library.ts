@@ -65,6 +65,7 @@ export const verifyLibrarySnapshot = (): void => {
   }
 };
 
+/** Parses only the first matching footprint block in source. */
 export const parseFootprintSource = (footprintName: string, source: string): FootprintPad[] => {
   const footprintStart = source.indexOf(`(footprint "${footprintName}"`);
   const footprintSource = footprintStart >= 0 ? blockAt(source, footprintStart) : source;
@@ -119,6 +120,24 @@ export const parseFootprintSource = (footprintName: string, source: string): Foo
   }
   if (pads.length === 0) throw new KicadLibraryError(`footprint ${footprintName} has no pads`);
   return pads;
+};
+
+/** Parses every matching footprint instance in board content. */
+export const parseAllFootprintSources = (
+  footprintName: string,
+  source: string,
+): FootprintPad[][] => {
+  const instances: FootprintPad[][] = [];
+  let cursor = 0;
+  const marker = `(footprint "${footprintName}"`;
+  while (true) {
+    const start = source.indexOf(marker, cursor);
+    if (start < 0) break;
+    const block = blockAt(source, start);
+    instances.push(parseFootprintSource(footprintName, block));
+    cursor = start + block.length;
+  }
+  return instances;
 };
 
 export const parseFootprintPads = (
