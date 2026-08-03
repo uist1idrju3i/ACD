@@ -128,6 +128,13 @@ describe("knowledge application", () => {
     );
   });
 
+  it("rejects applications for unknown knowledge IDs", () => {
+    const result = evaluateKnowledgeApplications([item()], context);
+    expect(() =>
+      recordKnowledgeApplications(result, [{ knowledgeId: "knowledge:missing" }]),
+    ).toThrow(/knowledge application references unknown knowledge/);
+  });
+
   it("keeps correction rules free of application exemptions", () => {
     const rule = rulesForFabProfile("fab:jlcpcb-class-2layer")?.rules.find(
       (candidate) => candidate.ruleId === "mask-sliver-min",
