@@ -1041,7 +1041,7 @@ try {
     const baseRevision = eventRevision;
     eventRevision += 1;
     const appliedEvent = createKnowledgeAppliedEvent({
-      eventId: `event:knowledge:applied:prototype-2:${decision.knowledgeId}`,
+      eventId: `event:knowledge:applied:${fixture.requirement.provenance.version}:${decision.knowledgeId}`,
       occurredAt: "2026-01-02T00:00:00.000Z",
       actor: "fixture:knowledge-application",
       projectId: fixture.fixtureId,
