@@ -17,6 +17,7 @@ export type FootprintPad = {
   rotation?: number;
   drill?: number;
   layers: string[];
+  solderMaskMargin?: number;
 };
 
 export type FootprintBounds = {
@@ -64,13 +65,16 @@ export const verifyLibrarySnapshot = (): void => {
   }
 };
 
+/** Parses only the first matching footprint block in source. */
 export const parseFootprintSource = (footprintName: string, source: string): FootprintPad[] => {
+  const footprintStart = source.indexOf(`(footprint "${footprintName}"`);
+  const footprintSource = footprintStart >= 0 ? blockAt(source, footprintStart) : source;
   const pads: FootprintPad[] = [];
   let cursor = 0;
   while (true) {
-    const start = source.indexOf('(pad "', cursor);
+    const start = footprintSource.indexOf('(pad "', cursor);
     if (start < 0) break;
-    const block = blockAt(source, start);
+    const block = blockAt(footprintSource, start);
     const header = block.match(/^\(pad "([^"]+)" ([^\s]+) ([^\s]+)/);
     const at = block.match(
       /\(at\s+(-?\d+(?:\.\d+)?)\s+(-?\d+(?:\.\d+)?)(?:\s+(-?\d+(?:\.\d+)?))?\)/,
@@ -78,6 +82,7 @@ export const parseFootprintSource = (footprintName: string, source: string): Foo
     const size = block.match(/\(size\s+(-?\d+(?:\.\d+)?)\s+(-?\d+(?:\.\d+)?)/);
     const hasDrill = /\(drill(?:\s|\))/.test(block);
     const drill = block.match(/\(drill\s+(-?\d+(?:\.\d+)?)\s*\)/);
+    const solderMaskMargin = block.match(/\(solder_mask_margin\s+(-?\d+(?:\.\d+)?)\s*\)/);
     const layersBlock = block.match(/\(layers\s+([^)]*)\)/);
     if (!header || !at || !size || !layersBlock) {
       throw new KicadLibraryError(`unsupported pad construct in ${footprintName}`);
@@ -106,6 +111,9 @@ export const parseFootprintSource = (footprintName: string, source: string): Foo
       height: Number(size[2]),
       ...(at[3] ? { rotation: Number(at[3]) } : {}),
       ...(drill?.[1] ? { drill: Number(drill[1]) } : {}),
+      ...(solderMaskMargin?.[1] !== undefined
+        ? { solderMaskMargin: Number(solderMaskMargin[1]) }
+        : {}),
       layers: layerText.match(/"[^"]+"/g)?.map((layer) => layer.slice(1, -1)) ?? [],
     });
     cursor = start + block.length;
@@ -114,12 +122,33 @@ export const parseFootprintSource = (footprintName: string, source: string): Foo
   return pads;
 };
 
-export const parseFootprintPads = (footprintName: string): FootprintPad[] => {
+/** Parses every matching footprint instance in board content. */
+export const parseAllFootprintSources = (
+  footprintName: string,
+  source: string,
+): FootprintPad[][] => {
+  const instances: FootprintPad[][] = [];
+  let cursor = 0;
+  const marker = `(footprint "${footprintName}"`;
+  while (true) {
+    const start = source.indexOf(marker, cursor);
+    if (start < 0) break;
+    const block = blockAt(source, start);
+    instances.push(parseFootprintSource(footprintName, block));
+    cursor = start + block.length;
+  }
+  return instances;
+};
+
+export const parseFootprintPads = (
+  footprintName: string,
+  sourceOverride?: string,
+): FootprintPad[] => {
   const entry = snapshotManifest.files.find(
     (candidate) => candidate.kind === "footprint" && candidate.id === footprintName,
   );
   if (!entry) throw new KicadLibraryError(`missing footprint manifest entry ${footprintName}`);
-  const source = snapshotFiles[entry.path as keyof typeof snapshotFiles];
+  const source = sourceOverride ?? snapshotFiles[entry.path as keyof typeof snapshotFiles];
   if (!source) throw new KicadLibraryError(`missing footprint snapshot ${entry.path}`);
   return parseFootprintSource(footprintName, source);
 };
@@ -193,12 +222,15 @@ export const parseFootprintCourtyardSource = (
   };
 };
 
-export const parseFootprintCourtyard = (footprintName: string): FootprintBounds | undefined => {
+export const parseFootprintCourtyard = (
+  footprintName: string,
+  sourceOverride?: string,
+): FootprintBounds | undefined => {
   const entry = snapshotManifest.files.find(
     (candidate) => candidate.kind === "footprint" && candidate.id === footprintName,
   );
   if (!entry) throw new KicadLibraryError(`missing footprint manifest entry ${footprintName}`);
-  const source = snapshotFiles[entry.path as keyof typeof snapshotFiles];
+  const source = sourceOverride ?? snapshotFiles[entry.path as keyof typeof snapshotFiles];
   if (!source) throw new KicadLibraryError(`missing footprint snapshot ${entry.path}`);
   return parseFootprintCourtyardSource(footprintName, source);
 };

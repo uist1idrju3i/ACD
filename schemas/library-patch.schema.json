@@ -1,0 +1,77 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://acd.local/schemas/library-patch.schema.json",
+  "title": "ACD library overlay patch",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "id",
+    "type",
+    "patchId",
+    "revision",
+    "libraryRevision",
+    "snapshotManifestHash",
+    "footprintId",
+    "sourceKnowledgeId",
+    "sourceEventIds",
+    "operations",
+    "content",
+    "contentHash",
+    "status",
+    "scope"
+  ],
+  "properties": {
+    "id": { "type": "string", "minLength": 1 },
+    "type": { "const": "LibraryOverlayPatch" },
+    "patchId": { "type": "string", "minLength": 1 },
+    "revision": { "type": "integer", "minimum": 0 },
+    "libraryRevision": { "type": "string", "minLength": 1 },
+    "snapshotManifestHash": { "type": "string", "pattern": "^sha256:[a-f0-9]{64}$" },
+    "footprintId": { "type": "string", "minLength": 1 },
+    "sourceKnowledgeId": { "type": "string", "minLength": 1 },
+    "sourceEventIds": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "type": "string", "minLength": 1 }
+    },
+    "operations": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["kind", "target", "requiredValueMm"],
+        "properties": {
+          "kind": { "const": "set-pad-mask-clearance" },
+          "target": { "type": "string", "minLength": 1 },
+          "requiredValueMm": { "type": "number" },
+          "padNumber": { "type": "string", "minLength": 1 }
+        }
+      }
+    },
+    "content": { "type": "string", "minLength": 1 },
+    "contentHash": { "type": "string", "pattern": "^sha256:[a-f0-9]{64}$" },
+    "materializedContentHash": { "type": "string", "pattern": "^sha256:[a-f0-9]{64}$" },
+    "status": {
+      "type": "string",
+      "enum": ["candidate", "reviewed", "adopted", "rejected"]
+    },
+    "scope": { "enum": ["project-local", "library-wide"] },
+    "failureReason": { "type": "string", "minLength": 1 },
+    "approvalId": { "type": "string", "minLength": 1 },
+    "previousRevisionId": { "type": "string", "minLength": 1 },
+    "verification": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["geometry", "reopen", "drc", "inputHash"],
+      "properties": {
+        "geometry": { "enum": ["passed", "failed"] },
+        "reopen": { "enum": ["passed", "failed", "blocked"] },
+        "drc": { "enum": ["passed", "failed", "blocked"] },
+        "inputHash": { "type": "string", "pattern": "^sha256:[a-f0-9]{64}$" },
+        "boardInputHash": { "type": "string", "pattern": "^sha256:[a-f0-9]{64}$" },
+        "failureEvidence": { "type": "string", "minLength": 1 }
+      }
+    }
+  }
+}

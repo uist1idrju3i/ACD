@@ -5,3 +5,5 @@ export * from "./projection.js";
 export * from "./netlist.js";
 export * from "./placement.js";
 export * from "./errors.js";
+export * from "./library-patch.js";
+export { parseAllFootprintSources, parseFootprintSource } from "./library.js";

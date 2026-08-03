@@ -29,6 +29,11 @@ docs/
 schemas/
 ```
 
+KiCadの公式library snapshotは`packages/adapters/kicad/library-snapshot/`に固定保存し、
+fab由来の修正は同adapterのoverlay patch modelで別revisionとして保持します。snapshotの
+manifest、hash、NOTICEを変更せず、patchはgraph-coreのKnowledgeItem/event契約をsource
+として参照します。未検証patchは投影へ渡しません。
+
 実際のpackage名はpnpm workspaceの初期化時に確定する。空のappsを先に作らず、
 Phase 0のlibraryから始める。
 

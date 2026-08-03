@@ -5,6 +5,12 @@ import type { Phase1Fixture } from "@acd/schema";
 import { projectGraphToKicad } from "./graph-projection.js";
 import { parseFootprintPads, verifyLibrarySnapshot } from "./library.js";
 import { snapshotFiles, snapshotManifest } from "./library-snapshot.js";
+import {
+  officialLibraryRevision,
+  resolveLibraryRevision,
+  snapshotManifestHash,
+  type LibraryOverlayPatch,
+} from "./library-patch.js";
 import { goldenLibrarySymbols, smokeLibrarySymbols } from "./symbol-library.js";
 import { KicadProjectionError } from "./errors.js";
 import { placeFixture } from "./placement.js";
@@ -697,7 +703,7 @@ export const renderProject = (): string =>
     2,
   );
 
-export const renderFootprintLibraryTable = (): string => `(fp_lib_table
+export const renderFootprintLibraryTable = (overlayLibraryPath?: string): string => `(fp_lib_table
   (version 7)
   (lib (name "Connector_JST") (type "KiCad") (uri "/usr/share/kicad/footprints/Connector_JST.pretty") (options "") (descr "KiCad official footprint library"))
   (lib (name "Resistor_SMD") (type "KiCad") (uri "/usr/share/kicad/footprints/Resistor_SMD.pretty") (options "") (descr "KiCad official footprint library"))
@@ -708,7 +714,7 @@ export const renderFootprintLibraryTable = (): string => `(fp_lib_table
   (lib (name "Package_TO_SOT_SMD") (type "KiCad") (uri "/usr/share/kicad/footprints/Package_TO_SOT_SMD.pretty") (options "") (descr "KiCad official footprint library"))
   (lib (name "Connector_PinHeader_2.54mm") (type "KiCad") (uri "/usr/share/kicad/footprints/Connector_PinHeader_2.54mm.pretty") (options "") (descr "KiCad official footprint library"))
   (lib (name "Button_Switch_SMD") (type "KiCad") (uri "/usr/share/kicad/footprints/Button_Switch_SMD.pretty") (options "") (descr "KiCad official footprint library"))
-  (lib (name "RF_Module") (type "KiCad") (uri "/usr/share/kicad/footprints/RF_Module.pretty") (options "") (descr "KiCad official footprint library"))
+  (lib (name "RF_Module") (type "KiCad") (uri "/usr/share/kicad/footprints/RF_Module.pretty") (options "") (descr "KiCad official footprint library"))${overlayLibraryPath ? `\n  (lib (name "ACD_Overlay") (type "KiCad") (uri "${overlayLibraryPath}") (options "") (descr "ACD materialized library overlay"))` : ""}
 )`;
 
 export const renderSymbolLibraryTable = (): string => `(sym_lib_table
@@ -730,12 +736,50 @@ export type KicadProjection = {
   boardPath: string;
 };
 
+export type KicadProjectionOptions = {
+  libraryRevision?: string;
+  patches?: LibraryOverlayPatch[];
+  allowUnadoptedForVerification?: boolean;
+};
+
 export const projectToKicad = async (
   graph: DesignGraph | Phase1Fixture,
   directory: string,
+  options: KicadProjectionOptions = {},
 ): Promise<KicadProjection> => {
+  const libraryRevision = options.libraryRevision ?? officialLibraryRevision();
+  const patch = resolveLibraryRevision(
+    libraryRevision,
+    options.patches ?? [],
+    options.allowUnadoptedForVerification ?? false,
+  );
   if (!isPhase1Fixture(graph)) {
     const projection = await projectGraphToKicad(graph, directory);
+    await writeFile(
+      join(directory, "library-revision.json"),
+      `${JSON.stringify(
+        {
+          libraryRevision,
+          snapshotManifestHash: patch?.snapshotManifestHash ?? snapshotManifestHash(),
+          overlayPatchId: patch?.id ?? null,
+        },
+        null,
+        2,
+      )}\n`,
+    );
+    if (patch) {
+      await mkdir(join(directory, "library-overlays"), { recursive: true });
+      await writeFile(
+        join(directory, "library-overlays", `${patch.footprintId}.kicad_mod`),
+        patch.content,
+        "utf8",
+      );
+    }
+    await writeFile(
+      join(directory, "fp-lib-table"),
+      renderFootprintLibraryTable(patch ? "${KIPRJMOD}/library-overlays" : undefined),
+      "utf8",
+    );
     return {
       directory,
       projectPath: projection.projectPath,
@@ -744,12 +788,36 @@ export const projectToKicad = async (
     };
   }
   await mkdir(directory, { recursive: true });
+  await writeFile(
+    join(directory, "library-revision.json"),
+    `${JSON.stringify(
+      {
+        libraryRevision,
+        snapshotManifestHash: patch?.snapshotManifestHash ?? snapshotManifestHash(),
+        overlayPatchId: patch?.id ?? null,
+      },
+      null,
+      2,
+    )}\n`,
+  );
+  if (patch) {
+    await mkdir(join(directory, "library-overlays"), { recursive: true });
+    await writeFile(
+      join(directory, "library-overlays", `${patch.footprintId}.kicad_mod`),
+      patch.content,
+      "utf8",
+    );
+  }
   const projectPath = join(directory, "design.kicad_pro");
   const schematicPath = join(directory, "design.kicad_sch");
   const boardPath = join(directory, "design.kicad_pcb");
   await writeFile(projectPath, renderProject(), "utf8");
   if (isPhase1Fixture(graph)) {
-    await writeFile(join(directory, "fp-lib-table"), renderFootprintLibraryTable(), "utf8");
+    await writeFile(
+      join(directory, "fp-lib-table"),
+      renderFootprintLibraryTable(patch ? "${KIPRJMOD}/library-overlays" : undefined),
+      "utf8",
+    );
     await writeFile(join(directory, "sym-lib-table"), renderSymbolLibraryTable(), "utf8");
   }
   await writeFile(schematicPath, renderSchematic(graph), "utf8");

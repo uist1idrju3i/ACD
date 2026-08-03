@@ -1,11 +1,16 @@
 import { execFileSync, spawnSync } from "node:child_process";
 import { createHash } from "node:crypto";
-import { mkdir, readFile, readdir, rm, writeFile } from "node:fs/promises";
+import { copyFile, mkdir, readFile, readdir, rm, writeFile } from "node:fs/promises";
 import { join, resolve } from "node:path";
 import {
   compareNetlists,
+  adoptVerifiedLibraryPatch,
+  createLibraryPatchCandidate,
+  materializeLibraryPatchInBoardSource,
   placeFixture,
+  parseAllFootprintSources,
   projectToKicad,
+  verifyLibraryPatchGeometry,
 } from "../packages/adapters/kicad/src/index.js";
 import {
   buildSpiceAnalyses,
@@ -34,9 +39,10 @@ import {
   unresolvedFindings,
   unresolvedRationaleFindings,
   unresolvedTestPlanFindings,
+  compareIds,
+  type KnowledgeItem,
   type FixturePatchOperation,
   type RecordedProposal,
-  compareIds,
 } from "../packages/graph-core/src/index.js";
 import {
   FixtureFabFeedbackReader,
@@ -78,6 +84,7 @@ const gateIds = gateMatrix.gates.map((gate) => gate.id);
 const results: Result[] = [];
 let currentGate = 0;
 let currentName = "golden";
+let adoptedKnowledgeForLibraryPatch: KnowledgeItem | undefined;
 const hash = (content: string): string =>
   `sha256:${createHash("sha256").update(content).digest("hex")}`;
 const run = (command: string, args: string[]): string =>
@@ -480,6 +487,9 @@ try {
       throw error;
     }
     knowledgeStates.push({ candidate, reviewed, adopted });
+    if (finding.references.ruleId === "mask-sliver-min") {
+      adoptedKnowledgeForLibraryPatch = adopted;
+    }
     await knowledgeEventLog.append(
       createKnowledgeCandidateCreatedEvent({
         eventId: `event:knowledge:candidate:prototype-1:${finding.findingId}`,
@@ -784,6 +794,199 @@ try {
   pass(12, {
     ...preOrderResult,
     verdict: "ready-for-order, approval required",
+  });
+
+  enter(21);
+  if (!adoptedKnowledgeForLibraryPatch) {
+    throw new Error("verification-failed: no adopted mask-sliver knowledge for library patch");
+  }
+  const libraryPatch = createLibraryPatchCandidate(adoptedKnowledgeForLibraryPatch);
+  const writeLibraryPatchFailure = async (
+    failureReason: string,
+    verification?: Record<string, unknown>,
+    boardHash?: string,
+  ): Promise<void> => {
+    const evidence = {
+      patch: libraryPatch,
+      failureReason,
+      verification: verification ?? null,
+      boardHash: boardHash ?? null,
+    };
+    await writeFile(
+      join(artifactRoot, "library-patch.json"),
+      `${JSON.stringify({ ...evidence, inputHash: hash(JSON.stringify(evidence)) }, null, 2)}\n`,
+    );
+  };
+  const geometryVerification = verifyLibraryPatchGeometry(libraryPatch);
+  if (geometryVerification.geometry !== "passed") {
+    await writeLibraryPatchFailure(
+      geometryVerification.failureEvidence ?? "library patch geometry failed",
+      geometryVerification,
+    );
+    throw new Error(
+      `verification-failed: library patch geometry failed: ${geometryVerification.failureEvidence}`,
+    );
+  }
+  const patchProjectRoot = join(artifactRoot, "library-patch-project");
+  await projectToKicad(fixture, patchProjectRoot, {
+    libraryRevision: libraryPatch.libraryRevision,
+    patches: [libraryPatch],
+    allowUnadoptedForVerification: true,
+  });
+  await copyFile(join(projectRoot, "routed.kicad_pcb"), join(patchProjectRoot, "design.kicad_pcb"));
+  await copyFile(join(projectRoot, "routed.kicad_pcb"), join(patchProjectRoot, "routed.kicad_pcb"));
+  await copyFile(join(projectRoot, "routed.kicad_pro"), join(patchProjectRoot, "routed.kicad_pro"));
+  await copyFile(join(projectRoot, "routed.kicad_prl"), join(patchProjectRoot, "routed.kicad_prl"));
+  await copyFile(join(projectRoot, "routed.kicad_pro"), join(patchProjectRoot, "design.kicad_pro"));
+  await copyFile(join(projectRoot, "routed.kicad_prl"), join(patchProjectRoot, "design.kicad_prl"));
+  const boardPath = join(patchProjectRoot, "design.kicad_pcb");
+  const unpatchedBoardContent = await readFile(boardPath, "utf8");
+  const unpatchedBoardHash = hash(unpatchedBoardContent);
+  const patchedBoardContent = materializeLibraryPatchInBoardSource(
+    unpatchedBoardContent,
+    libraryPatch.footprintId,
+    libraryPatch.operations,
+  );
+  if (patchedBoardContent === unpatchedBoardContent) {
+    await writeLibraryPatchFailure(
+      "library patch did not change the projected board",
+      { boardInputHash: unpatchedBoardHash },
+      unpatchedBoardHash,
+    );
+    throw new Error("verification-failed: library patch did not change the projected board");
+  }
+  if (
+    !patchedBoardContent.includes(
+      `ACD_LibraryOverlay" "pad-mask-clearance=${libraryPatch.operations[0]?.requiredValueMm}`,
+    )
+  ) {
+    await writeLibraryPatchFailure(
+      "projected board lacks the library correction",
+      { boardInputHash: unpatchedBoardHash },
+      unpatchedBoardHash,
+    );
+    throw new Error("verification-failed: projected board lacks the library correction");
+  }
+  const patchedPads = parseAllFootprintSources(
+    libraryPatch.footprintId,
+    patchedBoardContent,
+  ).flatMap((pads) => pads.filter((pad) => pad.solderMaskMargin !== undefined));
+  if (
+    patchedPads.length === 0 ||
+    patchedPads.some((pad) => pad.solderMaskMargin !== libraryPatch.operations[0]?.requiredValueMm)
+  ) {
+    await writeLibraryPatchFailure(
+      "patched board pads lack declared solder mask margin",
+      {
+        boardInputHash: unpatchedBoardHash,
+        patchedPadCount: patchedPads.length,
+      },
+      unpatchedBoardHash,
+    );
+    throw new Error("verification-failed: patched board pads lack declared solder mask margin");
+  }
+  const patchedBoardHash = hash(patchedBoardContent);
+  await writeFile(boardPath, patchedBoardContent, "utf8");
+  let reopen: "passed" | "failed" | "blocked" = "blocked";
+  let drc: "passed" | "failed" | "blocked" = "blocked";
+  let failureEvidence: string | undefined;
+  try {
+    docker([
+      "kicad-cli",
+      "sch",
+      "export",
+      "netlist",
+      "-o",
+      "/work/library-patch-project/design.net",
+      "/work/library-patch-project/design.kicad_sch",
+    ]);
+    docker([
+      "kicad-cli",
+      "pcb",
+      "export",
+      "ipcd356",
+      "-o",
+      "/work/library-patch-project/design.d356",
+      "/work/library-patch-project/design.kicad_pcb",
+    ]);
+    reopen = "passed";
+  } catch (error) {
+    reopen = "failed";
+    failureEvidence = error instanceof Error ? error.message : String(error);
+  }
+  try {
+    docker([
+      "kicad-cli",
+      "pcb",
+      "drc",
+      "--output",
+      "/work/library-patch-project/reports-drc.rpt",
+      "/work/library-patch-project/design.kicad_pcb",
+    ]);
+  } catch {
+    // Parse the report below; KiCad returns non-zero when it finds violations.
+  }
+  const patchDrcReport = await readFile(join(patchProjectRoot, "reports-drc.rpt"), "utf8").catch(
+    () => "",
+  );
+  const patchDrcMatch = patchDrcReport.match(
+    /\*\* Found (\d+) DRC violations \*\*[\s\S]*?\*\* Found (\d+) unconnected pads \*\*[\s\S]*?\*\* Found (\d+) Footprint errors \*\*/,
+  );
+  if (!patchDrcMatch) {
+    drc = "failed";
+    failureEvidence ??= "patched projection DRC summary is missing";
+  } else if (
+    Number(patchDrcMatch[1]) !== 0 ||
+    Number(patchDrcMatch[2]) !== 0 ||
+    Number(patchDrcMatch[3]) !== 0
+  ) {
+    drc = "failed";
+    failureEvidence ??= `patched projection DRC contains findings: ${patchDrcMatch[0]}`;
+  } else {
+    drc = "passed";
+  }
+  const verification = {
+    ...geometryVerification,
+    boardInputHash: patchedBoardHash,
+    reopen,
+    drc,
+    ...(failureEvidence ? { failureEvidence } : {}),
+  };
+  const adoptedLibraryPatch = adoptVerifiedLibraryPatch(libraryPatch, verification);
+  if (adoptedLibraryPatch.status !== "adopted") {
+    await writeLibraryPatchFailure(
+      "library patch verification did not pass",
+      verification,
+      patchedBoardHash,
+    );
+    throw new Error("verification-failed: library patch was not adopted");
+  }
+  await writeFile(
+    join(artifactRoot, "library-patch.json"),
+    `${JSON.stringify(
+      {
+        patch: adoptedLibraryPatch,
+        libraryRevision: adoptedLibraryPatch.libraryRevision,
+        snapshotManifestHash: adoptedLibraryPatch.snapshotManifestHash,
+        evidence: {
+          geometry: verification.geometry,
+          reopen: verification.reopen,
+          drc: verification.drc,
+          resolvedRevision: adoptedLibraryPatch.libraryRevision,
+          unpatchedBoardHash,
+          patchedBoardHash,
+          patchedBoardInputHash: patchedBoardHash,
+        },
+      },
+      null,
+      2,
+    )}\n`,
+  );
+  pass(21, {
+    patchId: adoptedLibraryPatch.id,
+    libraryRevision: adoptedLibraryPatch.libraryRevision,
+    snapshotManifestHash: adoptedLibraryPatch.snapshotManifestHash,
+    artifact: "library-patch.json",
   });
 
   const missing = missingExecutedGates(

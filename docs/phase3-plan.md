@@ -97,7 +97,7 @@ Phase 5、自働発注はPhase 6の範囲であり、本フェーズでは扱い
 
 ### WP3：フットプリント修正のlibrary反映（gate 21）
 
-**状態：未着手。** gate契約はgate 21（`gate:library-patch`、`runsAfter: gate:knowledge-lifecycle`）。
+**状態：実装済み。** gate契約はgate 21（`gate:library-patch`、`runsAfter: gate:pre-order-readiness`）。
 
 **作業**
 
