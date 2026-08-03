@@ -1,0 +1,185 @@
+{
+  "schemaVersion": "1.0.0",
+  "sourcePolicy": {
+    "liveSourcing": "not-permitted",
+    "unknownPolicy": "unknown-widens-verification"
+  },
+  "components": [
+    {
+      "id": "Connector:USB_C_Receptacle_PowerOnly_6P",
+      "footprintCandidates": [
+        {
+          "id": "footprint:Connector_USB:USB_C_Receptacle_GCT_USB4135-GF-A_6P_TopMnt_Horizontal",
+          "source": {
+            "source": "https://gitlab.com/kicad/libraries/kicad-footprints",
+            "retrievalBasis": "official KiCad 10.0.5 snapshot extraction",
+            "license": "CC-BY-SA-4.0-with-exception",
+            "contentHash": "sha256:beaaa41f4b1e53a8ca77ba55443631e22862ca17e23a6afc6e7c88b39ebb893d"
+          }
+        }
+      ],
+      "datasheetReferences": [],
+      "implementationNotes": [
+        {
+          "text": "The official USB-C footprint has an adopted ACD mask-sliver correction: solder_mask_margin -0.02 mm is materialized through the library overlay to increase the measured mask sliver from 0.29000000000000004 mm to 0.33000000000000007 mm against the 0.3 mm fab minimum.",
+          "status": "verified",
+          "provenance": {
+            "source": "https://github.com/uist1idrju3i/ACD/blob/main/fixtures/phase3/fab-report-prototype-1.json",
+            "retrievalBasis": "fab.feedback.received finding JLC-DFM-001, adopted KnowledgeItem knowledge:fab-report:prototype-1-jlcpcb-001:JLC-DFM-001:r2, and library revision library:overlay:b5856b8ee9f5e3fbc7c2cb1a31fa188fc8632b9aa43b1d238d53689514d0722e recorded by the Phase 3 golden run",
+            "license": "project fixture data",
+            "contentHash": "sha256:9109c1b219db4f35728aae73f6d757e4f3a757bd317625b215ca1e3b242821be"
+          }
+        }
+      ]
+    },
+    {
+      "id": "Connector_Generic:Conn_01x06",
+      "footprintCandidates": [
+        {
+          "id": "footprint:Connector_PinHeader_2.54mm:PinHeader_1x06_P2.54mm_Vertical",
+          "source": {
+            "source": "https://gitlab.com/kicad/libraries/kicad-footprints",
+            "retrievalBasis": "official KiCad 10.0.5 snapshot extraction",
+            "license": "CC-BY-SA-4.0-with-exception",
+            "contentHash": "sha256:5f2993c50dbd5024384bf6fa972fcd10d40d0837039e1e371b326a27d9f5b8b7"
+          }
+        }
+      ],
+      "datasheetReferences": [],
+      "implementationNotes": []
+    },
+    {
+      "id": "Device:C",
+      "footprintCandidates": [
+        {
+          "id": "footprint:Capacitor_SMD:C_0603_1608Metric",
+          "source": {
+            "source": "https://gitlab.com/kicad/libraries/kicad-footprints",
+            "retrievalBasis": "official KiCad 10.0.5 snapshot extraction",
+            "license": "CC-BY-SA-4.0-with-exception",
+            "contentHash": "sha256:fe0dbfefbb181a0466f93a8de52d84ba7b00fcd9acdbb69575f4128a0af4e405"
+          }
+        },
+        {
+          "id": "footprint:Capacitor_SMD:C_0805_2012Metric",
+          "source": {
+            "source": "https://gitlab.com/kicad/libraries/kicad-footprints",
+            "retrievalBasis": "official KiCad 10.0.5 snapshot extraction",
+            "license": "CC-BY-SA-4.0-with-exception",
+            "contentHash": "sha256:62775a51fe74ba7f1b572de327bdbd3fc92582721b2abcaa47787865590d89cb"
+          }
+        }
+      ],
+      "datasheetReferences": [],
+      "implementationNotes": []
+    },
+    {
+      "id": "Device:LED",
+      "footprintCandidates": [
+        {
+          "id": "footprint:LED_SMD:LED_0603_1608Metric",
+          "source": {
+            "source": "https://gitlab.com/kicad/libraries/kicad-footprints",
+            "retrievalBasis": "official KiCad 10.0.5 snapshot extraction",
+            "license": "CC-BY-SA-4.0-with-exception",
+            "contentHash": "sha256:7931ed1efba34cb13c8d74a60eb1dca4b0be57d950c38e08c3e7f007db500a1c"
+          }
+        }
+      ],
+      "datasheetReferences": [],
+      "implementationNotes": []
+    },
+    {
+      "id": "Device:R",
+      "footprintCandidates": [
+        {
+          "id": "footprint:Resistor_SMD:R_0603_1608Metric",
+          "source": {
+            "source": "https://gitlab.com/kicad/libraries/kicad-footprints",
+            "retrievalBasis": "official KiCad 10.0.5 snapshot extraction",
+            "license": "CC-BY-SA-4.0-with-exception",
+            "contentHash": "sha256:7190ac4a00125b807e54129ef0d87d87f2a658eeb74d025a7028203419b09f23"
+          }
+        }
+      ],
+      "datasheetReferences": [],
+      "implementationNotes": []
+    },
+    {
+      "id": "RF_Module:ESP32-WROOM-32E",
+      "footprintCandidates": [
+        {
+          "id": "footprint:RF_Module:ESP32-WROOM-32E",
+          "source": {
+            "source": "https://gitlab.com/kicad/libraries/kicad-footprints",
+            "retrievalBasis": "official KiCad 10.0.5 snapshot extraction",
+            "license": "CC-BY-SA-4.0-with-exception",
+            "contentHash": "sha256:b0690fed21a0929c7c43fb16f03ba0e6e5eaf9cf4eb36743f57651bfa00153d6"
+          }
+        }
+      ],
+      "datasheetReferences": [
+        {
+          "url": "https://www.espressif.com/sites/default/files/documentation/esp32-wroom-32e_datasheet_en.pdf",
+          "status": "unknown",
+          "provenance": {
+            "source": "https://www.espressif.com/sites/default/files/documentation/esp32-wroom-32e_datasheet_en.pdf",
+            "retrievalBasis": "reference recorded for future offline retrieval; not fetched in Phase 3",
+            "license": "unknown",
+            "contentHash": null,
+            "pendingReason": "not retrieved or independently verified in Phase 3"
+          }
+        }
+      ],
+      "implementationNotes": []
+    },
+    {
+      "id": "Regulator_Linear:AP1117-15",
+      "footprintCandidates": [
+        {
+          "id": "footprint:Package_TO_SOT_SMD:SOT-223-3_TabPin2",
+          "source": {
+            "source": "https://gitlab.com/kicad/libraries/kicad-footprints",
+            "retrievalBasis": "official KiCad 10.0.5 snapshot extraction",
+            "license": "CC-BY-SA-4.0-with-exception",
+            "contentHash": "sha256:8ae5f03e2c16377abed15e51af6864e23a934e1457b97fb7ea930e17fa99f11d"
+          }
+        }
+      ],
+      "datasheetReferences": [],
+      "implementationNotes": []
+    },
+    {
+      "id": "Sensor:BME280",
+      "footprintCandidates": [
+        {
+          "id": "footprint:Package_LGA:Bosch_LGA-8_2.5x2.5mm_P0.65mm_ClockwisePinNumbering",
+          "source": {
+            "source": "https://gitlab.com/kicad/libraries/kicad-footprints",
+            "retrievalBasis": "official KiCad 10.0.5 snapshot extraction",
+            "license": "CC-BY-SA-4.0-with-exception",
+            "contentHash": "sha256:14464b7a437e7efb0fa9947b89a7d3825242f3ed82d649fe2ca45fad5d3dda86"
+          }
+        }
+      ],
+      "datasheetReferences": [],
+      "implementationNotes": []
+    },
+    {
+      "id": "Switch:SW_Push",
+      "footprintCandidates": [
+        {
+          "id": "footprint:Button_Switch_SMD:SW_SPST_EVQP2_ShortPushTravel_H2.1mm",
+          "source": {
+            "source": "https://gitlab.com/kicad/libraries/kicad-footprints",
+            "retrievalBasis": "official KiCad 10.0.5 snapshot extraction",
+            "license": "CC-BY-SA-4.0-with-exception",
+            "contentHash": "sha256:a317bc527e5222726dc61c864cfddc8f02c29f78205dc6deae8ecb4566d2e383"
+          }
+        }
+      ],
+      "datasheetReferences": [],
+      "implementationNotes": []
+    }
+  ]
+}

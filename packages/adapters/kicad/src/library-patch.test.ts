@@ -1,4 +1,5 @@
 import { createHash } from "node:crypto";
+import { readFile } from "node:fs/promises";
 import { describe, expect, it } from "vitest";
 import type { KnowledgeItem } from "@acd/graph-core";
 import { loadSchemaValidator } from "@acd/schema";
@@ -55,6 +56,28 @@ const adoptedKnowledge = (): KnowledgeItem => ({
 });
 
 describe("KiCad library overlay patches", () => {
+  it("matches component-library footprint provenance to the pinned manifest", async () => {
+    const componentLibrary = JSON.parse(
+      await readFile(
+        new URL("../../../../fixtures/phase3/component-library.json", import.meta.url),
+        "utf8",
+      ),
+    ) as {
+      components: Array<{
+        footprintCandidates: Array<{ id: string; source: { contentHash: string } }>;
+      }>;
+    };
+    const manifestFootprints = snapshotManifest.files.filter((entry) => entry.kind === "footprint");
+    for (const component of componentLibrary.components) {
+      for (const candidate of component.footprintCandidates) {
+        const manifestEntry = manifestFootprints.find((entry) =>
+          candidate.id.endsWith(`:${entry.id}`),
+        );
+        expect(manifestEntry, `missing manifest entry for ${candidate.id}`).toBeDefined();
+        expect(candidate.source.contentHash).toBe(manifestEntry?.contentHash);
+      }
+    }
+  });
   it("derives a deterministic patch and revision from declared rule data", () => {
     const first = createLibraryPatchCandidate(adoptedKnowledge());
     const second = createLibraryPatchCandidate(adoptedKnowledge());

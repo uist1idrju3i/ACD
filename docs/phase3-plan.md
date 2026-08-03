@@ -164,14 +164,23 @@ KnowledgeItemとWP3 overlay revisionを適用し、同findingが0件になるこ
 
 ### WP6：電子部品ライブラリの本格整備
 
-**状態：未着手。**
+**状態：実装中（provenance-backed component records、coverage test、抽出時subset assertionを追加済み）。**
 
 **作業**
 
-- library snapshotの対象を2次試作のgolden taskが必要とする範囲へ拡張し、抽出scriptで
-  manifestを再生成する。
+- 1次・2次試作のmappingを抽出対象として検査する。prototype-2の部品集合は
+  golden-esp32のstrict subsetであるため、公式snapshotのmanifestと22ファイルは変更しない。
+  抽出scriptはこのsubset不変条件を検証し、将来prototype-2専用部品が増えた場合は停止する。
+- `fixtures/phase3/component-library.json`に、1次・2次試作で使用するsymbolと
+  footprint候補を記録する。未取得のdatasheetと実装上の注意は`unknown`として保持し、
+  Phase 4以降のlive sourcingを行わない。
+- fab feedback、adopted KnowledgeItem、library overlay revisionで実証されたUSB-C
+  mask-sliver補正は、検証済みimplementation noteとして記録する。それ以外の未検証属性は
+  推測で補完しない。
 - 部品エントリにdatasheet参照、footprint候補、既知の注意（実装上の制約、修正履歴）を
   出所付きで持たせる。
+- `verified`のdatasheet参照・implementation noteは`provenance.contentHash`を必須とし、
+  `contentHash: null`のエントリは`unknown`として`pendingReason`付きで保持する。
 - ライセンス帰属（CC-BY-SA-4.0-with-exception）とNOTICEの範囲を拡張分にも維持する。
 
 **受入基準**
@@ -179,6 +188,7 @@ KnowledgeItemとWP3 overlay revisionを適用し、同findingが0件になるこ
 - 拡張後もsnapshot hash検証と未知construct停止が機能する。
 - 追加部品がfixture mappingと照合でき、projectionが公式geometryを使う。
 - ライセンス表記が拡張分を含めて正しい。
+- 公式snapshot、manifest、container digest、ライセンスmetadata、NOTICEは変更しない。
 
 **やらないこと**
 
