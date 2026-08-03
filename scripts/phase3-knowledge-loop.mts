@@ -22,6 +22,7 @@ import {
   materializeLibraryPatchInBoardSource,
   type LibraryOverlayPatch,
 } from "../packages/adapters/kicad/src/index.js";
+import { loadSchemaValidator } from "../packages/schema/src/index.js";
 
 const root = resolve(import.meta.dirname, "..");
 const fixturePath = join(root, "fixtures/phase1/prototype-2.json");
@@ -119,16 +120,27 @@ const padsForFootprint = (board: string, footprintName: string): PadGeometry[] =
   });
 };
 
-const measuredMaskSliver = (board: string, footprintName: string): number => {
+const measuredMaskSliver = (
+  board: string,
+  footprintName: string,
+): { measuredMm: number; evaluatedPadPairs: number } => {
   const pads = padsForFootprint(board, footprintName);
   if (pads.length < 2) {
     throw new Error(`verification-failed: insufficient pads for ${footprintName}`);
   }
   let minimum = Number.POSITIVE_INFINITY;
+  let evaluatedPadPairs = 0;
   for (const left of pads) {
     for (const right of pads) {
       if (left === right) continue;
-      if (Math.abs(left.y - right.y) < 1e-6) {
+      const yOverlap =
+        Math.min(left.y + left.height / 2, right.y + right.height / 2) -
+        Math.max(left.y - left.height / 2, right.y - right.height / 2);
+      const xOverlap =
+        Math.min(left.x + left.width / 2, right.x + right.width / 2) -
+        Math.max(left.x - left.width / 2, right.x - right.width / 2);
+      if (yOverlap > 0) {
+        evaluatedPadPairs += 1;
         minimum = Math.min(
           minimum,
           Math.abs(left.x - right.x) -
@@ -137,7 +149,8 @@ const measuredMaskSliver = (board: string, footprintName: string): number => {
             right.maskMargin,
         );
       }
-      if (Math.abs(left.x - right.x) < 1e-6) {
+      if (xOverlap > 0) {
+        evaluatedPadPairs += 1;
         minimum = Math.min(
           minimum,
           Math.abs(left.y - right.y) -
@@ -151,27 +164,34 @@ const measuredMaskSliver = (board: string, footprintName: string): number => {
   if (!Number.isFinite(minimum)) {
     throw new Error(`verification-failed: no measurable pad pair for ${footprintName}`);
   }
-  return minimum;
+  return { measuredMm: minimum, evaluatedPadPairs };
 };
 
 const detectMaskSliver = (
   board: string,
-): { violates: boolean; measuredMm: number; minimumMm: number } => {
+): {
+  violates: boolean;
+  measuredMm: number;
+  minimumMm: number;
+  evaluatedPadPairs: number;
+} => {
   const rule = profileRules.rules.find((candidate) => candidate.ruleId === "mask-sliver-min");
   if (!rule?.minimumSliverMm) {
     throw new Error("schema-invalid: mask-sliver rule lacks numeric minimum");
   }
-  const measuredMm = measuredMaskSliver(
+  const measurement = measuredMaskSliver(
     board,
     "USB_C_Receptacle_GCT_USB4135-GF-A_6P_TopMnt_Horizontal",
   );
   return {
-    violates: measuredMm < rule.minimumSliverMm,
-    measuredMm,
+    violates: measurement.measuredMm < rule.minimumSliverMm,
+    measuredMm: measurement.measuredMm,
     minimumMm: rule.minimumSliverMm,
+    evaluatedPadPairs: measurement.evaluatedPadPairs,
   };
 };
 
+const feedbackValidator = await loadSchemaValidator("fab-feedback");
 const makeReport = (board: string): FabFeedbackReport => {
   const measurement = detectMaskSliver(board);
   const finding = {
@@ -185,7 +205,7 @@ const makeReport = (board: string): FabFeedbackReport => {
     },
   };
   if (!measurement.violates) {
-    return {
+    const report = {
       schemaVersion: "0.1.0-draft",
       reportId: "fab-report:prototype-2-knowledge-loop",
       fabJobId: "job:prototype-2-knowledge-loop",
@@ -199,13 +219,17 @@ const makeReport = (board: string): FabFeedbackReport => {
       },
       target: { projectId: fixture.fixtureId, designRevision: "prototype-2" },
       rawReport: { contentType: "text/plain", content: "", contentHash: hash("") },
-      rawFindings: [] as never,
+      rawFindings: [],
     } as FabFeedbackReport;
+    if (!feedbackValidator(report)) {
+      throw new Error("schema-invalid: generated DFM feedback report is invalid");
+    }
+    return report;
   }
   const findingText = finding.originalText;
   const content = `Prototype-2 deterministic DFM scan\n${findingText}\n`;
   const contentHash = hash(content);
-  return {
+  const report = {
     schemaVersion: "0.1.0-draft",
     reportId: "fab-report:prototype-2-knowledge-loop",
     fabJobId: "job:prototype-2-knowledge-loop",
@@ -221,6 +245,10 @@ const makeReport = (board: string): FabFeedbackReport => {
     rawReport: { contentType: "text/plain", content, contentHash },
     rawFindings: [{ ...finding, originalText: findingText }],
   } as FabFeedbackReport;
+  if (!feedbackValidator(report)) {
+    throw new Error("schema-invalid: generated DFM feedback report is invalid");
+  }
+  return report;
 };
 
 const officialProject = await projectToKicad(fixture, join(artifactRoot, "prototype-2-control"), {
@@ -321,7 +349,7 @@ const projectionArtifactId = "artifact:phase1-golden:prototype-2-knowledge-enabl
 const events = [
   sourceEvent,
   createKnowledgeAppliedEvent({
-    eventId: "event:knowledge:applied:prototype-2:P2-DFM-001",
+    eventId: `event:knowledge:applied:${targetDesignRevision}:P2-DFM-001`,
     occurredAt: "2026-01-03T00:00:00.000Z",
     actor: "fixture:phase3-knowledge-loop",
     projectId: fixture.fixtureId,
@@ -347,6 +375,7 @@ const output = {
     libraryRevision: officialLibraryRevision(),
     boardHash: controlBoardHash,
     geometry: controlMeasurement,
+    evaluatedPadPairs: controlMeasurement.evaluatedPadPairs,
     findings: maskFindingCount(controlIntake),
     reportHash: controlReport.rawReport.contentHash,
     intakeDerivationHash: controlIntake.derivationHash,
@@ -355,6 +384,7 @@ const output = {
     libraryRevision: patchArtifact.libraryRevision,
     boardHash: enabledBoardHash,
     geometry: enabledMeasurement,
+    evaluatedPadPairs: enabledMeasurement.evaluatedPadPairs,
     findings: maskFindingCount(enabledIntake),
     reportHash: enabledReport.rawReport.contentHash,
     intakeDerivationHash: enabledIntake.derivationHash,

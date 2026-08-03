@@ -29,7 +29,7 @@ export interface ACDFabFeedbackReport {
   /**
    * @minItems 1
    */
-  rawFindings: [RawFinding, ...RawFinding[]];
+  rawFindings: RawFinding[];
   derivation?: {
     method: string;
     version: string;

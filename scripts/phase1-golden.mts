@@ -8,7 +8,7 @@ import {
   createLibraryPatchCandidate,
   materializeLibraryPatchInBoardSource,
   placeFixture,
-  parseFootprintSource,
+  parseAllFootprintSources,
   projectToKicad,
   verifyLibraryPatchGeometry,
 } from "../packages/adapters/kicad/src/index.js";
@@ -48,8 +48,8 @@ import {
   type KnowledgeItem,
   type FixturePatchOperation,
   type RecordedProposal,
+  compareIds,
 } from "../packages/graph-core/src/index.js";
-import { compareIds } from "../packages/graph-core/src/hash.js";
 import {
   FixtureFabFeedbackReader,
   fabFeedbackUnknownError,
@@ -845,9 +845,10 @@ try {
   ) {
     throw new Error("verification-failed: projected board lacks the library correction");
   }
-  const patchedPads = parseFootprintSource(libraryPatch.footprintId, patchedBoardContent).filter(
-    (pad) => pad.solderMaskMargin !== undefined,
-  );
+  const patchedPads = parseAllFootprintSources(
+    libraryPatch.footprintId,
+    patchedBoardContent,
+  ).flatMap((pads) => pads.filter((pad) => pad.solderMaskMargin !== undefined));
   if (
     patchedPads.length === 0 ||
     patchedPads.some((pad) => pad.solderMaskMargin !== libraryPatch.operations[0]?.requiredValueMm)
@@ -1041,7 +1042,7 @@ try {
     const baseRevision = eventRevision;
     eventRevision += 1;
     const appliedEvent = createKnowledgeAppliedEvent({
-      eventId: `event:knowledge:applied:prototype-2:${decision.knowledgeId}`,
+      eventId: `event:knowledge:applied:${fixture.requirement.provenance.version}:${decision.knowledgeId}`,
       occurredAt: "2026-01-02T00:00:00.000Z",
       actor: "fixture:knowledge-application",
       projectId: fixture.fixtureId,

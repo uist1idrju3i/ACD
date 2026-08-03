@@ -3,6 +3,10 @@ import type { KnowledgeItem } from "./knowledge-lifecycle.js";
 import { GraphCoreError } from "./errors.js";
 
 /** Persistence contract: saves are idempotent for equal IDs and reject conflicting IDs. */
+/**
+ * Knowledge revisions are stored and addressed by knowledgeId; callers must
+ * not submit multiple revisions for one knowledgeId to application recording.
+ */
 export interface KnowledgeRepository {
   save(item: KnowledgeItem): Promise<void>;
   get(id: string): Promise<KnowledgeItem | undefined>;

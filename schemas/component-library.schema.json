@@ -47,7 +47,32 @@
                 "url": { "type": "string", "format": "uri" },
                 "status": { "enum": ["verified", "unknown"] },
                 "provenance": { "$ref": "#/$defs/provenance" }
-              }
+              },
+              "allOf": [
+                {
+                  "if": { "properties": { "status": { "const": "verified" } } },
+                  "then": {
+                    "properties": {
+                      "provenance": {
+                        "required": ["contentHash"],
+                        "properties": {
+                          "contentHash": { "type": "string", "pattern": "^sha256:[0-9a-f]{64}$" }
+                        }
+                      }
+                    }
+                  }
+                },
+                {
+                  "if": {
+                    "properties": {
+                      "provenance": {
+                        "properties": { "contentHash": { "const": null } }
+                      }
+                    }
+                  },
+                  "then": { "properties": { "status": { "const": "unknown" } } }
+                }
+              ]
             }
           },
           "implementationNotes": {
@@ -60,7 +85,32 @@
                 "text": { "type": "string", "minLength": 1 },
                 "status": { "enum": ["verified", "unknown"] },
                 "provenance": { "$ref": "#/$defs/provenance" }
-              }
+              },
+              "allOf": [
+                {
+                  "if": { "properties": { "status": { "const": "verified" } } },
+                  "then": {
+                    "properties": {
+                      "provenance": {
+                        "required": ["contentHash"],
+                        "properties": {
+                          "contentHash": { "type": "string", "pattern": "^sha256:[0-9a-f]{64}$" }
+                        }
+                      }
+                    }
+                  }
+                },
+                {
+                  "if": {
+                    "properties": {
+                      "provenance": {
+                        "properties": { "contentHash": { "const": null } }
+                      }
+                    }
+                  },
+                  "then": { "properties": { "status": { "const": "unknown" } } }
+                }
+              ]
             }
           }
         }
