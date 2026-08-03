@@ -5,9 +5,12 @@
 ## 背景
 
 Phase 4の再開は、要件からの無意味なやり直しを避けつつ、前提が変わった検証結果を
-再利用しないことが必要です。checkpointの粒度とstale判定が曖昧なままだと、古いtool、
-library、fab条件、またはKnowledgeItemに基づく結果を現行runの合格証拠として扱う
-危険があります。
+再利用しないことが必要です。AGENTS.mdのEvidence不変条件は、input revision/hash、
+tool/model/library/container version、provenance、measurement-system qualification、
+参照KnowledgeItem status、fab/manufacturing profileの変化時にEvidenceを遡って無効化し、
+依存する下流結果をstaleにすることを必須としています。checkpointの粒度とstale判定が
+この列挙と一致しないままだと、古い前提に基づく結果を現行runの合格証拠として扱う危険が
+あります。
 
 README §7の「ブラウザ強制終了しても最後のチェックポイントから完走できる」という
 完了条件は、ランを所有するworker processの耐久性を測る受入gateとして実施します。
@@ -15,17 +18,19 @@ README §7の「ブラウザ強制終了しても最後のチェックポイン�
 
 ## 決定
 
-checkpointはgate境界単位で作成します。checkpointには少なくとも入力hash、設計グラフ
-revision、tool／container version、library revision、fab profile、参照KnowledgeItemの
+checkpointはgate境界単位で作成します。checkpointには、無効化判定に使う項目を含めて、
+input revision／hash、設計グラフrevision、tool／model／library／container version、
+provenance、measurement-system qualification、fab／manufacturing profile、参照KnowledgeItem
 status、成果物hash、検証結果ID、event位置、実行環境を記録します。
 
 次のいずれかが変わったcheckpointはstaleとし、再利用せず対象stageを再実行します。
 
-1. input hash
-2. tool versionまたはcontainer version
-3. library revision
-4. fab profile
-5. 参照KnowledgeItem status
+1. input revisionまたはinput hash
+2. tool version、model version、library versionまたはcontainer version
+3. provenance
+4. measurement-system qualification
+5. fab profileまたはmanufacturing profile
+6. 参照KnowledgeItem status
 
 完了条件の受入測定は、決定論的なstage境界でworker processを強制終了し、最後の検証済み
 checkpointから再開して無中断runと同一の完了結果を得る方法に固定します。workerがランを
@@ -37,6 +42,8 @@ checkpointから再開して無中断runと同一の完了結果を得る方法�
   保持コストが増え、gate契約との対応が不明確になるため採用しない。
 - **入力hashだけでstale判定する**：tool、library、fab条件、KnowledgeItemの変更を
   捕捉できず、古いEvidenceを再利用するため却下する。
+- **checkpoint保存項目と無効化判定項目を分ける**：判定根拠を再現できず、AGENTS.mdの
+  Evidence無効化不変条件を満たさないため却下する。
 - **実ブラウザ強制終了を受入gateの正にする**：UI、browser、workerの複数要因が混ざり、
   ラン所有者の耐久性を直接測定できないため、WP6のUI回帰へ分離する。
 
