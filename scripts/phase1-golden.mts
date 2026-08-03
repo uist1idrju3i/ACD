@@ -18,19 +18,25 @@ import {
   applyFixturePatch,
   buildTestPlan,
   createFabFeedbackReceivedEvent,
+  createKnowledgeCandidate,
+  createKnowledgeCandidateCreatedEvent,
+  createKnowledgeTransitionedEvent,
   evaluateDesignRationale,
   evaluateFixtureGates,
   failedFindings,
   lintElectricalTopology,
   recordedProposer,
   repairLoopEvidence,
+  rulesForFabProfile,
   runRepairLoop,
+  transitionKnowledgeItem,
   InMemoryEventLog,
   unresolvedFindings,
   unresolvedRationaleFindings,
   unresolvedTestPlanFindings,
   type FixturePatchOperation,
   type RecordedProposal,
+  compareIds,
 } from "../packages/graph-core/src/index.js";
 import {
   FixtureFabFeedbackReader,
@@ -44,18 +50,20 @@ import {
   missingExecutedGates,
   validatePhase1FixtureReferences,
 } from "../packages/schema/src/index.js";
-import type { Phase1Fixture } from "../packages/schema/src/generated/phase1-fixture.js";
+import { loadSchemaValidator } from "../packages/schema/src/index.js";
+import type { ACDPhase1Fixture } from "../packages/schema/src/generated/phase1-fixture.js";
 import preOrder from "./pre-order.ts";
 
 const root = resolve(import.meta.dirname, "..");
 const fixture = JSON.parse(
   await readFile(join(root, "fixtures/phase1/golden-esp32.json"), "utf8"),
-) as Phase1Fixture;
+) as ACDPhase1Fixture;
 const artifactRoot = join(root, "artifacts/phase1-golden");
 const projectRoot = join(artifactRoot, "project");
 const digest =
   "kicad/kicad@sha256:182c8005cb775a2c448a4c18681d489f1ff472a761885eba3e08b07e3c0564de";
 const image = process.env.KICAD_IMAGE ?? digest;
+const designGraphValidator = await loadSchemaValidator("design-graph");
 
 type Result = {
   gate: number;
@@ -156,7 +164,7 @@ try {
       !line.lifecycle ||
       line.availability === "unknown" ||
       line.lifecycle === "unknown" ||
-      line.lifecycle === "EOL"
+      line.lifecycle === "eol"
     ) {
       throw new Error(`order-relevant BOM unknown for ${line.partId}`);
     }
@@ -270,8 +278,12 @@ try {
   await writeFile(join(artifactRoot, "repair-loop.json"), `${JSON.stringify(repairs, null, 2)}\n`);
   pass(17, {
     cases: repairs.length,
-    repaired: repairs.filter((entry) => entry.status === "repaired").length,
-    rejectedProposals: repairs.reduce((total, entry) => total + Number(entry.rejected ?? 0), 0),
+    repaired: repairs.filter((entry) => (entry as { status?: string }).status === "repaired")
+      .length,
+    rejectedProposals: repairs.reduce(
+      (total, entry) => total + Number((entry as { rejected?: number }).rejected ?? 0),
+      0,
+    ),
     recordingsHash: hash(JSON.stringify(recordings.proposals)),
     artifact: "repair-loop.json",
   });
@@ -396,6 +408,135 @@ try {
     derivationHash: fabFeedback.derivationHash,
     evidence: fabFeedback.evidence,
     artifact: "fab-feedback.json",
+  });
+
+  enter(20);
+  const passingFindings = fabFeedback.findings
+    .filter((finding) => finding.verdict === "pass")
+    .sort((left, right) => compareIds(left.findingId, right.findingId));
+  if (passingFindings.length === 0) {
+    throw new Error("verification-failed: fab feedback produced no passing findings");
+  }
+  const knowledgeEventLog = new InMemoryEventLog();
+  const knowledgeStates: Array<{
+    candidate: Awaited<ReturnType<typeof createKnowledgeCandidate>>;
+    reviewed: Awaited<ReturnType<typeof transitionKnowledgeItem>>;
+    adopted: Awaited<ReturnType<typeof transitionKnowledgeItem>>;
+  }> = [];
+  const validateKnowledgeItem = (
+    knowledgeItem: (typeof knowledgeStates)[number]["candidate"],
+  ): void => {
+    const graph = {
+      schemaVersion: "0.1.0-draft",
+      project: { id: fixture.fixtureId, type: "Project", revision: 0 },
+      entities: [knowledgeItem],
+    };
+    if (!designGraphValidator(graph)) {
+      throw new Error(
+        `schema-invalid: knowledge item ${knowledgeItem.id}: ${(designGraphValidator.errors ?? [])
+          .map((error) => `${error.instancePath || "/"} ${error.message ?? "invalid"}`)
+          .join("; ")}`,
+      );
+    }
+  };
+  let knowledgeRevision = 0;
+  for (const finding of passingFindings) {
+    const candidate = createKnowledgeCandidate({
+      finding,
+      report: fabFeedbackReport,
+      sourceEventId: "event:fab-feedback:prototype-1-jlcpcb-001",
+      designRevision: fabFeedbackReport.target.designRevision,
+      derivationInputHash: fabFeedback.evidence.value.derivationInputHash,
+      derivationOutputHash: fabFeedback.evidence.value.derivationOutputHash,
+      createdAt: "2026-01-01T00:00:00.000Z",
+    });
+    const reviewed = transitionKnowledgeItem(candidate, {
+      status: "reviewed",
+      now: "2026-01-01T00:00:00.000Z",
+    });
+    const adopted = transitionKnowledgeItem(reviewed, {
+      status: "adopted",
+      now: "2026-01-01T00:00:00.000Z",
+    });
+    try {
+      validateKnowledgeItem(candidate);
+      validateKnowledgeItem(reviewed);
+      validateKnowledgeItem(adopted);
+    } catch (error) {
+      await writeFile(
+        join(artifactRoot, "knowledge.json"),
+        `${JSON.stringify(
+          {
+            knowledgeStates,
+            failure: {
+              code: "schema-invalid",
+              message: error instanceof Error ? error.message : String(error),
+            },
+          },
+          null,
+          2,
+        )}\n`,
+      );
+      throw error;
+    }
+    knowledgeStates.push({ candidate, reviewed, adopted });
+    await knowledgeEventLog.append(
+      createKnowledgeCandidateCreatedEvent({
+        eventId: `event:knowledge:candidate:prototype-1:${finding.findingId}`,
+        occurredAt: "2026-01-01T00:00:00.000Z",
+        actor: "fixture:fab-report-prototype-1-jlcpcb",
+        projectId: fixture.fixtureId,
+        baseRevision: knowledgeRevision,
+        resultRevision: knowledgeRevision + 1,
+        knowledgeItem: candidate,
+      }),
+    );
+    knowledgeRevision += 1;
+    await knowledgeEventLog.append(
+      createKnowledgeTransitionedEvent({
+        eventId: `event:knowledge:reviewed:prototype-1:${finding.findingId}`,
+        occurredAt: "2026-01-01T00:00:00.000Z",
+        actor: "fixture:fab-report-prototype-1-jlcpcb",
+        projectId: fixture.fixtureId,
+        baseRevision: knowledgeRevision,
+        resultRevision: knowledgeRevision + 1,
+        knowledgeItem: reviewed,
+        previousStatus: "candidate",
+      }),
+    );
+    knowledgeRevision += 1;
+    await knowledgeEventLog.append(
+      createKnowledgeTransitionedEvent({
+        eventId: `event:knowledge:adopted:prototype-1:${finding.findingId}`,
+        occurredAt: "2026-01-01T00:00:00.000Z",
+        actor: "fixture:fab-report-prototype-1-jlcpcb",
+        projectId: fixture.fixtureId,
+        baseRevision: knowledgeRevision,
+        resultRevision: knowledgeRevision + 1,
+        knowledgeItem: adopted,
+        previousStatus: "reviewed",
+      }),
+    );
+    knowledgeRevision += 1;
+  }
+  const knowledgeEvents = await knowledgeEventLog.readAll();
+  const knowledgeText = JSON.stringify({ knowledgeStates, events: knowledgeEvents }, null, 2);
+  await writeFile(join(artifactRoot, "knowledge.json"), `${knowledgeText}\n`);
+  const profileRules = rulesForFabProfile(fabFeedbackReport.fabProfileId);
+  if (!profileRules) throw new Error(`schema-invalid: missing fab profile rules`);
+  pass(20, {
+    candidateCount: knowledgeStates.length,
+    adoptedIds: knowledgeStates.map((state) => state.adopted.id),
+    input: {
+      derivationHash: fabFeedback.derivationHash,
+      rulesVersion: profileRules.version,
+      sourceEventId: "event:fab-feedback:prototype-1-jlcpcb-001",
+    },
+    output: {
+      knowledgeHash: hash(knowledgeText),
+      eventCount: knowledgeEvents.length,
+    },
+    artifact: "knowledge.json",
   });
 
   enter(6);

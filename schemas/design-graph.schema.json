@@ -156,7 +156,10 @@
         "sourceEventIds",
         "provenance",
         "content",
-        "status"
+        "status",
+        "knowledgeId",
+        "appliesWhen",
+        "excludesWhen"
       ],
       "properties": {
         "id": { "$ref": "#/$defs/id" },
@@ -170,16 +173,52 @@
         "sourceEventIds": { "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/id" } },
         "provenance": { "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/provenance" } },
         "content": { "type": "string", "minLength": 1 },
-        "status": { "type": "string", "enum": ["candidate", "reviewed", "adopted", "deprecated"] },
+        "status": {
+          "type": "string",
+          "enum": ["candidate", "reviewed", "adopted", "rejected", "deprecated"]
+        },
+        "knowledgeId": { "$ref": "#/$defs/id" },
         "confidentiality": {
           "type": "string",
           "enum": ["project-confidential", "organization-confidential", "shareable"]
         },
-        "appliesWhen": { "type": "array", "items": { "type": "string" } },
-        "excludesWhen": { "type": "array", "items": { "type": "string" } },
-        "changedDecisionIds": { "type": "array", "items": { "$ref": "#/$defs/id" } }
+        "appliesWhen": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/applicabilityCondition" }
+        },
+        "excludesWhen": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/applicabilityCondition" }
+        },
+        "changedDecisionIds": { "type": "array", "items": { "$ref": "#/$defs/id" } },
+        "previousRevisionId": { "$ref": "#/$defs/id" },
+        "rejectionReason": { "type": "string", "minLength": 1 },
+        "staleReason": { "type": "string", "minLength": 1 },
+        "approvalId": { "$ref": "#/$defs/id" },
+        "confidence": { "type": "number", "minimum": 0, "maximum": 1 },
+        "reproduced": { "type": "boolean" }
       },
       "additionalProperties": true
+    },
+    "applicabilityCondition": {
+      "type": "object",
+      "required": ["field", "operator", "value"],
+      "additionalProperties": false,
+      "properties": {
+        "field": {
+          "type": "string",
+          "enum": [
+            "fabProfileId",
+            "partId",
+            "footprintId",
+            "ruleId",
+            "classification",
+            "reproductionCondition"
+          ]
+        },
+        "operator": { "type": "string", "enum": ["equals", "notEquals"] },
+        "value": { "type": "string", "minLength": 1 }
+      }
     },
     "taskLedgerEntry": {
       "type": "object",
@@ -256,12 +295,13 @@
         "type": { "const": "VerificationResult" },
         "revision": { "type": "integer", "minimum": 0 },
         "gate": { "type": "string", "minLength": 1 },
-        "status": { "type": "string", "enum": ["passed", "failed", "blocked", "waived"] },
+        "status": { "type": "string", "enum": ["passed", "failed", "blocked", "waived", "stale"] },
         "inputRevision": { "type": "integer", "minimum": 0 },
         "toolVersion": { "type": "string", "minLength": 1 },
         "checkedAt": { "type": "string", "format": "date-time" },
         "findingIds": { "type": "array", "items": { "$ref": "#/$defs/id" } },
-        "evidenceIds": { "type": "array", "items": { "$ref": "#/$defs/id" } }
+        "evidenceIds": { "type": "array", "items": { "$ref": "#/$defs/id" } },
+        "staleReason": { "type": "string", "minLength": 1 }
       },
       "additionalProperties": true
     },
@@ -277,6 +317,7 @@
         "approvedBy": { "type": "string", "minLength": 1 },
         "approvedAt": { "type": "string", "format": "date-time" },
         "expiresAt": { "type": "string", "format": "date-time" },
+        "subject": { "$ref": "#/$defs/id" },
         "condition": { "type": "string" }
       },
       "additionalProperties": true

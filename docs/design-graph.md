@@ -40,6 +40,13 @@
 | `Approval`             | 人間または認可主体による範囲付き承認                  | approval ID, scope, expiry                     |
 | `Waiver`               | 検証警告・免除の理由と期限                            | gate, risk, approval ID, expiry                |
 
+`KnowledgeItem`は`sourceEventIds`、`provenance`、`scope`、`status`、`knowledgeId`を必須の
+ライフサイクル情報として持ちます。`appliesWhen`と`excludesWhen`は
+`{ field, operator, value }`の構造化条件で、fab profile、part、footprint、rule、分類、
+再現条件を表します。元の設計revisionは`provenance`に記録し、適用条件には含めません。
+版の変更は`previousRevisionId`で旧版を参照し、却下理由、承認ID、信頼度、stale理由を
+追加記録できます。
+
 ## 設計根拠
 
 `Rationale`は最低限、次を持ちます。
@@ -79,6 +86,8 @@
 分析結果から、変更点×影響先Entity／工程の相互影響マトリクス、変更影響レポート、再実行が必要な検証ゲート・`TestItem`、レビューが必要な`Rationale`を生成します。マトリクスとレポートは正規設計グラフではなく、対象リビジョンと`patchId`を参照する再生成可能な投影です。影響伝播のリンクが`unknown`または未定義の場合は影響を狭く見積もらず、より広い再検証へフォールバックします。
 
 `VerificationResult`は検証入力のグラフリビジョン、関連パッチ、入力ハッシュを参照します。依存するEntityまたは属性が変更されたとき、過去の結果は自動的にstale（再検証待ち）となり、staleな結果を合格証拠として下流へ流しません。これにより、差分開発では影響範囲だけを効率的に再検証しつつ、jidokaの停止・通知・証拠追跡を維持できます。
+
+知識のdeprecation伝播では、成功済みの依存結果だけをstaleへ更新し、failed・blocked・waivedなど成功以外の記録は上書きせず保全します。staleへ更新したEntityはrevisionをインクリメントし、伝播時に保全したEntity IDもEvidenceへ記録します。
 
 ## 監査文書の生成投影
 

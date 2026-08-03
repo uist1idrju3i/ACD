@@ -27,6 +27,10 @@ Phase 0の実行、patch、検証、停止、再開を追記専用で記録し�
 `baseRevision`、`resultRevision`、`payloadHash`です。`payload`はイベント種別
 ごとのtyped payloadとし、hashはcanonical JSON化したpayloadへ適用します。
 
+Gate 20のknowledge eventにおける`baseRevision`/`resultRevision`は設計graphの
+revisionではなく、knowledge event log内で単調増加するカウンタです。Gate 19の
+fab feedback logとは別のappend-only logとして管理し、ログを混在させません。
+
 ## イベント種別
 
 Phase 0では少なくとも次を扱います。
@@ -42,6 +46,9 @@ Phase 0では少なくとも次を扱います。
 - `run.resumed`
 - `fab.feedback.received`：記録済みfab reportの入力と、対象revision・provenanceを含む
   決定論的なintake結果
+- `knowledge.candidate.created`：fab intakeから生成したcandidate KnowledgeItem
+- `knowledge.transitioned`：KnowledgeItemの状態またはscopeの遷移
+- `knowledge.applied`：採用済みKnowledgeItemを設計revisionへ適用した記録
 
 イベント種別ごとのpayload schemaとerror codeは実装時に追加し、未知の種別は
 削除せず`unknown event`として保存してreplayを停止します。
@@ -53,6 +60,8 @@ Phase 0では少なくとも次を扱います。
 - replay順は保存順ではなく、revision、occurredAt、eventIdを検査した順序とする。
 - 同一revisionに複数の結果を確定しない。
 - payload hash、snapshot hash、patch IDを相互参照できるようにする。
+
+知識ライフサイクルイベントも同じappend-only revision契約に従い、candidate作成からreviewed・adoptedへの各イベントは直前イベントのresultRevisionを次のbaseRevisionとして記録します。
 
 ## 訂正と取り消し
 

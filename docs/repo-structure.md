@@ -12,10 +12,10 @@
 ```text
 packages/
   schema/                 # JSON Schema、生成型、runtime validator
-  graph-core/             # snapshot、Entity、semantic validation、Repository契約
+  graph-core/             # snapshot、Entity、semantic validation、knowledge lifecycle、Repository契約
   adapters/
     kicad/                # Graph -> KiCad、再オープン、artifact manifest
-    storage-fs/           # snapshot、patch、event logのファイル実装
+    storage-fs/           # snapshot、patch、event log、KnowledgeItemのファイル実装
     freerouting/          # DSN/SES境界
     spice/                # nominal SPICE deck生成とngspice出力の解釈
     fab-feedback/         # recorded/live fab reportのintake adapter

@@ -239,6 +239,19 @@
         "schema-invalid",
         "reference-integrity"
       ]
+    },
+    {
+      "order": 20,
+      "id": "gate:knowledge-lifecycle",
+      "name": "KnowledgeItem lifecycle",
+      "phase": 3,
+      "runsAfter": "gate:fab-feedback-intake",
+      "status": "implemented",
+      "appliesTo": ["golden"],
+      "inputs": "gate 19 intake result、source event、applicability metadata、approval",
+      "passCondition": "candidateを生成し、provenance・source event・適用条件を検証したうえでreviewed、adoptedへ決定論的に遷移できることを検証する",
+      "onFailure": "`verification-failed`または`schema-invalid`で停止し、承認不足・不正遷移・stale対象を記録",
+      "errorCodes": ["verification-failed", "schema-invalid", "stale-result"]
     }
   ]
 }

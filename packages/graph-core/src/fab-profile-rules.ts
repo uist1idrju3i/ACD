@@ -1,3 +1,15 @@
+export type ApplicabilityCondition = {
+  field:
+    | "fabProfileId"
+    | "partId"
+    | "footprintId"
+    | "ruleId"
+    | "classification"
+    | "reproductionCondition";
+  operator: "equals" | "notEquals";
+  value: string;
+};
+
 export type FabProfileRule = {
   ruleId: string;
   textPatterns: string[];
@@ -11,6 +23,8 @@ export type FabProfileRule = {
     | "solderability";
   confidence: number;
   reproductionConditions: string[];
+  appliesWhen: ApplicabilityCondition[];
+  excludesWhen: ApplicabilityCondition[];
 };
 
 export type FabProfileRules = {
@@ -23,7 +37,7 @@ export type FabProfileRules = {
 export const fabProfileRules: FabProfileRules[] = [
   {
     profileId: "fab:jlcpcb-class-2layer",
-    version: "0.1.0",
+    version: "0.2.0",
     confidenceFloor: 0.8,
     rules: [
       {
@@ -32,6 +46,12 @@ export const fabProfileRules: FabProfileRules[] = [
         classification: "mask-clearance",
         confidence: 0.98,
         reproductionConditions: ["2-layer", "HASL", "0.1mm minimum mask sliver"],
+        appliesWhen: [
+          { field: "fabProfileId", operator: "equals", value: "fab:jlcpcb-class-2layer" },
+        ],
+        excludesWhen: [
+          { field: "fabProfileId", operator: "notEquals", value: "fab:jlcpcb-class-2layer" },
+        ],
       },
       {
         ruleId: "copper-clearance-min",
@@ -39,6 +59,12 @@ export const fabProfileRules: FabProfileRules[] = [
         classification: "spacing",
         confidence: 0.91,
         reproductionConditions: ["2-layer", "0.127mm copper clearance profile"],
+        appliesWhen: [
+          { field: "fabProfileId", operator: "equals", value: "fab:jlcpcb-class-2layer" },
+        ],
+        excludesWhen: [
+          { field: "fabProfileId", operator: "notEquals", value: "fab:jlcpcb-class-2layer" },
+        ],
       },
       {
         ruleId: "silkscreen-edge",
@@ -46,6 +72,12 @@ export const fabProfileRules: FabProfileRules[] = [
         classification: "silkscreen",
         confidence: 0.88,
         reproductionConditions: ["2-layer", "board-edge silkscreen exclusion"],
+        appliesWhen: [
+          { field: "fabProfileId", operator: "equals", value: "fab:jlcpcb-class-2layer" },
+        ],
+        excludesWhen: [
+          { field: "fabProfileId", operator: "notEquals", value: "fab:jlcpcb-class-2layer" },
+        ],
       },
       {
         ruleId: "pad-geometry",
@@ -53,6 +85,12 @@ export const fabProfileRules: FabProfileRules[] = [
         classification: "pad-geometry",
         confidence: 0.9,
         reproductionConditions: ["2-layer", "fab pad geometry profile"],
+        appliesWhen: [
+          { field: "fabProfileId", operator: "equals", value: "fab:jlcpcb-class-2layer" },
+        ],
+        excludesWhen: [
+          { field: "fabProfileId", operator: "notEquals", value: "fab:jlcpcb-class-2layer" },
+        ],
       },
     ],
   },

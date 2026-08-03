@@ -8,7 +8,7 @@ import {
   unresolvedFindings,
   type FixturePatchOperation,
 } from "../packages/graph-core/src/index.js";
-import type { Phase1Fixture } from "../packages/schema/src/generated/phase1-fixture.js";
+import type { ACDPhase1Fixture } from "../packages/schema/src/generated/phase1-fixture.js";
 
 /**
  * Regenerates the recorded repair proposals used by the offline repair loop.
@@ -24,7 +24,7 @@ const gateIds = (
 ).gates.map((gate) => gate.id);
 const golden = JSON.parse(
   await readFile(join(root, "fixtures/phase1/golden-esp32.json"), "utf8"),
-) as Phase1Fixture;
+) as ACDPhase1Fixture;
 
 const partIndex = (id: string): number => {
   const index = golden.parts.findIndex((part) => part.id === id);
@@ -124,7 +124,7 @@ const cases: Case[] = [
   },
 ];
 
-const promptHashOf = (fixture: Phase1Fixture): string =>
+const promptHashOf = (fixture: ACDPhase1Fixture): string =>
   sha256(
     unresolvedFindings(evaluateFixtureGates(fixture, gateIds)).map((finding) => [
       finding.ruleId,
