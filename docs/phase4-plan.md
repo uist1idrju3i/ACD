@@ -1,6 +1,6 @@
 # Phase 4実装計画
 
-**ステータス：Draft（未着手。ADR-0024〜0027は未決定）**
+**ステータス：Draft（未着手。ADR-0024〜0027はAccepted）**
 
 ## 目的と権威範囲
 
@@ -34,12 +34,13 @@ FWパッケージと仮想実機はPhase 5、自働発注はPhase 6、cron型の
 - 現状のPhase 1〜3のrunは`scripts/*.mts`の単発runnerであり、途中終了すると先頭から
   やり直します。README §7 Phase 4の完了条件は、この構造では測定できません。
 
-## 未決定事項（ADR化が必要）
+## 決定事項（ADR-0024〜0027）
 
-以下の設計判断はADR-0024〜0027に記録済みです。ADRは実装前のProposedとして保持し、
-実装時の契約と検証方法を固定します。
+長時間ランの所有、checkpoint、WASM対象、ブラウザUI範囲の設計判断は、Acceptedの
+ADR-0024〜0027に記録済みです。残る未決定事項は、ADR-0026のWASM実装言語と
+ADR-0027のUIフレームワークであり、それぞれWP7／WP6着手時に別ADRとして記録します。
 
-| #        | 決定事項                         | 推奨案                                                                                                                                                                                                                                                                                                                                                                              | 影響          |
+| #        | 決定事項                         | 決定                                                                                                                                                                                                                                                                                                                                                                                | 影響          |
 | -------- | -------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------- |
 | ADR-0024 | 長時間ランの所有者と永続化形式   | [ADR-0024](adr/0024-long-running-run-ownership-and-persistence.md)：ランはworker processが所有し、台帳・checkpointはappend-only JSONL（`.acd/runs/<runId>/`）で保持する。ブラウザは再接続して状態を見る端末に限定し、IndexedDB／OPFSはPhase 4では採用しない                                                                                                                         | WP1、WP2、WP6 |
 | ADR-0025 | checkpointの粒度と無効化条件     | [ADR-0025](adr/0025-checkpoint-granularity-and-invalidation.md)：checkpointはgate境界単位。input revision／hash、tool／model／library／container version、provenance、measurement-system qualification、fab／manufacturing profile、参照KnowledgeItem statusのいずれかが変わったcheckpointはstaleとして再実行する（再利用しない）。完了条件の受入測定はworker process強制終了とする | WP2、WP3      |
@@ -231,7 +232,9 @@ FWパッケージと仮想実機はPhase 5、自働発注はPhase 6、cron型の
 - [`agent-runtime.md`](agent-runtime.md)、[`architecture.md`](architecture.md)、
   [`repo-structure.md`](repo-structure.md)、[`event-log.md`](event-log.md)、
   [`error-taxonomy.md`](error-taxonomy.md)を実装に合わせて更新する。
-- ADR-0024〜0027を記録し、`docs/phase4-retrospective.md`に測定結果と教訓を残す。
+- ADR-0024〜0027を実装に合わせて更新し、[`architecture.md`](architecture.md)のブラウザのみ
+  モードとPhase 4のworker側正規永続化の関係、および[`adr/0006-implementation-language-storage.md`](adr/0006-implementation-language-storage.md)
+  の候補記述との同期を行う。`docs/phase4-retrospective.md`に測定結果と教訓を残す。
 
 **受入基準**
 

@@ -1,6 +1,6 @@
 # ADR-0024：長時間ランの所有者と永続化形式
 
-**ステータス：Proposed（Phase 4 WP1／WP2／WP6）**
+**ステータス：Accepted（Phase 4 WP1／WP2／WP6）**
 
 ## 背景
 
@@ -11,8 +11,9 @@ Phase 4は、設計ランを途中で中断しても最後の検証済みcheckpo
 
 ADR-0004はブラウザを第一に設計しつつ、重い・長い・秘密性の高い処理を任意のローカル／
 サーバーワーカーへ委譲できると定めています。また、[`architecture.md`](../architecture.md)
-はブラウザのみモードとワーカーモードを併記しています。本ADRはADR-0004を廃止せず、
-そのワーカーモードをPhase 4の長時間ランの実行形態として限定し、最小永続化形式を具体化します。
+はブラウザのみモードとワーカーモードを併記し、[`ADR-0006`](0006-implementation-language-storage.md)
+はIndexedDB／OPFSをストレージ候補として列挙しています。本ADRはこれらを廃止せず、
+Phase 4の長時間ランの正規永続化のみをworker側JSONLに限定し、その実行形態を具体化します。
 
 ## 決定
 
@@ -45,12 +46,15 @@ ADR-0004はブラウザを第一に設計しつつ、重い・長い・秘密性
 - ブラウザのみの実行やIndexedDB／OPFSの採用は、必要性が明確になった場合に後続ADRで再検討します。
 - ブラウザのみモードを廃止する決定ではありません。Phase 4のREADME完了条件を測定する
   受入経路だけをworker-owned runに固定します。
+- `architecture.md`のブラウザのみモードとPhase 4の正規永続化の関係、およびADR-0006の
+  候補列挙との同期はWP8で行います。本ADRはその同期までのPhase 4実装契約を定めます。
 
 ## 参照
 
 - [`../../README.md`](../../README.md#9-長時間タスクを走り切る実行基盤)
 - [`../phase4-plan.md`](../phase4-plan.md)
 - [`0004-browser-first-optional-workers.md`](0004-browser-first-optional-workers.md)
+- [`0006-implementation-language-storage.md`](0006-implementation-language-storage.md)
 - [`../agent-runtime.md`](../agent-runtime.md)
 - [`../architecture.md`](../architecture.md)
 - [`../event-log.md`](../event-log.md)

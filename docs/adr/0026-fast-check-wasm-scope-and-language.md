@@ -1,6 +1,6 @@
 # ADR-0026：高速チェックのWASM対象と実装言語
 
-**ステータス：Proposed（Phase 4 WP7）**
+**ステータス：Accepted（Phase 4 WP7）**
 
 ## 背景
 
@@ -28,7 +28,7 @@ native TypeScript実装を判定の正とし、WASMは同一入力で同一結�
 3. nativeとWASMの不一致、provenance欠落、入力不一致は停止します。
 4. WASMが利用できない環境ではnative経路へ決定論的にfallbackします。
 5. `kicad-cli`、ngspice、routerなど全エンジンのWASM化は行いません。
-6. 実装言語は未決定とし、Rustを推奨候補としてWP7着手時に決定します。
+6. 実装言語は本ADRでは決定せず、Rustを推奨候補としてWP7着手時に別ADRで決定します。
 
 ## 代替案
 
@@ -38,8 +38,8 @@ native TypeScript実装を判定の正とし、WASMは同一入力で同一結�
   Phase 4の目的を満たす経路を失うため採用しない。
 - **WASMを正の実装にする**：nativeとの結果差を正当化する別判定系となり、決定論的な
   gateの一貫性を損なうため採用しない。
-- **実装言語を今決定する**：toolchainとruntime boundaryを先に固定するが、WP7の
-  parity要件と実行環境を確認する前に選択を狭めるため未決定として残す。
+- **実装言語を本ADRで決定する**：toolchainとruntime boundaryを先に固定するが、WP7の
+  parity要件と実行環境を確認する前に選択を狭めるため、別ADRへ分離する。
 
 ## 結果とリスク
 
@@ -47,8 +47,8 @@ native TypeScript実装を判定の正とし、WASMは同一入力で同一結�
 - parity failure、WASM runtime failure、build digest欠落、未対応環境ではWASM経路を
   無効化または停止し、未検証結果をgateへ流しません。
 - nativeとWASMの性能差、浮動小数点差、toolchain差はfixture集合で測定します。
-- 言語選択はWP7の着手時に、license、build再現性、browser runtime、parity結果を
-  根拠として別途確定します。
+- 言語選択は本ADRでは決定せず、WP7の着手時にlicense、build再現性、browser runtime、
+  parity結果を根拠として別ADRで確定します。
 
 ## 参照
 

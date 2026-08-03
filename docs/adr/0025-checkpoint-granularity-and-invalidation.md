@@ -1,6 +1,6 @@
 # ADR-0025：checkpointの粒度と無効化条件
 
-**ステータス：Proposed（Phase 4 WP2／WP3）**
+**ステータス：Accepted（Phase 4 WP2／WP3）**
 
 ## 背景
 
