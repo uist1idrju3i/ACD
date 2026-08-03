@@ -46,3 +46,7 @@ ADRはACDの技術選定を、理由・代替案・前提・結果とともに�
 - [`0021-fab-feedback-intake-source.md`](0021-fab-feedback-intake-source.md)
 - [`0022-knowledge-scope-promotion-approval-boundary.md`](0022-knowledge-scope-promotion-approval-boundary.md)
 - [`0023-library-versioning-official-snapshot-overlay-patch.md`](0023-library-versioning-official-snapshot-overlay-patch.md)
+- [`0024-long-running-run-ownership-and-persistence.md`](0024-long-running-run-ownership-and-persistence.md)
+- [`0025-checkpoint-granularity-and-invalidation.md`](0025-checkpoint-granularity-and-invalidation.md)
+- [`0026-fast-check-wasm-scope-and-language.md`](0026-fast-check-wasm-scope-and-language.md)
+- [`0027-browser-ui-scope-and-technology.md`](0027-browser-ui-scope-and-technology.md)
