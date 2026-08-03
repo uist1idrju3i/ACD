@@ -147,6 +147,16 @@ describe("knowledge lifecycle", () => {
       operator: "equals",
       value: "footprint:r0603",
     });
+    expect(adopted.appliesWhen).not.toContainEqual({
+      field: "ruleId",
+      operator: "equals",
+      value: "mask-sliver-min",
+    });
+    expect(adopted.appliesWhen).not.toContainEqual({
+      field: "classification",
+      operator: "equals",
+      value: "mask-clearance",
+    });
     expect(
       evaluateKnowledgeApplicability(adopted, {
         fabProfileId: "fab:jlcpcb-class-2layer",
@@ -154,7 +164,7 @@ describe("knowledge lifecycle", () => {
         footprintId: "footprint:r0603",
         ruleId: "mask-sliver-min",
         classification: "mask-clearance",
-        reproductionCondition: ["2-layer", "HASL", "0.1mm minimum mask sliver"],
+        reproductionCondition: ["2-layer", "HASL", "0.30mm minimum mask sliver"],
         designRevision: "prototype-2",
       }),
     ).toBe("pass");

@@ -42,7 +42,7 @@ describe("gate matrix", () => {
   it("runs a gate declaring runsAfter directly after the gate it names", () => {
     const orders = gatesInExecutionOrder(matrix).map((gate) => gate.order);
     expect(orders).toEqual([
-      1, 2, 3, 4, 5, 14, 15, 16, 17, 18, 19, 20, 6, 7, 8, 9, 10, 11, 12, 21, 13,
+      1, 2, 3, 4, 5, 14, 15, 16, 17, 18, 19, 20, 6, 7, 8, 9, 10, 11, 12, 21, 22, 13,
     ]);
     expect(gateByOrder(matrix, 14).runsAfter).toBe("gate:netlist-consistency");
     expect(gateByOrder(matrix, 15).runsAfter).toBe("gate:electrical-lint");
@@ -58,26 +58,26 @@ describe("gate matrix", () => {
       1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11,
     ]);
     expect(gatesForScope(matrix, "golden").map((gate) => gate.order)).toEqual([
-      1, 2, 3, 4, 5, 14, 15, 16, 17, 18, 19, 20, 6, 7, 8, 9, 10, 11, 12, 21, 13,
+      1, 2, 3, 4, 5, 14, 15, 16, 17, 18, 19, 20, 6, 7, 8, 9, 10, 11, 12, 21, 22, 13,
     ]);
     expect(gateByOrder(matrix, 13).status).toBe("contract-only");
   });
 
   it("reports contracted gates a run skipped", () => {
     const executed = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 14, 15, 16, 17, 18];
-    expect(missingExecutedGates(matrix, "golden", [...executed, 19, 20, 21])).toEqual([]);
+    expect(missingExecutedGates(matrix, "golden", [...executed, 19, 20, 21, 22])).toEqual([]);
     expect(
       missingExecutedGates(
         matrix,
         "golden",
         executed.filter((order) => order !== 14),
       ).map((gate) => gate.order),
-    ).toEqual([14, 19, 20, 21]);
+    ).toEqual([14, 19, 20, 21, 22]);
     expect(
       missingExecutedGates(matrix, "golden", executed, {
         includeContractOnly: true,
       }).map((gate) => gate.order),
-    ).toEqual([19, 20, 21, 13]);
+    ).toEqual([19, 20, 21, 22, 13]);
   });
 
   it("stops when an unknown gate order is requested", () => {

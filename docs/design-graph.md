@@ -42,8 +42,12 @@
 
 `KnowledgeItem`は`sourceEventIds`、`provenance`、`scope`、`status`、`knowledgeId`を必須の
 ライフサイクル情報として持ちます。`appliesWhen`と`excludesWhen`は
-`{ field, operator, value }`の構造化条件で、fab profile、part、footprint、rule、分類、
-再現条件を表します。元の設計revisionは`provenance`に記録し、適用条件には含めません。
+`{ field, operator, value }`の構造化条件で、target designが事前に宣言できるfab profile、
+part、footprint、process/stackup条件と、rule tableが明示的に宣言した条件を表します。
+source findingのrule・分類・再現結果は適用条件へ自動注入せず、provenance/contentへ保持します。
+元の設計revisionは`provenance`に記録し、適用条件には含めません。
+
+次設計への知識適用（WP4）は、target designの宣言から決定論的に導出したfab profile、使用中のfootprint、process/stackup条件を`ApplicabilityContext`として評価します。source reportのfindingからrule・classification・再現条件をコピーしてはいけません。採用済みKnowledgeItemごとに`pass`、`fail`、`unknown`、または明示的な「適用可能な知識なし」を記録し、`unknown`は検証を狭めません。適用可能な知識は投影前に明示的library revisionへ解決し、`knowledge.applied`がKnowledgeItem、library revision、projection artifactを連鎖させます。
 版の変更は`previousRevisionId`で旧版を参照し、却下理由、承認ID、信頼度、stale理由を
 追加記録できます。
 

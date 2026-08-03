@@ -201,7 +201,9 @@ export const materializeLibraryPatchInBoardSource = (
 
 const ruleForKnowledge = (item: KnowledgeItem) => {
   const profileId = conditionValue(item, "fabProfileId");
-  const ruleId = conditionValue(item, "ruleId");
+  const ruleId =
+    conditionValue(item, "ruleId") ??
+    (typeof item.provenance[0]?.ruleId === "string" ? item.provenance[0].ruleId : undefined);
   if (!profileId || !ruleId) {
     throw new GraphCoreError("schema-invalid", `knowledge item lacks fab profile/rule: ${item.id}`);
   }

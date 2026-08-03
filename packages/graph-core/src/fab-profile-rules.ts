@@ -22,9 +22,11 @@ export type FabProfileRule = {
     | "spacing"
     | "solderability";
   confidence: number;
+  minimumSliverMm?: number;
   reproductionConditions: string[];
   appliesWhen: ApplicabilityCondition[];
   excludesWhen: ApplicabilityCondition[];
+  applicationExemption?: "no-correction-required";
   correction?: {
     target: "pad-mask-clearance";
     requiredValueMm: number;
@@ -39,6 +41,9 @@ export type FabProfileRules = {
   rules: FabProfileRule[];
 };
 
+export const maskSliverReproductionCondition = (minimumSliverMm: number): string =>
+  `${minimumSliverMm.toFixed(2)}mm minimum mask sliver`;
+
 export const fabProfileRules: FabProfileRules[] = [
   {
     profileId: "fab:jlcpcb-class-2layer",
@@ -50,14 +55,15 @@ export const fabProfileRules: FabProfileRules[] = [
         textPatterns: ["solder mask sliver", "mask sliver"],
         classification: "mask-clearance",
         confidence: 0.98,
-        reproductionConditions: ["2-layer", "HASL", "0.1mm minimum mask sliver"],
+        minimumSliverMm: 0.3,
+        reproductionConditions: ["2-layer", "HASL", maskSliverReproductionCondition(0.3)],
         appliesWhen: [
           { field: "fabProfileId", operator: "equals", value: "fab:jlcpcb-class-2layer" },
         ],
         excludesWhen: [
           { field: "fabProfileId", operator: "notEquals", value: "fab:jlcpcb-class-2layer" },
         ],
-        correction: { target: "pad-mask-clearance", requiredValueMm: 0.1, padNumber: "1" },
+        correction: { target: "pad-mask-clearance", requiredValueMm: -0.02 },
       },
       {
         ruleId: "copper-clearance-min",
@@ -71,6 +77,7 @@ export const fabProfileRules: FabProfileRules[] = [
         excludesWhen: [
           { field: "fabProfileId", operator: "notEquals", value: "fab:jlcpcb-class-2layer" },
         ],
+        applicationExemption: "no-correction-required",
       },
       {
         ruleId: "silkscreen-edge",
@@ -84,6 +91,7 @@ export const fabProfileRules: FabProfileRules[] = [
         excludesWhen: [
           { field: "fabProfileId", operator: "notEquals", value: "fab:jlcpcb-class-2layer" },
         ],
+        applicationExemption: "no-correction-required",
       },
       {
         ruleId: "pad-geometry",
@@ -97,6 +105,7 @@ export const fabProfileRules: FabProfileRules[] = [
         excludesWhen: [
           { field: "fabProfileId", operator: "notEquals", value: "fab:jlcpcb-class-2layer" },
         ],
+        applicationExemption: "no-correction-required",
       },
     ],
   },
@@ -104,3 +113,10 @@ export const fabProfileRules: FabProfileRules[] = [
 
 export const rulesForFabProfile = (profileId: string): FabProfileRules | undefined =>
   fabProfileRules.find((profile) => profile.profileId === profileId);
+
+export const reproductionConditionsForFabProfile = (profileId: string): string[] => {
+  const profile = rulesForFabProfile(profileId);
+  return profile
+    ? [...new Set(profile.rules.flatMap((rule) => rule.reproductionConditions))].sort()
+    : [];
+};

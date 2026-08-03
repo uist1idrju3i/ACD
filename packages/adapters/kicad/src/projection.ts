@@ -777,7 +777,7 @@ export const projectToKicad = async (
     }
     await writeFile(
       join(directory, "fp-lib-table"),
-      renderFootprintLibraryTable(patch ? "${KIPRJMOD}/library-overlays" : undefined),
+      renderFootprintLibraryTable(patch ? join(directory, "library-overlays") : undefined),
       "utf8",
     );
     return {
@@ -815,7 +815,7 @@ export const projectToKicad = async (
   if (isPhase1Fixture(graph)) {
     await writeFile(
       join(directory, "fp-lib-table"),
-      renderFootprintLibraryTable(patch ? "${KIPRJMOD}/library-overlays" : undefined),
+      renderFootprintLibraryTable(patch ? join(directory, "library-overlays") : undefined),
       "utf8",
     );
     await writeFile(join(directory, "sym-lib-table"), renderSymbolLibraryTable(), "utf8");

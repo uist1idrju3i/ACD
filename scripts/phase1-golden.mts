@@ -26,6 +26,11 @@ import {
   createKnowledgeCandidate,
   createKnowledgeCandidateCreatedEvent,
   createKnowledgeTransitionedEvent,
+  createKnowledgeAppliedEvent,
+  assertKnowledgeApplicationsComplete,
+  createTargetDesignKnowledgeContext,
+  evaluateKnowledgeApplications,
+  recordKnowledgeApplications,
   evaluateDesignRationale,
   evaluateFixtureGates,
   failedFindings,
@@ -40,6 +45,7 @@ import {
   unresolvedRationaleFindings,
   unresolvedTestPlanFindings,
   compareIds,
+  reproductionConditionsForFabProfile,
   type KnowledgeItem,
   type FixturePatchOperation,
   type RecordedProposal,
@@ -52,11 +58,12 @@ import {
 } from "../packages/adapters/fab-feedback/src/index.js";
 import {
   gateByOrder,
+  loadSchemaValidator,
   loadGateMatrix,
   missingExecutedGates,
   validatePhase1FixtureReferences,
 } from "../packages/schema/src/index.js";
-import { loadSchemaValidator } from "../packages/schema/src/index.js";
+
 import type { ACDPhase1Fixture } from "../packages/schema/src/generated/phase1-fixture.js";
 import preOrder from "./pre-order.ts";
 
@@ -85,6 +92,7 @@ const results: Result[] = [];
 let currentGate = 0;
 let currentName = "golden";
 let adoptedKnowledgeForLibraryPatch: KnowledgeItem | undefined;
+let adoptedLibraryPatch: ReturnType<typeof createLibraryPatchCandidate> | undefined;
 const hash = (content: string): string =>
   `sha256:${createHash("sha256").update(content).digest("hex")}`;
 const run = (command: string, args: string[]): string =>
@@ -801,28 +809,8 @@ try {
     throw new Error("verification-failed: no adopted mask-sliver knowledge for library patch");
   }
   const libraryPatch = createLibraryPatchCandidate(adoptedKnowledgeForLibraryPatch);
-  const writeLibraryPatchFailure = async (
-    failureReason: string,
-    verification?: Record<string, unknown>,
-    boardHash?: string,
-  ): Promise<void> => {
-    const evidence = {
-      patch: libraryPatch,
-      failureReason,
-      verification: verification ?? null,
-      boardHash: boardHash ?? null,
-    };
-    await writeFile(
-      join(artifactRoot, "library-patch.json"),
-      `${JSON.stringify({ ...evidence, inputHash: hash(JSON.stringify(evidence)) }, null, 2)}\n`,
-    );
-  };
   const geometryVerification = verifyLibraryPatchGeometry(libraryPatch);
   if (geometryVerification.geometry !== "passed") {
-    await writeLibraryPatchFailure(
-      geometryVerification.failureEvidence ?? "library patch geometry failed",
-      geometryVerification,
-    );
     throw new Error(
       `verification-failed: library patch geometry failed: ${geometryVerification.failureEvidence}`,
     );
@@ -848,11 +836,6 @@ try {
     libraryPatch.operations,
   );
   if (patchedBoardContent === unpatchedBoardContent) {
-    await writeLibraryPatchFailure(
-      "library patch did not change the projected board",
-      { boardInputHash: unpatchedBoardHash },
-      unpatchedBoardHash,
-    );
     throw new Error("verification-failed: library patch did not change the projected board");
   }
   if (
@@ -860,11 +843,6 @@ try {
       `ACD_LibraryOverlay" "pad-mask-clearance=${libraryPatch.operations[0]?.requiredValueMm}`,
     )
   ) {
-    await writeLibraryPatchFailure(
-      "projected board lacks the library correction",
-      { boardInputHash: unpatchedBoardHash },
-      unpatchedBoardHash,
-    );
     throw new Error("verification-failed: projected board lacks the library correction");
   }
   const patchedPads = parseAllFootprintSources(
@@ -875,14 +853,6 @@ try {
     patchedPads.length === 0 ||
     patchedPads.some((pad) => pad.solderMaskMargin !== libraryPatch.operations[0]?.requiredValueMm)
   ) {
-    await writeLibraryPatchFailure(
-      "patched board pads lack declared solder mask margin",
-      {
-        boardInputHash: unpatchedBoardHash,
-        patchedPadCount: patchedPads.length,
-      },
-      unpatchedBoardHash,
-    );
     throw new Error("verification-failed: patched board pads lack declared solder mask margin");
   }
   const patchedBoardHash = hash(patchedBoardContent);
@@ -952,13 +922,8 @@ try {
     drc,
     ...(failureEvidence ? { failureEvidence } : {}),
   };
-  const adoptedLibraryPatch = adoptVerifiedLibraryPatch(libraryPatch, verification);
+  adoptedLibraryPatch = adoptVerifiedLibraryPatch(libraryPatch, verification);
   if (adoptedLibraryPatch.status !== "adopted") {
-    await writeLibraryPatchFailure(
-      "library patch verification did not pass",
-      verification,
-      patchedBoardHash,
-    );
     throw new Error("verification-failed: library patch was not adopted");
   }
   await writeFile(
@@ -987,6 +952,142 @@ try {
     libraryRevision: adoptedLibraryPatch.libraryRevision,
     snapshotManifestHash: adoptedLibraryPatch.snapshotManifestHash,
     artifact: "library-patch.json",
+  });
+
+  enter(22);
+  if (!adoptedLibraryPatch || !adoptedKnowledgeForLibraryPatch) {
+    throw new Error(
+      "verification-failed: adopted library patch is unavailable for knowledge application",
+    );
+  }
+  if (!fixture.manufacturingProfile) {
+    throw new Error("verification-failed: target design lacks a declared manufacturing profile");
+  }
+  const declaredConditions = reproductionConditionsForFabProfile(
+    fixture.manufacturingProfile.fabProfileId,
+  );
+  const unknownConditions = fixture.manufacturingProfile.processConditions.filter(
+    (condition) => !declaredConditions.includes(condition),
+  );
+  if (unknownConditions.length > 0) {
+    throw new Error("schema-invalid: target process conditions drift from fab profile rules");
+  }
+  const adoptedKnowledgeItems = knowledgeStates.map((state) => state.adopted);
+  const targetKnowledgeContext = createTargetDesignKnowledgeContext({
+    designRevision: fixture.requirement.provenance.version,
+    fabProfileId: fixture.manufacturingProfile.fabProfileId,
+    footprintIds: [
+      ...new Set(
+        fixture.mappings.map(
+          (mapping) => `footprint:${mapping.footprintLibraryId}:${mapping.footprintName}`,
+        ),
+      ),
+    ]
+      .map(String)
+      .sort(),
+    reproductionConditions: fixture.manufacturingProfile.processConditions,
+  });
+  const applicationResult = evaluateKnowledgeApplications(
+    adoptedKnowledgeItems,
+    targetKnowledgeContext,
+  );
+  const appliedResult = recordKnowledgeApplications(applicationResult, [
+    {
+      knowledgeId: adoptedKnowledgeForLibraryPatch.knowledgeId,
+      libraryRevision: adoptedLibraryPatch.libraryRevision,
+    },
+  ]);
+  try {
+    assertKnowledgeApplicationsComplete(appliedResult, "projection");
+  } catch (error) {
+    await writeFile(
+      join(artifactRoot, "knowledge-application.json"),
+      `${JSON.stringify(
+        {
+          targetContext: targetKnowledgeContext,
+          decisions: appliedResult.decisions,
+          libraryRevisions: appliedResult.libraryRevisions,
+          failureReason: error instanceof Error ? error.message : String(error),
+          inputHash: hash(
+            JSON.stringify({
+              targetContext: targetKnowledgeContext,
+              decisions: appliedResult.decisions,
+            }),
+          ),
+        },
+        null,
+        2,
+      )}\n`,
+    );
+    throw error;
+  }
+  const applicationProjectRoot = join(artifactRoot, "knowledge-application-project");
+  await projectToKicad(fixture, applicationProjectRoot, {
+    libraryRevision: adoptedLibraryPatch.libraryRevision,
+    patches: [adoptedLibraryPatch],
+  });
+  const projectionArtifactId = "artifact:phase1-golden:knowledge-application-project";
+  let eventRevision = Math.max(
+    0,
+    ...(await knowledgeEventLog.readAll()).map((event) => event.resultRevision),
+  );
+  const appliedEvents = [];
+  const targetRevision = Number(fixture.requirement.provenance.version.match(/\d+$/)?.[0] ?? 0);
+  for (const decision of appliedResult.decisions.filter(
+    (candidate) =>
+      candidate.applied &&
+      candidate.lifecycleStatus === "adopted" &&
+      (candidate.status === "pass" || candidate.status === "unknown"),
+  )) {
+    const baseRevision = eventRevision;
+    eventRevision += 1;
+    const appliedEvent = createKnowledgeAppliedEvent({
+      eventId: `event:knowledge:applied:prototype-2:${decision.knowledgeId}`,
+      occurredAt: "2026-01-02T00:00:00.000Z",
+      actor: "fixture:knowledge-application",
+      projectId: fixture.fixtureId,
+      baseRevision,
+      resultRevision: eventRevision,
+      payload: {
+        knowledgeItemId: decision.knowledgeItemId,
+        targetProjectId: fixture.fixtureId,
+        targetRevision,
+        appliedAt: "2026-01-02T00:00:00.000Z",
+        ...(decision.libraryRevision ? { libraryRevision: decision.libraryRevision } : {}),
+        projectionArtifactId,
+      },
+    });
+    await knowledgeEventLog.append(appliedEvent);
+    appliedEvents.push(appliedEvent);
+  }
+  await writeFile(
+    join(artifactRoot, "knowledge-application.json"),
+    `${JSON.stringify(
+      {
+        targetContext: targetKnowledgeContext,
+        decisions: appliedResult.decisions,
+        libraryRevisions: appliedResult.libraryRevisions,
+        projection: {
+          artifactId: projectionArtifactId,
+          libraryRevision: adoptedLibraryPatch.libraryRevision,
+        },
+        events: appliedEvents,
+      },
+      null,
+      2,
+    )}\n`,
+  );
+  pass(22, {
+    decisions: appliedResult.decisions.length,
+    appliedKnowledge: appliedResult.decisions
+      .filter((decision) => decision.applied)
+      .map((decision) => decision.knowledgeId),
+    exemptedKnowledge: appliedResult.decisions
+      .filter((decision) => decision.applicationExemption)
+      .map((decision) => decision.knowledgeId),
+    libraryRevision: adoptedLibraryPatch.libraryRevision,
+    projectionArtifactId,
+    artifact: "knowledge-application.json",
   });
 
   const missing = missingExecutedGates(

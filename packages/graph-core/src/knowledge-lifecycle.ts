@@ -77,7 +77,11 @@ const evaluateCondition = (
   const observed = context[conditionToEvaluate.field];
   if (observed === undefined) return "unknown";
   const values = Array.isArray(observed) ? observed : [observed];
-  const matches = values.includes(conditionToEvaluate.value);
+  const normalize = (value: string): string =>
+    conditionToEvaluate.field === "footprintId" && value.startsWith("footprint:")
+      ? value.slice("footprint:".length)
+      : value;
+  const matches = values.map(normalize).includes(normalize(conditionToEvaluate.value));
   return (conditionToEvaluate.operator === "equals" ? matches : !matches) ? "pass" : "fail";
 };
 
@@ -158,14 +162,12 @@ const conditionsForFinding = (
     ...(finding.references.footprintId
       ? [condition("footprintId", "equals", finding.references.footprintId)]
       : []),
-    ...(finding.references.ruleId
-      ? [condition("ruleId", "equals", finding.references.ruleId)]
-      : []),
-    condition("classification", "equals", finding.classification),
-    ...finding.reproductionConditions.map((value) =>
+    ...rule.reproductionConditions.map((value) =>
       condition("reproductionCondition", "equals", value),
     ),
-    ...rule.appliesWhen,
+    ...rule.appliesWhen.filter(
+      (entry) => entry.field !== "ruleId" && entry.field !== "classification",
+    ),
   ];
   const unique = (conditions: ApplicabilityCondition[]): ApplicabilityCondition[] =>
     conditions.filter(
@@ -213,6 +215,7 @@ export const createKnowledgeCandidate = (input: {
         contentHash: input.report.rawReport.contentHash,
         designRevision: input.designRevision,
         fabProfileId: input.report.fabProfileId,
+        ...(input.finding.references.ruleId ? { ruleId: input.finding.references.ruleId } : {}),
         derivationInputHash: input.derivationInputHash,
         derivationOutputHash: input.derivationOutputHash,
       },
@@ -464,6 +467,8 @@ export type KnowledgeAppliedPayload = {
   targetProjectId: string;
   targetRevision: number;
   appliedAt: string;
+  libraryRevision?: string;
+  projectionArtifactId?: string;
 };
 
 export const createKnowledgeCandidateCreatedEvent = (input: {
