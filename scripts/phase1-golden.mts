@@ -44,6 +44,7 @@ import {
   unresolvedFindings,
   unresolvedRationaleFindings,
   unresolvedTestPlanFindings,
+  compareIds,
   reproductionConditionsForFabProfile,
   type KnowledgeItem,
   type FixturePatchOperation,
