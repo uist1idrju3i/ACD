@@ -27,7 +27,7 @@ export interface ACDFabFeedbackReport {
     contentHash: string;
   };
   /**
-   * @minItems 1
+   * @minItems 0
    */
   rawFindings: RawFinding[];
   derivation?: {
