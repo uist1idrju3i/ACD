@@ -146,6 +146,8 @@ const run = async (
   timeoutMs: number,
   attempt = 0,
 ): Promise<{ stdout: string; stderr: string }> => {
+  const runId = toolRunIds.get(context) ?? randomUUID();
+  toolRunIds.set(context, runId);
   const inputFileHashes: Record<string, string> = {};
   for (const arg of args) {
     if (!arg.startsWith("/work/")) continue;
@@ -167,7 +169,7 @@ const run = async (
     contractVersion: "0.1.0",
     inputHash,
     graphRevision: 0,
-    correlationId: `run:${context.artifactRoot}/invocation:${++invocationSequence}`,
+    correlationId: `run:${runId}/invocation:${++invocationSequence}`,
     idempotencyKey: `tool:${toolName}/input:${inputHash}/attempt:${attempt}`,
     operationClass: "reversible" as const,
     timeoutMs,
@@ -185,7 +187,7 @@ const run = async (
       killGraceMs: 5_000,
     },
     {
-      toolVersion: toolName,
+      toolVersion: "unknown",
       containerVersion: image,
       provenance: [{ kind: "tool-output", locator: toolName, capturedBy: "phase1" }],
     },

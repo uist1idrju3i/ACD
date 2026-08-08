@@ -24,12 +24,16 @@ worker/runtime共通で防ぎ、失敗を既存のerror taxonomyで停止させ�
    keyで再実行する。resumeは同じattemptを引き継ぐ。
 4. retry budgetはtask ledgerが単独で所有する。tool envelopeにretry loopを持ち込まない。
 5. `correlationId`、`idempotencyKey`、`eventId`を分離する。
+   `correlationId`にはhostの絶対パスを含めず、run-scopedなtool run IDを使う。
 6. 外部依存なしの`ProcessPort`をgraph-coreに置き、Nodeのprocess実装をfilesystem
    adapter側へ分離する。timeout、cancel、signal、出力上限を型付きで扱う。
    `ProcessSpec.cwd`で実行ディレクトリを明示し、既存の外部process呼び出しは
    WP3と同じ`root`を渡す。Node adapterは従来どおり親processの環境変数を継承し、
    `spec.environment`を上書き適用する。これはWP3の`execFileSync`／`spawnSync`の
    継承挙動を維持するためであり、host環境変数のallowlist化は本ADRでは行わない。
+   Phase 1のtool envelopeはdocker境界自体の版を取得できないため、
+   `toolVersion`を`unknown`とし、実行対象の固定image digestを`containerVersion`に
+   記録する。ngspiceなど個別engineの版は、Evidenceで取得できた値を別途記録する。
    `kicad-cli`、KiCad Python、ngspiceは600秒、FreeRoutingは1800秒、library抽出は
    300秒、出力上限は64 MiBとする。これはPhase 4の外部processが大規模fixtureで
    完了するための固定値であり、retry budgetとは別のprocess watchdogである。
@@ -43,6 +47,8 @@ worker/runtime共通で防ぎ、失敗を既存のerror taxonomyで停止させ�
    生内容hashを混同しない。
    process boundaryではtimestamp normalizationを定義しないため、両hashが同値に
    なることを仕様として明記する。
+   Phase 1のfixture経路ではgraph revisionが存在しないため`graphRevision: 0`を固定する。
+   将来、実際のgraph revisionをfixture経路へ接続した時点で置き換える。
 8. timeout/cancelではSIGTERMを送信し、猶予後にSIGKILLへエスカレーションする。
    子processの`close`を受信してから結果またはerrorを永続化する。stdoutとstderrは
    別々に収集し、Evidenceからstderrを欠落させない。
