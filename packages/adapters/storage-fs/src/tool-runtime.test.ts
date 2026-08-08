@@ -137,6 +137,30 @@ describe("FileToolInvocationRegistry", () => {
     await rm(root, { recursive: true, force: true });
   });
 
+  it("does not replay an invocation from a different run registry", async () => {
+    const root = await mkdtemp(join(tmpdir(), "acd-tool-run-scope-"));
+    const request = {
+      toolName: "run-scope.test",
+      contractVersion: "0.1.0",
+      inputHash: `sha256:${"d".repeat(64)}`,
+      graphRevision: 0,
+      correlationId: "correlation-run-scope",
+      idempotencyKey: "tool:run-scope.test:once",
+      operationClass: "read" as const,
+      timeoutMs: 100,
+      input: {},
+    };
+    let executions = 0;
+    const operation = async () => {
+      executions += 1;
+      return { error: toolFailureForTest() };
+    };
+    await new FileToolInvocationRegistry(join(root, "run-a.jsonl")).execute(request, operation);
+    await new FileToolInvocationRegistry(join(root, "run-b.jsonl")).execute(request, operation);
+    expect(executions).toBe(2);
+    await rm(root, { recursive: true, force: true });
+  });
+
   it("stops on a mid-stream corrupt record", async () => {
     const root = await mkdtemp(join(tmpdir(), "acd-tool-corrupt-"));
     const path = join(root, "tool-invocations.jsonl");

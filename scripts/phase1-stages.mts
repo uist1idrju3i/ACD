@@ -1,4 +1,4 @@
-import { createHash } from "node:crypto";
+import { createHash, randomUUID } from "node:crypto";
 import { copyFile, mkdir, readFile, readdir, stat, writeFile } from "node:fs/promises";
 import { join, resolve } from "node:path";
 import {
@@ -123,8 +123,13 @@ const image =
   "kicad/kicad@sha256:182c8005cb775a2c448a4c18681d489f1ff472a761885eba3e08b07e3c0564de";
 const hash = rawSha256;
 const boundaries = new Map<string, ToolBoundary>();
+const toolRunIds = new WeakMap<StageContext, string>();
+export const setToolRunId = (context: StageContext, runId: string): void => {
+  toolRunIds.set(context, runId);
+};
 const boundaryFor = (context: StageContext): ToolBoundary => {
-  const runId = context.artifactRoot.split("/").at(-1) ?? "phase1";
+  const runId = toolRunIds.get(context) ?? randomUUID();
+  toolRunIds.set(context, runId);
   const path = join(root, ".acd", "runs", runId, "tool-invocations.jsonl");
   const existing = boundaries.get(path);
   if (existing) return existing;

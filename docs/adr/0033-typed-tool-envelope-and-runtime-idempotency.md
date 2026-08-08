@@ -17,6 +17,9 @@ worker/runtime共通で防ぎ、失敗を既存のerror taxonomyで停止させ�
    sync、single-writer lock、末尾部分行だけの回復、無期限保持を適用する。
 3. 同一keyの再送は保存済みresult/errorを返し、外部processを再実行しない。同一keyで
    input hashが変わる再送は`reference-integrity`で停止する。
+   registryのスコープは1 run内に限定し、run開始時に一意な`runId`を発行して
+   `.acd/runs/<runId>/`を選択する。resumeは同じrunIdを引き継ぐが、別runの
+   registryは再利用しない。runIdはartifact、hash、`gate-results.json`へ含めない。
 4. retry budgetはtask ledgerが単独で所有する。tool envelopeにretry loopを持ち込まない。
 5. `correlationId`、`idempotencyKey`、`eventId`を分離する。
 6. 外部依存なしの`ProcessPort`をgraph-coreに置き、Nodeのprocess実装をfilesystem

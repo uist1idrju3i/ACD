@@ -1,4 +1,5 @@
 import { spawn } from "node:child_process";
+import { randomUUID } from "node:crypto";
 import { mkdir, readFile, readdir, rm, writeFile } from "node:fs/promises";
 import { join, relative, resolve } from "node:path";
 import {
@@ -20,6 +21,7 @@ import {
   createPhase1Context,
   deserializeStageContext,
   phase1Stages,
+  setToolRunId,
   serializeStageContext,
   stageContextHash,
   type Result,
@@ -34,6 +36,7 @@ const workerMode = process.argv.includes("--worker");
 const resumeMode = process.argv.includes("--resume");
 const caseId = process.argv.find((value) => value.startsWith("--case="))?.slice(7);
 const killAfter = process.argv.find((value) => value.startsWith("--kill-after="))?.slice(13);
+const toolRunId = process.argv.find((value) => value.startsWith("--tool-run-id="))?.slice(14);
 
 const fixture = JSON.parse(
   await readFile(join(root, "fixtures/phase1/golden-esp32.json"), "utf8"),
@@ -252,6 +255,7 @@ const checkpointInput = (
 });
 
 const runWorker = async (runRoot: string): Promise<void> => {
+  const activeToolRunId = toolRunId ?? randomUUID();
   await mkdir(projectRoot(runRoot), { recursive: true });
   const log = new FileEventLog(eventPath(runRoot));
   const clock = new FixedClock();
@@ -328,6 +332,7 @@ const runWorker = async (runRoot: string): Promise<void> => {
         for (const stage of phase1Stages) await ledger.create(taskEntry(stage));
       }
     }
+    setToolRunId(context, activeToolRunId);
 
     const executedRecords = await readJson<ExecutionRecord[]>(executionPath(runRoot), []);
     for (const stage of phase1Stages.filter((candidate) => !skipped.has(candidate.id))) {
@@ -442,19 +447,26 @@ const runChild = (
   });
 
 const runCase = async (id: string, interruption: string): Promise<Record<string, unknown>> => {
+  const activeToolRunId = randomUUID();
   const caseRoot = join(artifactRoot, id);
   const baselineRoot = join(caseRoot, "baseline");
   const interruptedRoot = join(caseRoot, "interrupted");
   await rm(caseRoot, { recursive: true, force: true });
   await mkdir(baselineRoot, { recursive: true });
   await mkdir(interruptedRoot, { recursive: true });
-  const baseline = await runChild(["--worker", `--case=${id}`, `--root=${baselineRoot}`]);
+  const baseline = await runChild([
+    "--worker",
+    `--case=${id}`,
+    `--root=${baselineRoot}`,
+    `--tool-run-id=${activeToolRunId}`,
+  ]);
   if (baseline.code !== 0) throw new Error(`baseline worker failed: ${id}`);
   const killed = await runChild([
     "--worker",
     `--case=${id}`,
     `--root=${interruptedRoot}`,
     `--kill-after=${interruption}`,
+    `--tool-run-id=${activeToolRunId}`,
   ]);
   if (killed.signal !== "SIGKILL") throw new Error(`worker did not terminate with SIGKILL: ${id}`);
   await rm(`${eventPath(interruptedRoot)}.lock`, { force: true });
@@ -467,6 +479,7 @@ const runCase = async (id: string, interruption: string): Promise<Record<string,
     "--resume",
     `--case=${id}`,
     `--root=${interruptedRoot}`,
+    `--tool-run-id=${activeToolRunId}`,
   ]);
   if (resumed.code !== 0) throw new Error(`resume worker failed: ${id}`);
 
