@@ -16,4 +16,5 @@ export * from "./repository.js";
 export * from "./repair-loop.js";
 export * from "./semantic.js";
 export * from "./test-items.js";
+export * from "./task-ledger.js";
 export * from "./verification.js";

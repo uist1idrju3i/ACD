@@ -26,7 +26,9 @@ const definitions = [
 
 for (const [filename, schemaPath] of definitions) {
   const schema = JSON.parse(await readFile(schemaPath, "utf8")) as object;
-  const types = await compile(schema, filename.replace(".schema.json", ""));
+  const types = await compile(schema, filename.replace(".schema.json", ""), {
+    unreachableDefinitions: filename === "design-graph.schema.json",
+  });
   await writeFile(
     new URL(filename.replace(".schema.json", ".ts"), generatedDirectory),
     `/* eslint-disable */\n${types}`,
