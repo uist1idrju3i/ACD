@@ -17,6 +17,8 @@ const ids: IdPort = (() => {
 
 const entry = (overrides: Partial<TaskLedgerEntry> = {}): TaskLedgerEntry => ({
   id: "task:main",
+  type: "TaskLedgerEntry",
+  revision: 1,
   purpose: "run the task",
   inputRevision: 1,
   dependencyIds: [],
@@ -26,14 +28,8 @@ const entry = (overrides: Partial<TaskLedgerEntry> = {}): TaskLedgerEntry => ({
   budget: { scope: "execution", tokens: 100, amount: 5 },
   approvalState: "not-required",
   status: "pending",
+  checkpointIds: [],
   artifactIds: [],
-  measurements: {
-    attempts: 0,
-    clockSeconds: 0,
-    toolCalls: 0,
-    tokens: "unknown",
-    money: "unknown",
-  },
   ...overrides,
 });
 
@@ -55,15 +51,10 @@ describe("task ledger", () => {
     expect(() => transitionTask(entry(), "blocked", [])).toThrow(/stop reason/);
   });
 
-  it("retains token and money measurements as unknown", () => {
+  it("uses the schema attemptCount as the attempt measurement", () => {
     const running = transitionTask(entry(), "running", []);
-    expect(running.measurements).toEqual({
-      attempts: 1,
-      clockSeconds: 0,
-      toolCalls: 0,
-      tokens: "unknown",
-      money: "unknown",
-    });
+    expect(running.attemptCount).toBe(1);
+    expect(running.revision).toBe(2);
     expect(() => transitionTask(running, "completed", [], { resultId: "result:1" })).not.toThrow();
   });
 

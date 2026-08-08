@@ -6,12 +6,20 @@
  * and run json-schema-to-typescript to regenerate this file.
  */
 
+/**
+ * This interface was referenced by `ACDDesignGraphPhase0Draft`'s JSON-Schema
+ * via the `definition` "project".
+ */
 export type Project = Entity & {
   type?: "Project";
   requirements?: Id[];
   revisionIds?: Id[];
   [k: string]: unknown;
 };
+/**
+ * This interface was referenced by `ACDDesignGraphPhase0Draft`'s JSON-Schema
+ * via the `definition` "entity".
+ */
 export type Entity = {
   [k: string]: unknown;
 } & {
@@ -32,7 +40,15 @@ export type Entity = {
   };
   [k: string]: unknown;
 };
+/**
+ * This interface was referenced by `ACDDesignGraphPhase0Draft`'s JSON-Schema
+ * via the `definition` "id".
+ */
 export type Id = string;
+/**
+ * This interface was referenced by `ACDDesignGraphPhase0Draft`'s JSON-Schema
+ * via the `definition` "entityType".
+ */
 export type EntityType =
   | "Project"
   | "Requirement"
@@ -55,6 +71,25 @@ export type EntityType =
   | "VerificationResult"
   | "Approval"
   | "Waiver";
+/**
+ * A budget for a task or order. For scope total-order-cost, amount is the complete order cap including board fabrication, components, assembly, shipping, taxes, and any enclosure or mechanical-part orders.
+ *
+ * This interface was referenced by `ACDDesignGraphPhase0Draft`'s JSON-Schema
+ * via the `definition` "budget".
+ */
+export type Budget = {
+  [k: string]: unknown;
+} & {
+  /**
+   * total-order-cost includes board fabrication, components, assembly, shipping, taxes, and any enclosure or mechanical-part orders.
+   */
+  scope: "execution" | "total-order-cost";
+  timeSeconds?: number;
+  tokens?: number;
+  toolCalls?: number;
+  amount?: number;
+  currency?: string;
+};
 
 /**
  * Phase-0 draft canonical typed design graph. Implementation and ADR decisions may refine this schema.
@@ -67,6 +102,9 @@ export interface ACDDesignGraphPhase0Draft {
 }
 /**
  * Traceable source and creation context.
+ *
+ * This interface was referenced by `ACDDesignGraphPhase0Draft`'s JSON-Schema
+ * via the `definition` "provenance".
  */
 export interface Provenance {
   kind:
@@ -86,6 +124,10 @@ export interface Provenance {
   contentHash?: string;
   [k: string]: unknown;
 }
+/**
+ * This interface was referenced by `ACDDesignGraphPhase0Draft`'s JSON-Schema
+ * via the `definition` "rationale".
+ */
 export interface Rationale {
   reason: string;
   alternativesConsidered: string[];
@@ -95,11 +137,19 @@ export interface Rationale {
   tuningNeeded: boolean;
   generatedTestItemIds?: Id[];
 }
+/**
+ * This interface was referenced by `ACDDesignGraphPhase0Draft`'s JSON-Schema
+ * via the `definition` "evidenceLink".
+ */
 export interface EvidenceLink {
   evidenceId: Id;
   claim?: string;
   locator?: string;
 }
+/**
+ * This interface was referenced by `ACDDesignGraphPhase0Draft`'s JSON-Schema
+ * via the `definition` "uncertainty".
+ */
 export interface Uncertainty {
   state: "unknown" | "assumed" | "inferred" | "verified" | "rejected";
   description: string;
@@ -107,6 +157,10 @@ export interface Uncertainty {
   resolution?: string;
   dueAt?: string;
 }
+/**
+ * This interface was referenced by `ACDDesignGraphPhase0Draft`'s JSON-Schema
+ * via the `definition` "patch".
+ */
 export interface Patch {
   patchId: Id;
   baseRevision: number;
@@ -129,4 +183,170 @@ export interface Patch {
   createdAt: string;
   createdBy?: string;
   verificationResultIds?: Id[];
+}
+/**
+ * This interface was referenced by `ACDDesignGraphPhase0Draft`'s JSON-Schema
+ * via the `definition` "evidence".
+ */
+export interface Evidence {
+  id: Id;
+  type: "Evidence";
+  revision: number;
+  evidenceKind:
+    | "datasheet"
+    | "fab-feedback"
+    | "simulation"
+    | "measurement"
+    | "sourcing"
+    | "tool-output"
+    | "human-observation"
+    | "other";
+  observedAt: string;
+  /**
+   * @minItems 1
+   */
+  observations: [
+    {
+      claim: string;
+      value?: unknown;
+      unit?: string;
+      pass?: boolean;
+      [k: string]: unknown;
+    },
+    ...{
+      claim: string;
+      value?: unknown;
+      unit?: string;
+      pass?: boolean;
+      [k: string]: unknown;
+    }[]
+  ];
+  /**
+   * @minItems 1
+   */
+  provenance: [Provenance, ...Provenance[]];
+  uncertainty?: Uncertainty;
+  [k: string]: unknown;
+}
+/**
+ * This interface was referenced by `ACDDesignGraphPhase0Draft`'s JSON-Schema
+ * via the `definition` "knowledgeItem".
+ */
+export interface KnowledgeItem {
+  id: Id;
+  type: "KnowledgeItem";
+  revision: number;
+  /**
+   * library-wide currently means a user-personal library reused by the same user; organization and community sharing are out of scope.
+   */
+  scope: "project-local" | "library-wide";
+  /**
+   * @minItems 1
+   */
+  sourceEventIds: [Id, ...Id[]];
+  /**
+   * @minItems 1
+   */
+  provenance: [Provenance, ...Provenance[]];
+  content: string;
+  status: "candidate" | "reviewed" | "adopted" | "rejected" | "deprecated";
+  knowledgeId: Id;
+  confidentiality?: "project-confidential" | "organization-confidential" | "shareable";
+  appliesWhen: ApplicabilityCondition[];
+  excludesWhen: ApplicabilityCondition[];
+  changedDecisionIds?: Id[];
+  previousRevisionId?: Id;
+  rejectionReason?: string;
+  staleReason?: string;
+  approvalId?: Id;
+  confidence?: number;
+  reproduced?: boolean;
+  [k: string]: unknown;
+}
+/**
+ * This interface was referenced by `ACDDesignGraphPhase0Draft`'s JSON-Schema
+ * via the `definition` "applicabilityCondition".
+ */
+export interface ApplicabilityCondition {
+  field: "fabProfileId" | "partId" | "footprintId" | "ruleId" | "classification" | "reproductionCondition";
+  operator: "equals" | "notEquals";
+  value: string;
+}
+/**
+ * This interface was referenced by `ACDDesignGraphPhase0Draft`'s JSON-Schema
+ * via the `definition` "taskLedgerEntry".
+ */
+export interface TaskLedgerEntry {
+  id: Id;
+  type: "TaskLedgerEntry";
+  revision: number;
+  purpose: string;
+  inputRevision: number;
+  status: "pending" | "running" | "blocked" | "completed" | "failed" | "cancelled";
+  /**
+   * @minItems 1
+   */
+  acceptanceCriteria: [string, ...string[]];
+  attemptCount: number;
+  retryBudget: number;
+  budget: Budget;
+  checkpointIds: Id[];
+  dependencyIds?: Id[];
+  lane?: string;
+  approvalId?: Id;
+  approvalState?: "not-required" | "pending" | "approved" | "rejected";
+  stopReason?: string;
+  artifactIds?: Id[];
+  resultId?: Id;
+  [k: string]: unknown;
+}
+/**
+ * This interface was referenced by `ACDDesignGraphPhase0Draft`'s JSON-Schema
+ * via the `definition` "verificationResult".
+ */
+export interface VerificationResult {
+  id: Id;
+  type: "VerificationResult";
+  revision: number;
+  gate: string;
+  status: "passed" | "failed" | "blocked" | "waived" | "stale";
+  inputRevision: number;
+  toolVersion: string;
+  checkedAt: string;
+  findingIds?: Id[];
+  evidenceIds?: Id[];
+  staleReason?: string;
+  [k: string]: unknown;
+}
+/**
+ * This interface was referenced by `ACDDesignGraphPhase0Draft`'s JSON-Schema
+ * via the `definition` "approval".
+ */
+export interface Approval {
+  id: Id;
+  type: "Approval";
+  revision: number;
+  approvalId: string;
+  scope: string;
+  approvedBy: string;
+  approvedAt: string;
+  expiresAt?: string;
+  subject?: Id;
+  condition?: string;
+  [k: string]: unknown;
+}
+/**
+ * This interface was referenced by `ACDDesignGraphPhase0Draft`'s JSON-Schema
+ * via the `definition` "waiver".
+ */
+export interface Waiver {
+  id: Id;
+  type: "Waiver";
+  revision: number;
+  gate: string;
+  reason: string;
+  risk: string;
+  approvalId: Id;
+  expiresAt: string;
+  [k: string]: unknown;
 }

@@ -227,8 +227,10 @@
         "type",
         "revision",
         "purpose",
+        "inputRevision",
         "status",
         "acceptanceCriteria",
+        "attemptCount",
         "retryBudget",
         "budget",
         "checkpointIds"
@@ -238,19 +240,26 @@
         "type": { "const": "TaskLedgerEntry" },
         "revision": { "type": "integer", "minimum": 0 },
         "purpose": { "type": "string", "minLength": 1 },
+        "inputRevision": { "type": "integer", "minimum": 0 },
         "status": {
           "type": "string",
           "enum": ["pending", "running", "blocked", "completed", "failed", "cancelled"]
         },
         "acceptanceCriteria": { "type": "array", "minItems": 1, "items": { "type": "string" } },
+        "attemptCount": { "type": "integer", "minimum": 0 },
         "retryBudget": { "type": "integer", "minimum": 0 },
         "budget": { "$ref": "#/$defs/budget" },
         "checkpointIds": { "type": "array", "items": { "$ref": "#/$defs/id" } },
         "dependencyIds": { "type": "array", "items": { "$ref": "#/$defs/id" } },
         "lane": { "type": "string" },
         "approvalId": { "$ref": "#/$defs/id" },
+        "approvalState": {
+          "type": "string",
+          "enum": ["not-required", "pending", "approved", "rejected"]
+        },
         "stopReason": { "type": "string" },
-        "artifactIds": { "type": "array", "items": { "$ref": "#/$defs/id" } }
+        "artifactIds": { "type": "array", "items": { "$ref": "#/$defs/id" } },
+        "resultId": { "$ref": "#/$defs/id" }
       },
       "additionalProperties": true
     },

@@ -1,4 +1,5 @@
 import { GraphCoreError } from "./errors.js";
+import type { Budget as SchemaBudget, TaskLedgerEntry as SchemaTaskLedgerEntry } from "@acd/schema";
 import {
   createEvent,
   type EventEnvelope,
@@ -8,55 +9,19 @@ import {
 } from "./event-log.js";
 import { canonicalize } from "./hash.js";
 
-export type TaskLedgerStatus =
-  | "pending"
-  | "running"
-  | "blocked"
-  | "completed"
-  | "failed"
-  | "cancelled";
-
-export type ApprovalState = "not-required" | "pending" | "approved" | "rejected";
-
-export type LedgerBudget = {
-  scope: "execution" | "total-order-cost";
-  timeSeconds?: number;
-  tokens?: number;
-  toolCalls?: number;
-  amount?: number;
-  currency?: string;
-};
-
-export type LedgerMeasurements = {
-  attempts: number;
-  clockSeconds: number;
-  toolCalls: number;
-  tokens: "unknown";
-  money: "unknown";
-};
-
-export type TaskLedgerEntry = {
-  id: string;
-  purpose: string;
-  inputRevision: number;
+export type TaskLedgerEntry = SchemaTaskLedgerEntry & {
   dependencyIds: string[];
-  acceptanceCriteria: string[];
-  attemptCount: number;
-  retryBudget: number;
-  budget: LedgerBudget;
-  approvalState: ApprovalState;
-  status: TaskLedgerStatus;
-  stopReason?: string;
-  checkpointId?: string;
+  approvalState: NonNullable<SchemaTaskLedgerEntry["approvalState"]>;
   artifactIds: string[];
-  resultId?: string;
-  measurements: LedgerMeasurements;
 };
+export type TaskLedgerStatus = TaskLedgerEntry["status"];
+export type ApprovalState = NonNullable<TaskLedgerEntry["approvalState"]>;
+export type LedgerBudget = SchemaBudget;
 
 export type TaskTransitionContext = {
   stopReason?: string;
   resultId?: string;
-  checkpointId?: string;
+  checkpointIds?: string[];
   artifactIds?: string[];
 };
 
@@ -74,7 +39,7 @@ export interface IdPort {
 }
 
 export type TaskLedgerEventPayload =
-  | { kind: "created"; entry: TaskLedgerEntry }
+  | { kind: "created"; taskId: string; entry: TaskLedgerEntry }
   | {
       kind: "transitioned";
       taskId: string;
@@ -108,9 +73,6 @@ export const validateTaskLedgerEntry = (entry: TaskLedgerEntry): void => {
     fail(`invalid retry counters: ${entry.id}`);
   }
   if (entry.acceptanceCriteria.length === 0) fail(`missing acceptance criteria: ${entry.id}`);
-  if (entry.measurements.tokens !== "unknown" || entry.measurements.money !== "unknown") {
-    fail(`unmeasured budget fields must remain unknown: ${entry.id}`);
-  }
 };
 
 const dependencyEntries = (
@@ -172,19 +134,15 @@ export const transitionTask = (
   }
   const next: TaskLedgerEntry = {
     ...entry,
+    revision: entry.revision + 1,
     status: target,
     attemptCount: target === "running" ? entry.attemptCount + 1 : entry.attemptCount,
     artifactIds: context.artifactIds ?? entry.artifactIds,
-    measurements: {
-      ...entry.measurements,
-      attempts:
-        target === "running" ? entry.measurements.attempts + 1 : entry.measurements.attempts,
-    },
   };
   const stopReason = context.stopReason ?? entry.stopReason;
   if (stopReason && target !== "completed" && target !== "pending") next.stopReason = stopReason;
-  const checkpointId = context.checkpointId ?? entry.checkpointId;
-  if (checkpointId) next.checkpointId = checkpointId;
+  const checkpointIds = context.checkpointIds ?? entry.checkpointIds;
+  if (checkpointIds) next.checkpointIds = checkpointIds;
   const resultId = context.resultId ?? entry.resultId;
   if (resultId) next.resultId = resultId;
   validateTaskLedgerEntry(next);
@@ -212,8 +170,8 @@ export const replayTaskLedger = (events: readonly EventEnvelope[]): TaskLedgerSt
     }
     const payload = taskPayload(event);
     if (payload.kind === "created") {
-      if (state.entries[payload.entry.id]) {
-        throw new GraphCoreError("event-replay-failure", `duplicate task: ${payload.entry.id}`);
+      if (payload.taskId !== payload.entry.id || state.entries[payload.taskId]) {
+        throw new GraphCoreError("event-replay-failure", `duplicate task: ${payload.taskId}`);
       }
       validateTaskLedgerEntry(payload.entry);
       state.entries[payload.entry.id] = structuredClone(payload.entry);
@@ -262,7 +220,7 @@ export class TaskLedgerRuntime {
   async create(entry: TaskLedgerEntry): Promise<TaskLedgerState> {
     validateTaskLedgerEntry(entry);
     if (this.state.entries[entry.id]) fail(`task already exists: ${entry.id}`);
-    await this.append("task.created", { kind: "created", entry });
+    await this.append("task.created", { kind: "created", taskId: entry.id, entry });
     return structuredClone(this.state);
   }
 
@@ -300,6 +258,6 @@ export class TaskLedgerRuntime {
     });
     verifyEvent(event);
     await this.eventLog.append(event);
-    this.state = replayTaskLedger([...(await this.eventLog.readAll()).slice(0, -1), event]);
+    this.state = replayTaskLedger(await this.eventLog.readAll());
   }
 }
