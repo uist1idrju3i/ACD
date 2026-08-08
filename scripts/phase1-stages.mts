@@ -47,7 +47,7 @@ import {
   unresolvedRationaleFindings,
   unresolvedTestPlanFindings,
   compareIds,
-  sha256,
+  sha256 as canonicalSha256,
   reproductionConditionsForFabProfile,
   type FixturePatchOperation,
   type RecordedProposal,
@@ -71,6 +71,7 @@ import {
 
 import type { ACDPhase1Fixture } from "../packages/schema/src/generated/phase1-fixture.js";
 import preOrder from "./pre-order.ts";
+import { rawSha256 } from "./golden-shared.mts";
 
 export type JsonValue =
   | string
@@ -120,7 +121,7 @@ let graphValidator: Awaited<ReturnType<typeof loadSchemaValidator>> | undefined;
 const image =
   process.env.KICAD_IMAGE ??
   "kicad/kicad@sha256:182c8005cb775a2c448a4c18681d489f1ff472a761885eba3e08b07e3c0564de";
-const hash = sha256;
+const hash = rawSha256;
 const boundaries = new Map<string, ToolBoundary>();
 const boundaryFor = (context: StageContext): ToolBoundary => {
   const runId = context.artifactRoot.split("/").at(-1) ?? "phase1";
@@ -154,7 +155,7 @@ const run = async (
     }
   }
   const input = { command, args, inputFileHashes };
-  const inputHash = sha256(input);
+  const inputHash = canonicalSha256(input);
   const request = {
     toolName,
     contractVersion: "0.1.0",
@@ -172,6 +173,7 @@ const run = async (
     {
       command,
       args,
+      cwd: root,
       timeoutMs,
       maxOutputBytes: 64 * 1024 * 1024,
       killGraceMs: 5_000,
@@ -1341,7 +1343,7 @@ export const createPhase1Context = (input: {
 export const serializeStageContext = (context: StageContext): string => JSON.stringify(context);
 
 export const stageContextHash = (context: StageContext): string =>
-  sha256(
+  canonicalSha256(
     serializeStageContext({
       ...context,
       artifactRoot: "<run-root>",

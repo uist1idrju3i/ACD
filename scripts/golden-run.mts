@@ -17,7 +17,7 @@ import {
   projectToKicad,
 } from "../packages/adapters/kicad/src/index.js";
 import { loadSchemaValidator, type PatchEnvelope } from "../packages/schema/src/index.js";
-import { normalizedArtifact, sha256 } from "./golden-shared.mts";
+import { normalizedArtifact, rawSha256 } from "./golden-shared.mts";
 import { NodeProcessPort } from "../packages/adapters/storage-fs/src/index.js";
 
 const root = resolve(import.meta.dirname, "..");
@@ -50,7 +50,7 @@ type Observed = {
   evidence: Record<string, unknown>;
 };
 
-const hash = sha256;
+const hash = rawSha256;
 
 const processPort = new NodeProcessPort();
 const dockerRun = async (workDirectory: string, args: string[]): Promise<string> => {
@@ -70,6 +70,7 @@ const dockerRun = async (workDirectory: string, args: string[]): Promise<string>
       image,
       ...args,
     ],
+    cwd: root,
     environment: { PWD: root },
     timeoutMs: 600_000,
     maxOutputBytes: 64 * 1024 * 1024,

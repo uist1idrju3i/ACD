@@ -11,11 +11,12 @@ export class NodeProcessPort implements ProcessPort {
   execute(spec: ProcessSpec): Promise<ProcessResult> {
     return new Promise((resolve) => {
       const child = spawn(spec.command, spec.args, {
+        ...(spec.cwd ? { cwd: spec.cwd } : {}),
         env: { ...process.env, ...spec.environment },
         stdio: ["ignore", "pipe", "pipe"],
       });
-      let stdout = "";
-      let stderr = "";
+      const stdoutChunks: Buffer[] = [];
+      const stderrChunks: Buffer[] = [];
       let outputBytes = 0;
       let timedOut = false;
       let cancelled = false;
@@ -25,6 +26,10 @@ export class NodeProcessPort implements ProcessPort {
       let graceTimer: ReturnType<typeof setTimeout> | undefined;
       let closed: { exitCode: number | null; signal: NodeJS.Signals | null } | undefined;
       let escalated = false;
+      const outputText = (): { stdout: string; stderr: string } => ({
+        stdout: Buffer.concat(stdoutChunks).toString("utf8"),
+        stderr: Buffer.concat(stderrChunks).toString("utf8"),
+      });
       const terminate = (): void => {
         if (termSent) return;
         termSent = true;
@@ -33,6 +38,7 @@ export class NodeProcessPort implements ProcessPort {
           escalated = true;
           child.kill("SIGKILL");
           if (closed) {
+            const output = outputText();
             finish({
               kind: timedOut
                 ? "timedOut"
@@ -43,8 +49,8 @@ export class NodeProcessPort implements ProcessPort {
                     : "failed",
               exitCode: closed.exitCode,
               signal: "SIGKILL",
-              stdout,
-              stderr,
+              stdout: output.stdout,
+              stderr: output.stderr,
               outputBytes,
             });
           }
@@ -68,8 +74,8 @@ export class NodeProcessPort implements ProcessPort {
       };
       const collect = (chunk: Buffer, target: "stdout" | "stderr"): void => {
         outputBytes += chunk.byteLength;
-        if (target === "stdout") stdout += chunk.toString("utf8");
-        else stderr += chunk.toString("utf8");
+        if (target === "stdout") stdoutChunks.push(chunk);
+        else stderrChunks.push(chunk);
         if (outputBytes > spec.maxOutputBytes) {
           outputLimitExceeded = true;
           terminate();
@@ -78,9 +84,10 @@ export class NodeProcessPort implements ProcessPort {
       child.stdout.on("data", (chunk: Buffer) => collect(chunk, "stdout"));
       child.stderr.on("data", (chunk: Buffer) => collect(chunk, "stderr"));
       child.on("error", (error: Error) => {
-        stderr += error.message;
+        stderrChunks.push(Buffer.from(error.message, "utf8"));
       });
       child.on("close", (exitCode, signal) => {
+        const output = outputText();
         if ((timedOut || cancelled || outputLimitExceeded) && graceTimer && !escalated) {
           closed = { exitCode, signal };
           return;
@@ -97,8 +104,8 @@ export class NodeProcessPort implements ProcessPort {
                   : "failed",
           exitCode,
           signal: escalated ? "SIGKILL" : signal,
-          stdout,
-          stderr,
+          stdout: output.stdout,
+          stderr: output.stderr,
           outputBytes,
         });
       });

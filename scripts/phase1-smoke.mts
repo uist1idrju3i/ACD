@@ -42,6 +42,7 @@ const run = async (command: string, args: string[], cwd = root): Promise<string>
   const result = await processPort.execute({
     command,
     args,
+    cwd,
     environment: { PWD: cwd },
     timeoutMs: 600_000,
     maxOutputBytes: 64 * 1024 * 1024,

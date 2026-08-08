@@ -5,6 +5,21 @@ import { describe, expect, it } from "vitest";
 import { FileToolInvocationRegistry, NodeProcessPort, ToolBoundary } from "./tool-runtime.js";
 
 describe("NodeProcessPort", () => {
+  it("decodes UTF-8 correctly when a multibyte character spans chunks", async () => {
+    const result = await new NodeProcessPort().execute({
+      command: process.execPath,
+      args: [
+        "-e",
+        "process.stdout.write(Buffer.from([0xe2])); setTimeout(() => process.stdout.write(Buffer.from([0x82,0xac])), 10)",
+      ],
+      timeoutMs: 1000,
+      maxOutputBytes: 1024,
+      killGraceMs: 50,
+    });
+    expect(result.kind).toBe("completed");
+    expect(result.stdout).toBe("€");
+  });
+
   it("records timeout and cancellation as result kinds", async () => {
     const port = new NodeProcessPort();
     const timedOut = await port.execute({

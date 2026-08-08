@@ -26,7 +26,7 @@ import {
   type StageContext,
   type StageDefinition,
 } from "./phase1-stages.mts";
-import { normalizedArtifact, sha256 } from "./golden-shared.mts";
+import { normalizedArtifact, rawSha256 } from "./golden-shared.mts";
 
 const root = resolve(import.meta.dirname, "..");
 const artifactRoot = join(root, "artifacts/phase4");
@@ -173,7 +173,7 @@ const artifactHashes = async (runRoot: string): Promise<string[]> => {
   for (const file of files) {
     if (runtimeFiles.has(relative(runRoot, file))) continue;
     const content = normalizedArtifact(await readFile(file));
-    hashes.push(`${relative(runRoot, file)}=${sha256(content)}`);
+    hashes.push(`${relative(runRoot, file)}=${rawSha256(content)}`);
   }
   return hashes.sort();
 };

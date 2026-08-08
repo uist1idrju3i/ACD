@@ -56,6 +56,7 @@ const dockerRead = async (path: string): Promise<string> => {
       "cat",
       path,
     ],
+    cwd: root,
     timeoutMs: 300_000,
     maxOutputBytes: 64 * 1024 * 1024,
     killGraceMs: 5_000,
@@ -322,6 +323,7 @@ const main = async (): Promise<void> => {
     await processPort.execute({
       command: "pnpm",
       args: ["exec", "prettier", "--write", path],
+      cwd: root,
       environment: { PWD: root },
       timeoutMs: 300_000,
       maxOutputBytes: 64 * 1024 * 1024,

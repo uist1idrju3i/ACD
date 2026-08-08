@@ -21,10 +21,19 @@ worker/runtime共通で防ぎ、失敗を既存のerror taxonomyで停止させ�
 5. `correlationId`、`idempotencyKey`、`eventId`を分離する。
 6. 外部依存なしの`ProcessPort`をgraph-coreに置き、Nodeのprocess実装をfilesystem
    adapter側へ分離する。timeout、cancel、signal、出力上限を型付きで扱う。
+   `ProcessSpec.cwd`で実行ディレクトリを明示し、既存の外部process呼び出しは
+   WP3と同じ`root`を渡す。Node adapterは従来どおり親processの環境変数を継承し、
+   `spec.environment`を上書き適用する。これはWP3の`execFileSync`／`spawnSync`の
+   継承挙動を維持するためであり、host環境変数のallowlist化は本ADRでは行わない。
    `kicad-cli`、KiCad Python、ngspiceは600秒、FreeRoutingは1800秒、library抽出は
    300秒、出力上限は64 MiBとする。これはPhase 4の外部processが大規模fixtureで
    完了するための固定値であり、retry budgetとは別のprocess watchdogである。
 7. 生出力hashとtimestamp-only正規化後hashを別フィールドで保存する。
+   Evidence／artifactのhashはWP3互換のraw bytes／raw text semanticsを使い、
+   `scripts/golden-shared.mts`の`rawSha256`で計算する。tool envelopeの
+   `inputHash`など構造化値のhashにはgraph-coreのcanonical `sha256`を使い、
+   両者を同じ関数名で扱わない。これにより、構造化入力のcanonical hashと
+   外部artifactの生内容hashを混同しない。
 8. timeout/cancelではSIGTERMを送信し、猶予後にSIGKILLへエスカレーションする。
    子processの`close`を受信してから結果またはerrorを永続化する。stdoutとstderrは
    別々に収集し、Evidenceからstderrを欠落させない。

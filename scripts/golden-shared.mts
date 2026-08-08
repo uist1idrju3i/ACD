@@ -12,7 +12,8 @@ export type PipelineStageResult = {
   evidence: Record<string, unknown>;
 };
 
-export const sha256 = (content: string | Buffer): string =>
+/** Hashes artifact content using the historical raw-byte/raw-text semantics. */
+export const rawSha256 = (content: string | Buffer): string =>
   `sha256:${createHash("sha256").update(content).digest("hex")}`;
 
 export const normalizedArtifact = (content: Buffer): Buffer =>

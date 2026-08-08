@@ -3,6 +3,7 @@ export type ProcessResultKind = "completed" | "timedOut" | "cancelled" | "failed
 export type ProcessSpec = {
   command: string;
   args: string[];
+  cwd?: string;
   environment?: Readonly<Record<string, string>>;
   timeoutMs: number;
   maxOutputBytes: number;
