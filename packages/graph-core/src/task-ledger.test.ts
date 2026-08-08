@@ -9,6 +9,7 @@ import {
   type IdPort,
   type TaskLedgerEntry,
 } from "./task-ledger.js";
+import { createBudgetUsageSnapshot } from "./budget.js";
 
 const clock: ClockPort = { now: () => "2026-01-01T00:00:00.000Z" };
 const ids: IdPort = (() => {
@@ -148,5 +149,23 @@ describe("task ledger", () => {
         entries: { "task:main": { ...completed.entries["task:main"]!, resultId: "result:stale" } },
       }),
     ).rejects.toThrow(/differs from event replay/);
+  });
+
+  it("replays usage separately from the budget cap", async () => {
+    const eventLog = new InMemoryEventLog();
+    const runtime = new TaskLedgerRuntime("project:test", "test", eventLog, clock, ids);
+    await runtime.create(entry());
+    const usage = createBudgetUsageSnapshot({
+      scope: "task",
+      attempts: 1,
+      externalProcessExecutions: 2,
+    });
+    const held = await runtime.updateUsage("task:main", usage);
+    expect(held.usage?.["task:main"]).toEqual(usage);
+    const restarted = new TaskLedgerRuntime("project:test", "test", eventLog, clock, ids);
+    expect((await restarted.load()).usage?.["task:main"]).toEqual(usage);
+    await expect(
+      restarted.assertConsistent({ ...held, usage: { "task:main": { ...usage, attempts: 2 } } }),
+    ).rejects.toThrow("event replay");
   });
 });

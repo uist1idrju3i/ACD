@@ -118,6 +118,48 @@ describe("FileToolInvocationRegistry", () => {
     await rm(root, { recursive: true, force: true });
   });
 
+  it("observes replay separately from external process execution", async () => {
+    const root = await mkdtemp(join(tmpdir(), "acd-tool-observation-"));
+    const observations: string[] = [];
+    const registry = new FileToolInvocationRegistry(join(root, "run.jsonl"), (observation) => {
+      observations.push(observation.kind);
+    });
+    const request = {
+      toolName: "test",
+      contractVersion: "0.1.0",
+      inputHash: `sha256:${"c".repeat(64)}`,
+      graphRevision: 1,
+      correlationId: "correlation-observation",
+      idempotencyKey: "tool:test:observation",
+      operationClass: "read" as const,
+      timeoutMs: 100,
+      input: {},
+    };
+    let externalExecutions = 0;
+    const observedError = {
+      kind: "error" as const,
+      code: "tool-failure" as const,
+      severity: "error" as const,
+      message: "unused observation test error",
+      retryable: false,
+      recoverable: false,
+      context: {},
+      evidenceIds: [],
+    };
+    await registry.execute(request, async () => {
+      externalExecutions += 1;
+      return { error: observedError };
+    });
+    await registry.execute(request, async () => {
+      externalExecutions += 1;
+      return { error: observedError };
+    });
+    expect(externalExecutions).toBe(1);
+    expect(observations).toEqual(["logical-request", "logical-request", "registry-replay"]);
+    await registry.close();
+    await rm(root, { recursive: true, force: true });
+  });
+
   it("does not rerun a real process on envelope replay", async () => {
     const root = await mkdtemp(join(tmpdir(), "acd-tool-boundary-"));
     const registry = new FileToolInvocationRegistry(join(root, "tool-invocations.jsonl"));

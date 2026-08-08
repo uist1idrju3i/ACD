@@ -1,0 +1,35 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://acd.example.invalid/schemas/budget-usage.schema.json",
+  "title": "ACD Budget Usage Snapshot",
+  "type": "object",
+  "required": [
+    "scope",
+    "attempts",
+    "elapsedSeconds",
+    "externalProcessExecutions",
+    "logicalToolRequests",
+    "tokens",
+    "money"
+  ],
+  "properties": {
+    "scope": { "type": "string", "enum": ["run", "task"] },
+    "attempts": { "type": "integer", "minimum": 0 },
+    "elapsedSeconds": { "type": "number", "minimum": 0 },
+    "externalProcessExecutions": { "type": "integer", "minimum": 0 },
+    "logicalToolRequests": { "type": "integer", "minimum": 0 },
+    "tokens": {
+      "type": "object",
+      "required": ["status"],
+      "properties": { "status": { "const": "unknown" } },
+      "additionalProperties": false
+    },
+    "money": {
+      "type": "object",
+      "required": ["status"],
+      "properties": { "status": { "const": "unknown" } },
+      "additionalProperties": false
+    }
+  },
+  "additionalProperties": false
+}

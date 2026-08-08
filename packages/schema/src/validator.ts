@@ -11,6 +11,8 @@ import {
   patchSchemaPath,
   phase1FixtureSchemaPath,
   toolEnvelopeSchemaPath,
+  budgetUsageSchemaPath,
+  stopRecordSchemaPath,
 } from "./paths.js";
 
 export type SchemaName =
@@ -22,7 +24,9 @@ export type SchemaName =
   | "phase1-fixture"
   | "library-patch"
   | "component-library"
-  | "tool-envelope";
+  | "tool-envelope"
+  | "budget-usage"
+  | "stop-record";
 
 const paths: Record<SchemaName, string> = {
   "design-graph": designGraphSchemaPath,
@@ -34,6 +38,8 @@ const paths: Record<SchemaName, string> = {
   "library-patch": libraryPatchSchemaPath,
   "component-library": componentLibrarySchemaPath,
   "tool-envelope": toolEnvelopeSchemaPath,
+  "budget-usage": budgetUsageSchemaPath,
+  "stop-record": stopRecordSchemaPath,
 };
 
 export const createSchemaValidator = (): Ajv2020 => {
@@ -49,6 +55,12 @@ export const loadSchemaValidator = async (name: SchemaName): Promise<ValidateFun
   if (name === "tool-envelope") {
     const designGraph = JSON.parse(await readFile(designGraphSchemaPath, "utf8")) as object;
     ajv.addSchema(designGraph, "design-graph.schema.json");
+  }
+  if (name === "stop-record") {
+    const designGraph = JSON.parse(await readFile(designGraphSchemaPath, "utf8")) as object;
+    ajv.addSchema(designGraph);
+    const budgetUsage = JSON.parse(await readFile(budgetUsageSchemaPath, "utf8")) as object;
+    ajv.addSchema(budgetUsage);
   }
   const schema = JSON.parse(await readFile(paths[name], "utf8")) as object;
   return ajv.compile(schema);

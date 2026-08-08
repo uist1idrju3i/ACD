@@ -100,6 +100,18 @@ type StoredInvocation = {
   error?: ToolError;
 };
 
+export type ToolObservationContext = {
+  runId?: string;
+  taskId?: string;
+  attempt?: number;
+};
+
+export type ToolObservation = {
+  kind: "logical-request" | "registry-replay" | "external-process-started";
+} & ToolObservationContext;
+
+export type ToolObservationHook = (observation: ToolObservation) => void;
+
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === "object" && value !== null;
 
@@ -125,7 +137,10 @@ export class FileToolInvocationRegistry {
   private lock: FileHandle | undefined;
   private records: Map<string, StoredInvocation> | undefined;
 
-  constructor(private readonly path: string) {}
+  constructor(
+    private readonly path: string,
+    private readonly observe?: ToolObservationHook,
+  ) {}
 
   async execute(
     request: ToolRequest,
@@ -134,9 +149,11 @@ export class FileToolInvocationRegistry {
       error?: ToolError;
       status?: StoredInvocation["status"];
     }>,
+    context: ToolObservationContext = {},
   ): Promise<{ result?: ToolResult; error?: ToolError }> {
     try {
       await this.load();
+      this.observe?.({ kind: "logical-request", ...context });
       const previous = this.records?.get(request.idempotencyKey);
       if (previous) {
         if (previous.inputHash !== request.inputHash) {
@@ -147,6 +164,7 @@ export class FileToolInvocationRegistry {
             { idempotencyKey: request.idempotencyKey, inputHash: request.inputHash },
           );
         }
+        this.observe?.({ kind: "registry-replay", ...context });
         return {
           ...(previous.result ? { result: previous.result } : {}),
           ...(previous.error ? { error: previous.error } : {}),
@@ -239,6 +257,7 @@ export class ToolBoundary {
   constructor(
     private readonly process: ProcessPort,
     private readonly registry: FileToolInvocationRegistry,
+    private readonly observe?: ToolObservationHook,
   ) {}
 
   async execute(
@@ -249,87 +268,93 @@ export class ToolBoundary {
       containerVersion: string;
       provenance: ToolResult["provenance"];
     },
+    context: ToolObservationContext = {},
   ): Promise<ToolResult> {
-    const outcome = await this.registry.execute(request, async () => {
-      const startedAt = new Date().toISOString();
-      const processResult = await this.process.execute(spec);
-      const endedAt = new Date().toISOString();
-      const outputHash = `sha256:${createHash("sha256")
-        .update(`${processResult.stdout}${processResult.stderr}`)
-        .digest("hex")}`;
-      if (processResult.kind === "completed") {
-        return {
-          result: {
-            kind: "result",
-            ...request,
-            status: "completed",
-            startedAt,
-            endedAt,
-            toolVersion: metadata.toolVersion,
-            containerVersion: metadata.containerVersion,
-            provenance: metadata.provenance,
-            artifactIds: [],
-            evidenceIds: [],
-            rawOutputHash: outputHash,
-            normalizedOutputHash: outputHash,
-            outputBytes: processResult.outputBytes,
-            exitCode: processResult.exitCode,
-            signal: processResult.signal,
-            stdout: processResult.stdout,
-            stderr: processResult.stderr,
-            retryable: false,
-            recoverable: true,
-          },
-        };
-      }
-      if (processResult.kind === "cancelled") {
-        return {
-          status: "cancelled",
-          result: {
-            kind: "result",
-            ...request,
+    const outcome = await this.registry.execute(
+      request,
+      async () => {
+        this.observe?.({ kind: "external-process-started", ...context });
+        const startedAt = new Date().toISOString();
+        const processResult = await this.process.execute(spec);
+        const endedAt = new Date().toISOString();
+        const outputHash = `sha256:${createHash("sha256")
+          .update(`${processResult.stdout}${processResult.stderr}`)
+          .digest("hex")}`;
+        if (processResult.kind === "completed") {
+          return {
+            result: {
+              kind: "result",
+              ...request,
+              status: "completed",
+              startedAt,
+              endedAt,
+              toolVersion: metadata.toolVersion,
+              containerVersion: metadata.containerVersion,
+              provenance: metadata.provenance,
+              artifactIds: [],
+              evidenceIds: [],
+              rawOutputHash: outputHash,
+              normalizedOutputHash: outputHash,
+              outputBytes: processResult.outputBytes,
+              exitCode: processResult.exitCode,
+              signal: processResult.signal,
+              stdout: processResult.stdout,
+              stderr: processResult.stderr,
+              retryable: false,
+              recoverable: true,
+            },
+          };
+        }
+        if (processResult.kind === "cancelled") {
+          return {
             status: "cancelled",
-            startedAt,
-            endedAt,
-            toolVersion: metadata.toolVersion,
-            containerVersion: metadata.containerVersion,
-            provenance: metadata.provenance,
-            artifactIds: [],
-            evidenceIds: [],
-            rawOutputHash: outputHash,
-            normalizedOutputHash: outputHash,
-            outputBytes: processResult.outputBytes,
-            exitCode: processResult.exitCode,
-            signal: processResult.signal,
-            stdout: processResult.stdout,
-            stderr: processResult.stderr,
-            retryable: false,
+            result: {
+              kind: "result",
+              ...request,
+              status: "cancelled",
+              startedAt,
+              endedAt,
+              toolVersion: metadata.toolVersion,
+              containerVersion: metadata.containerVersion,
+              provenance: metadata.provenance,
+              artifactIds: [],
+              evidenceIds: [],
+              rawOutputHash: outputHash,
+              normalizedOutputHash: outputHash,
+              outputBytes: processResult.outputBytes,
+              exitCode: processResult.exitCode,
+              signal: processResult.signal,
+              stdout: processResult.stdout,
+              stderr: processResult.stderr,
+              retryable: false,
+              recoverable: false,
+            },
+          };
+        }
+        const status = processResult.kind === "timedOut" ? "timedOut" : "failed";
+        return {
+          status,
+          error: {
+            kind: "error",
+            code: processResult.kind === "timedOut" ? "tool-timeout" : "tool-failure",
+            severity: "error",
+            message: `tool process ${processResult.kind}`,
+            retryable: processResult.kind === "timedOut",
             recoverable: false,
+            context: {
+              processKind: processResult.kind,
+              exitCode: processResult.exitCode,
+              signal: processResult.signal,
+              stdout: processResult.stdout,
+              stderr: processResult.stderr,
+              outputBytes: processResult.outputBytes,
+            },
+            evidenceIds: [],
           },
         };
-      }
-      const status = processResult.kind === "timedOut" ? "timedOut" : "failed";
-      return {
-        status,
-        error: {
-          kind: "error",
-          code: processResult.kind === "timedOut" ? "tool-timeout" : "tool-failure",
-          severity: "error",
-          message: `tool process ${processResult.kind}`,
-          retryable: processResult.kind === "timedOut",
-          recoverable: false,
-          context: {
-            processKind: processResult.kind,
-            exitCode: processResult.exitCode,
-            signal: processResult.signal,
-            stdout: processResult.stdout,
-            stderr: processResult.stderr,
-            outputBytes: processResult.outputBytes,
-          },
-          evidenceIds: [],
-        },
-      };
-    });
+      },
+      context,
+    );
     if (outcome.error) {
       const code = outcome.error.code === "tool-timeout" ? "tool-timeout" : "tool-failure";
       throw new GraphCoreError(code, outcome.error.message, "error", outcome.error.context);

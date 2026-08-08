@@ -9,6 +9,12 @@ export const ERROR_CODES = [
   "reopen-failure",
   "tool-timeout",
   "tool-failure",
+  "budget-exceeded",
+  "unknown-impact",
+  "convergence-failure",
+  "license-restriction",
+  "approval-required",
+  "patent-concern",
   "fab-feedback-unknown",
 ] as const;
 

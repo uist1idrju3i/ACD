@@ -1,5 +1,9 @@
 import { GraphCoreError } from "./errors.js";
-import type { Budget as SchemaBudget, TaskLedgerEntry as SchemaTaskLedgerEntry } from "@acd/schema";
+import type {
+  Budget as SchemaBudget,
+  BudgetUsageSnapshot,
+  TaskLedgerEntry as SchemaTaskLedgerEntry,
+} from "@acd/schema";
 import {
   createEvent,
   type EventEnvelope,
@@ -8,6 +12,7 @@ import {
   verifyReplay,
 } from "./event-log.js";
 import { canonicalize, compareIds } from "./hash.js";
+import { validateBudgetUsageSnapshot } from "./budget.js";
 
 export type TaskLedgerEntry = SchemaTaskLedgerEntry & {
   dependencyIds: string[];
@@ -28,6 +33,7 @@ export type TaskTransitionContext = {
 export type TaskLedgerState = {
   revision: number;
   entries: Record<string, TaskLedgerEntry>;
+  usage?: Record<string, BudgetUsageSnapshot>;
 };
 
 export type TaskLedgerAttention = {
@@ -55,6 +61,11 @@ export type TaskLedgerEventPayload =
       from: TaskLedgerStatus;
       to: TaskLedgerStatus;
       entry: TaskLedgerEntry;
+    }
+  | {
+      kind: "usage-updated";
+      taskId: string;
+      usage: BudgetUsageSnapshot;
     };
 
 const statusValues: TaskLedgerStatus[] = [
@@ -184,7 +195,12 @@ export const transitionTask = (
 
 const taskPayload = (event: EventEnvelope): TaskLedgerEventPayload => {
   const payload = event.payload as TaskLedgerEventPayload;
-  if (!payload || (payload.kind !== "created" && payload.kind !== "transitioned")) {
+  if (
+    !payload ||
+    (payload.kind !== "created" &&
+      payload.kind !== "transitioned" &&
+      payload.kind !== "usage-updated")
+  ) {
     throw new GraphCoreError(
       "event-replay-failure",
       `invalid task event payload: ${event.eventId}`,
@@ -195,14 +211,29 @@ const taskPayload = (event: EventEnvelope): TaskLedgerEventPayload => {
 
 export const replayTaskLedger = (events: readonly EventEnvelope[]): TaskLedgerState => {
   verifyReplay([...events]);
-  const state: TaskLedgerState = { revision: 0, entries: {} };
+  const state: TaskLedgerState = { revision: 0, entries: {}, usage: {} };
   for (const event of events) {
     if (event.type !== "task.created" && event.type !== "task.transitioned") {
       state.revision = event.resultRevision;
       continue;
     }
     const payload = taskPayload(event);
-    if (payload.kind === "created") {
+    if (payload.kind === "usage-updated") {
+      if (!state.entries[payload.taskId] || payload.usage.scope !== "task") {
+        throw new GraphCoreError("event-replay-failure", `invalid task usage: ${payload.taskId}`);
+      }
+      try {
+        validateBudgetUsageSnapshot(payload.usage);
+      } catch (error) {
+        throw new GraphCoreError(
+          "event-replay-failure",
+          `invalid task usage: ${payload.taskId}`,
+          "critical",
+          { cause: error instanceof Error ? error.message : String(error) },
+        );
+      }
+      state.usage![payload.taskId] = structuredClone(payload.usage);
+    } else if (payload.kind === "created") {
       if (payload.taskId !== payload.entry.id || state.entries[payload.taskId]) {
         throw new GraphCoreError("event-replay-failure", `duplicate task: ${payload.taskId}`);
       }
@@ -225,7 +256,7 @@ export const replayTaskLedger = (events: readonly EventEnvelope[]): TaskLedgerSt
 };
 
 export class TaskLedgerRuntime {
-  private state: TaskLedgerState = { revision: 0, entries: {} };
+  private state: TaskLedgerState = { revision: 0, entries: {}, usage: {} };
 
   constructor(
     private readonly projectId: string,
@@ -242,7 +273,8 @@ export class TaskLedgerRuntime {
 
   async assertConsistent(held: TaskLedgerState): Promise<void> {
     const replayed = await this.load();
-    if (canonicalize(replayed) !== canonicalize(held)) {
+    const normalizedHeld = { ...held, usage: held.usage ?? {} };
+    if (canonicalize(replayed) !== canonicalize(normalizedHeld)) {
       throw new GraphCoreError(
         "event-replay-failure",
         "held task ledger differs from event replay",
@@ -272,6 +304,18 @@ export class TaskLedgerRuntime {
       to: target,
       entry: next,
     });
+    return structuredClone(this.state);
+  }
+
+  async updateUsage(taskId: string, usage: BudgetUsageSnapshot): Promise<TaskLedgerState> {
+    if (!this.state.entries[taskId]) {
+      throw new GraphCoreError("reference-integrity", `unknown task: ${taskId}`);
+    }
+    if (usage.scope !== "task") {
+      throw new GraphCoreError("schema-invalid", "task usage must have task scope");
+    }
+    validateBudgetUsageSnapshot(usage);
+    await this.append("task.transitioned", { kind: "usage-updated", taskId, usage });
     return structuredClone(this.state);
   }
 

@@ -93,3 +93,11 @@ function callingは、同じrequest/result/error schemaを運ぶ後続transport 
 - [`error-taxonomy.md`](error-taxonomy.md)
 - [`repo-structure.md`](repo-structure.md)
 - [`verification-gates.md`](verification-gates.md)
+
+### WP4 runtime observation
+
+runtime observationでは、logical request、registry replay、external process startを
+別イベントとして通知し、run/task/attempt相関を保持する。予算上のtool callは外部
+process startだけを数え、registry replayを二重計上しない。契約の詳細は
+[`adr/0034-budget-watchdog-core-contract.md`](adr/0034-budget-watchdog-core-contract.md)
+を参照する。
