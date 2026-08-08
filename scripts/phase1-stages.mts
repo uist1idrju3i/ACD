@@ -50,6 +50,7 @@ import {
   sha256 as canonicalSha256,
   reproductionConditionsForFabProfile,
   type FixturePatchOperation,
+  type ProgressObservation,
   type RecordedProposal,
 } from "../packages/graph-core/src/index.js";
 import {
@@ -112,6 +113,8 @@ export type StageContext = {
   sesHashB?: string;
   adoptedKnowledgeForLibraryPatch?: Awaited<ReturnType<typeof transitionKnowledgeItem>>;
   adoptedLibraryPatch?: ReturnType<typeof createLibraryPatchCandidate>;
+  watchdogInjection?: boolean;
+  watchdogProgressObservations?: ProgressObservation[];
 };
 export type StageDefinition = {
   id: string;
@@ -399,6 +402,40 @@ const stage_repair_loop = async (context: StageContext): Promise<void> => {
   const recordings = JSON.parse(
     await readFile(join(root, "fixtures/phase2/repair-recordings.json"), "utf8"),
   ) as { proposals: RecordedProposal[] };
+  if (context.watchdogInjection) {
+    const injection = repairCases.cases.find(
+      (entry) => entry.caseId === "case:i2c-pullup-out-of-range",
+    );
+    if (!injection) throw new Error("reference-integrity: missing watchdog repair injection");
+    const injected = applyFixturePatch(context.fixture, injection.injection);
+    const recorded = recordedProposer(recordings.proposals);
+    let repeatedProposal: ReturnType<typeof recorded.propose>[number] | undefined;
+    const proposer = {
+      id: "recorded-watchdog-injection",
+      propose: (input: Parameters<typeof recorded.propose>[0]) => {
+        const proposals = recorded.propose(input);
+        repeatedProposal ??= proposals[0];
+        return repeatedProposal ? [repeatedProposal] : proposals;
+      },
+    };
+    const observations = (context.watchdogProgressObservations = []);
+    const result = runRepairLoop({
+      fixture: injected,
+      proposer,
+      gateIds: context.gateIds,
+      maxIterations: 3,
+      continueOnNoProgress: true,
+      observe: (observation) => observations.push(observation),
+    });
+    if (observations.length < 3) {
+      throw new Error("verification-failed: watchdog injection did not observe repeated proposals");
+    }
+    await writeFile(
+      join(context.artifactRoot, "repair-loop-watchdog.json"),
+      `${JSON.stringify({ injection: injection.caseId, result: repairLoopEvidence(result) }, null, 2)}\n`,
+    );
+    return;
+  }
   const proposer = recordedProposer(recordings.proposals);
   const repairs = repairCases.cases.map((entry) => {
     const injected = applyFixturePatch(context.fixture, entry.injection);

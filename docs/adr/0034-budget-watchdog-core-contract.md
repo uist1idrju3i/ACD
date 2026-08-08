@@ -16,10 +16,11 @@ Accepted（Step Aのコア契約とStep Bのrunner接続。Gate 25のstatus変�
 4. graph-coreには数値monotonic時刻を返す`MonotonicClockPort`を置き、実clock、
    sleep、timerはadapter/workerに置く。既存の`ClockPort`と`CheckpointClock`の
    重複統合は今回行わない。
-5. 操作前にusageと見積りコストを加算して判定する。tool callは外部process
-   1回、時間は呼び出し側が宣言する秒数を見積りとする。必要な見積りがない場合は
-   `unknown-impact`として実行せず停止する。上限到達または到達見込みは
-   `budget-exceeded`とする。
+5. 操作前にusageと見積りコストを加算して判定する。tool callの見積りは、
+   stageごとに実行し得る外部process数の保守的な上限（通常runでは全stageの
+   最大値15、注入runではstage固有の上限）を使い、時間はstage単位の注入値1秒
+   とする。必要な見積りがない場合は`unknown-impact`として実行せず停止する。
+   上限到達または到達見込みは`budget-exceeded`とする。
    attempt上限の所有者はtask ledgerの`retryBudget`であり、`usage.attempts`は
    実測値として記録するだけである。既存ledgerは`pending -> running`遷移前に
    retry budgetを検査するため、到達後ではなく次のattempt実行前に停止する。
@@ -36,6 +37,12 @@ Accepted（Step Aのコア契約とStep Bのrunner接続。Gate 25のstatus変�
    `artifacts/phase4/budget-watchdog.json`を出力する。injected clock、attempt、
    observation counter、stop recordは既存のresume証跡から分離し、既存の
    `artifacts/phase4/resume.json`およびgate結果へ混入させない。
+   証跡の`elapsedSeconds`は実時間ではなく、stageごとに1秒進める注入monotonic
+   clockの値である。
+10. usage更新eventはattempt・budgetの実測を保持するruntime eventであり、
+    baselineとresumedで必然的に異なるため、resumeの意味比較対象から除外する。
+    除外一覧には`task.transitioned(kind=usage-updated)`を明示する。raw event countは
+    実event logの全件数を保持し、比較用の件数は別フィールドで除外後の集合を示す。
 
 ## 代替案と理由
 

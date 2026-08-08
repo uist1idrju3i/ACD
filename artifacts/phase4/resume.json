@@ -1411,11 +1411,14 @@
         "equalExcludingInterruptions": true,
         "excludedEvents": [
           "run.stopped",
-          "run.resumed"
+          "run.resumed",
+          "task.transitioned(kind=usage-updated)"
         ]
       },
-      "baselineEventCount": 105,
-      "resumedEventCount": 107,
+      "baselineEventCount": 126,
+      "resumedEventCount": 128,
+      "comparableBaselineEventCount": 105,
+      "comparableResumedEventCount": 105,
       "contextValidation": {
         "deserialized": true,
         "fixtureValidated": true,
@@ -2756,11 +2759,14 @@
         "equalExcludingInterruptions": true,
         "excludedEvents": [
           "run.stopped",
-          "run.resumed"
+          "run.resumed",
+          "task.transitioned(kind=usage-updated)"
         ]
       },
-      "baselineEventCount": 105,
-      "resumedEventCount": 107,
+      "baselineEventCount": 126,
+      "resumedEventCount": 128,
+      "comparableBaselineEventCount": 105,
+      "comparableResumedEventCount": 105,
       "contextValidation": {
         "deserialized": true,
         "fixtureValidated": true,
@@ -4094,11 +4100,14 @@
         "equalExcludingInterruptions": true,
         "excludedEvents": [
           "run.stopped",
-          "run.resumed"
+          "run.resumed",
+          "task.transitioned(kind=usage-updated)"
         ]
       },
-      "baselineEventCount": 105,
-      "resumedEventCount": 107,
+      "baselineEventCount": 126,
+      "resumedEventCount": 128,
+      "comparableBaselineEventCount": 105,
+      "comparableResumedEventCount": 105,
       "contextValidation": {
         "deserialized": true,
         "fixtureValidated": true,
@@ -4113,7 +4122,7 @@
   ],
   "comparison": {
     "outputHashes": "SHA-256 over normalized real Phase 1 artifacts",
-    "eventSequence": "canonical event comparison excluding run.stopped/run.resumed",
+    "eventSequence": "canonical event comparison excluding run.stopped/run.resumed/task.transitioned(kind=usage-updated)",
     "context": "validated StageContext with fixture references and checkpoint hash equality"
   }
 }

@@ -45,6 +45,7 @@ const root = resolve(import.meta.dirname, "..");
 const artifactRoot = join(root, "artifacts/phase4");
 const workerMode = process.argv.includes("--worker");
 const resumeMode = process.argv.includes("--resume");
+const budgetInjectionMode = process.argv.includes("--budget-injected");
 const caseId = process.argv.find((value) => value.startsWith("--case="))?.slice(7);
 const killAfter = process.argv.find((value) => value.startsWith("--kill-after="))?.slice(13);
 const toolRunId = process.argv.find((value) => value.startsWith("--tool-run-id="))?.slice(14);
@@ -104,19 +105,29 @@ type BudgetWatchdogEvidence = {
       registryReplays: number;
     }
   >;
-  runUsage: ReturnType<typeof createBudgetUsageSnapshot>;
-  taskUsage: ReturnType<typeof createBudgetUsageSnapshot>;
-  observationCounts: {
-    externalProcessExecutions: number;
-    logicalToolRequests: number;
-    registryReplays: number;
-  };
   injectedNoProgress: {
     reasons: string[];
-    budgetStatus: string;
-    operationExecuted: boolean;
-    downstreamExecuted: boolean;
+    run: {
+      runUsage: ReturnType<typeof createBudgetUsageSnapshot>;
+      budget: { toolCalls: number; timeSeconds: number };
+    };
+    task: {
+      taskUsage: ReturnType<typeof createBudgetUsageSnapshot>;
+      budget: { toolCalls: number; timeSeconds: number };
+    };
+    observations: ProgressObservation[];
+    executedStageIds: string[];
     stopRecord: ReturnType<typeof buildStopRecord>;
+    nextStageId: string;
+    nextStageStarted: boolean;
+    nextStageUpperBound: { externalProcessExecutions: number; elapsedSeconds: number };
+    stopRecordPath: string;
+    repairEvidence: unknown;
+    observationCounts: {
+      externalProcessExecutions: number;
+      logicalToolRequests: number;
+      registryReplays: number;
+    };
   };
 };
 
@@ -310,7 +321,11 @@ const runWorker = async (runRoot: string): Promise<void> => {
   const log = new FileEventLog(eventPath(runRoot));
   const clock = new FixedClock();
   const monotonicClock = new FixedMonotonicClock();
-  const runBudget = { scope: "execution" as const, timeSeconds: 3600, toolCalls: 100 };
+  const runBudget = {
+    scope: "execution" as const,
+    timeSeconds: 3600,
+    toolCalls: budgetInjectionMode ? 2 : 100,
+  };
   let runExternalProcessExecutions = 0;
   let runLogicalToolRequests = 0;
   let runRegistryReplays = 0;
@@ -392,6 +407,7 @@ const runWorker = async (runRoot: string): Promise<void> => {
         gateMatrix,
         designGraphValidator,
       });
+      if (budgetInjectionMode) context.watchdogInjection = true;
       if (Object.keys(state.entries).length === 0) {
         for (const stage of phase1Stages) await ledger.create(taskEntry(stage));
       }
@@ -410,6 +426,11 @@ const runWorker = async (runRoot: string): Promise<void> => {
       const runLogicalBefore = runLogicalToolRequests;
       const runUsage = createBudgetUsageSnapshot({
         scope: "run",
+        attempts: (await log.readAll()).filter(
+          (event) =>
+            event.type === "task.transitioned" &&
+            (event.payload as { to?: string }).to === "running",
+        ).length,
         elapsedSeconds: monotonicClock.now(),
         externalProcessExecutions: runExternalProcessExecutions,
         logicalToolRequests: runLogicalToolRequests,
@@ -421,13 +442,24 @@ const runWorker = async (runRoot: string): Promise<void> => {
         externalProcessExecutions: taskExternalBefore,
         logicalToolRequests: taskLogicalBefore,
       });
-      const runDecision = checkBudget(runBudget, runUsage, {
+      const nextStageUpperBound = budgetInjectionMode
+        ? ({
+            "gate:spice": 3,
+            "gate:kicad-projection": 2,
+            "gate:erc": 1,
+            "gate:routing": 3,
+            "gate:drc": 1,
+            "gate:manufacturing": 2,
+            "gate:library-patch": 3,
+          }[stage.id] ?? 0)
+        : 15;
+      const operationEstimate = {
         elapsedSeconds: 1,
-        externalProcessExecutions: 1,
-      });
+        externalProcessExecutions: nextStageUpperBound,
+      };
+      const runDecision = checkBudget(runBudget, runUsage, operationEstimate);
       const taskDecision = checkBudget(entry.budget, taskUsage, {
-        elapsedSeconds: 1,
-        externalProcessExecutions: 1,
+        ...operationEstimate,
       });
       if (runDecision.status !== "allowed" || taskDecision.status !== "allowed") {
         const reasonCode = runDecision.reasonCode ?? taskDecision.reasonCode ?? "budget-exceeded";
@@ -436,8 +468,9 @@ const runWorker = async (runRoot: string): Promise<void> => {
           knownFacts: [
             runDecision.status !== "allowed" ? `run budget is ${runDecision.status}` : "",
             taskDecision.status !== "allowed" ? `task budget is ${taskDecision.status}` : "",
+            `next stage upper-bound external process estimate is ${nextStageUpperBound}`,
           ].filter(Boolean),
-          uncertainties: ["the next external process was not started"],
+          uncertainties: ["the next stage was not started"],
           options: [{ id: "resume", description: "resume after an approved budget change" }],
           recommendation: "review the budget declaration before resuming",
           resumeCondition: "the applicable budget cap is approved",
@@ -519,7 +552,7 @@ const runWorker = async (runRoot: string): Promise<void> => {
         .map((record) => record.stageId),
       actualStageExecution: executedRecords,
       gateResults: context.results,
-      eventCount: finalEvents.filter((event) => !isUsageUpdate(event)).length,
+      eventCount: finalEvents.length,
       contextValidation: {
         deserialized: resumeMode,
         fixtureValidated: resumeMode,
@@ -695,10 +728,12 @@ const runCase = async (id: string, interruption: string): Promise<Record<string,
     },
     eventSequenceComparison: {
       equalExcludingInterruptions: eventsEqual,
-      excludedEvents: ["run.stopped", "run.resumed"],
+      excludedEvents: ["run.stopped", "run.resumed", "task.transitioned(kind=usage-updated)"],
     },
-    baselineEventCount: baselineEvents.filter((event) => !isUsageUpdate(event)).length,
-    resumedEventCount: resumedEvents.filter((event) => !isUsageUpdate(event)).length,
+    baselineEventCount: baselineEvents.length,
+    resumedEventCount: resumedEvents.length,
+    comparableBaselineEventCount: comparableBaseline.length,
+    comparableResumedEventCount: comparableResumed.length,
     contextValidation: resumedRun.contextValidation,
     verification: {
       passed: hashesEqual && gatesEqual && eventsEqual,
@@ -712,80 +747,57 @@ const runCase = async (id: string, interruption: string): Promise<Record<string,
 };
 
 const buildBudgetWatchdogEvidence = async (): Promise<BudgetWatchdogEvidence> => {
-  const recordings = JSON.parse(
-    await readFile(join(root, "fixtures/phase2/repair-recordings.json"), "utf8"),
-  ) as unknown;
-  const inputHash = rawSha256(JSON.stringify(recordings));
-  const observations: ProgressObservation[] = [
-    {
-      inputHash: `sha256:${inputHash}`,
-      proposalHash: "proposal:repeated",
-      artifactHash: "artifact:unchanged",
-      gateResultHash: "gate:unchanged",
-      unresolvedFindingCount: 2,
-      gateStatus: "failed",
-      stateHash: "state:repeated",
-    },
-    {
-      inputHash: `sha256:${inputHash}`,
-      proposalHash: "proposal:repeated",
-      artifactHash: "artifact:unchanged",
-      gateResultHash: "gate:unchanged",
-      unresolvedFindingCount: 2,
-      gateStatus: "failed",
-      stateHash: "state:repeated",
-    },
-  ];
+  const injectedRoot = join(artifactRoot, "budget-watchdog-injected");
+  await rm(injectedRoot, { recursive: true, force: true });
+  await mkdir(injectedRoot, { recursive: true });
+  const injected = await runChild([
+    "--worker",
+    "--budget-injected",
+    "--case=budget-watchdog-injected",
+    `--root=${injectedRoot}`,
+    "--tool-run-id=tool-run:budget-watchdog-injected",
+  ]);
+  if (injected.code !== 0) throw new Error("budget watchdog injected worker failed");
+  const run = await readJson<RunManifest>(join(injectedRoot, "run.json"), {} as RunManifest);
+  const runtime = await readJson<{
+    runUsage: ReturnType<typeof createBudgetUsageSnapshot>;
+    observationCounts: BudgetWatchdogEvidence["injectedNoProgress"]["observationCounts"];
+  }>(join(injectedRoot, "budget-runtime.json"), {} as never);
+  const context = deserializeStageContext(await readFile(contextPath(injectedRoot), "utf8"));
+  const observations = context.watchdogProgressObservations ?? [];
   const reasons = detectNoProgress(observations);
-  const runUsage = createBudgetUsageSnapshot({
-    scope: "run",
-    attempts: 1,
-    elapsedSeconds: 1,
-    externalProcessExecutions: 0,
-    logicalToolRequests: 0,
-  });
-  const taskUsage = createBudgetUsageSnapshot({
-    scope: "task",
-    attempts: 1,
-    elapsedSeconds: 1,
-    externalProcessExecutions: 0,
-    logicalToolRequests: 0,
-  });
-  const budgetStatus = checkBudget(
-    { scope: "execution", timeSeconds: 10, toolCalls: 1 },
-    runUsage,
-    { elapsedSeconds: 1, externalProcessExecutions: 1 },
+  const stopRecord = await readJson<ReturnType<typeof buildStopRecord>>(
+    join(injectedRoot, "stop-record.json"),
+    {} as ReturnType<typeof buildStopRecord>,
   );
-  const stopRecord = buildStopRecord({
-    reasonCode: "unknown-impact",
-    knownFacts: [
-      "the injected recording repeats the same input and proposal",
-      `no-progress reasons: ${reasons.join(", ")}`,
-      `next operation budget status: ${budgetStatus.status}`,
-    ],
-    uncertainties: ["the next operation cost cannot be safely committed"],
-    options: [{ id: "resume", description: "resume after proposal or budget review" }],
-    recommendation: "review the repair proposal and budget before resuming",
-    resumeCondition: "a new proposal or an approved budget is available",
-    resumePosition: { eventPosition: 0 },
-    budgetSnapshot: { run: runUsage, task: taskUsage },
-    evidenceIds: ["evidence:phase4-budget-watchdog-injected"],
-  });
+  const repairEvidence = await readJson<unknown>(
+    join(injectedRoot, "repair-loop-watchdog.json"),
+    null,
+  );
+  const nextStageId = "gate:spice";
+  const taskSnapshot = stopRecord.budgetSnapshot.task;
   return {
     runner: "phase4-resume",
-    runUsage,
-    taskUsage,
-    observationCounts: {
-      externalProcessExecutions: 0,
-      logicalToolRequests: 0,
-      registryReplays: 0,
-    },
+    normalRunObservationCounts: {},
     injectedNoProgress: {
       reasons,
-      budgetStatus: budgetStatus.status,
-      operationExecuted: false,
-      downstreamExecuted: false,
+      run: {
+        runUsage: runtime.runUsage,
+        budget: { toolCalls: 2, timeSeconds: 3600 },
+      },
+      task: {
+        taskUsage: taskSnapshot,
+        budget: { toolCalls: 100, timeSeconds: 3600 },
+      },
+      observations,
+      executedStageIds: run.executedStageIds,
       stopRecord,
+      nextStageId,
+      nextStageStarted: run.executedStageIds.includes(nextStageId),
+      nextStageUpperBound: { externalProcessExecutions: 3, elapsedSeconds: 1 },
+      stopRecordPath: join(injectedRoot, "stop-record.json"),
+      repairEvidence,
+      observationCounts: runtime.observationCounts,
     },
   };
 };
@@ -814,7 +826,8 @@ if (workerMode) {
         interruptionCases: results,
         comparison: {
           outputHashes: "SHA-256 over normalized real Phase 1 artifacts",
-          eventSequence: "canonical event comparison excluding run.stopped/run.resumed",
+          eventSequence:
+            "canonical event comparison excluding run.stopped/run.resumed/task.transitioned(kind=usage-updated)",
           context: "validated StageContext with fixture references and checkpoint hash equality",
         },
       },

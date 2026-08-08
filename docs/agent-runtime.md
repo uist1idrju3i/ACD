@@ -41,7 +41,8 @@ usageに明示的な`unknown`を保持する。停止の機械可読な正本は
 保存する。詳細は[`adr/0034-budget-watchdog-core-contract.md`](adr/0034-budget-watchdog-core-contract.md)を参照する。
 Phase 4 runnerはrun/task capを操作前に独立判定し、到達見込みならdownstreamを実行せず、
 `artifacts/phase4/budget-watchdog.json`へ決定論的な停止証跡を保存する。既存のresume証跡と
-gate結果は変更しない。
+gate結果は変更しない。注入ケースは実workerとrecorded repair proposerを実行し、
+証跡の`elapsedSeconds`は実時間ではなく注入monotonic clockの値である。
 
 ## 割り込み
 
