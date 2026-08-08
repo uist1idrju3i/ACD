@@ -144,6 +144,7 @@ const run = async (
   command: string,
   args: string[],
   timeoutMs: number,
+  attempt = 0,
 ): Promise<{ stdout: string; stderr: string }> => {
   const inputFileHashes: Record<string, string> = {};
   for (const arg of args) {
@@ -167,7 +168,7 @@ const run = async (
     inputHash,
     graphRevision: 0,
     correlationId: `run:${context.artifactRoot}/invocation:${++invocationSequence}`,
-    idempotencyKey: `tool:${toolName}/input:${inputHash}`,
+    idempotencyKey: `tool:${toolName}/input:${inputHash}/attempt:${attempt}`,
     operationClass: "reversible" as const,
     timeoutMs,
     maxOutputBytes: 64 * 1024 * 1024,

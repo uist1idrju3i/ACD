@@ -47,7 +47,7 @@ export interface ToolResult {
    */
   rawOutputHash: string;
   /**
-   * SHA-256 after timestamp-only normalization for deterministic comparison.
+   * SHA-256 of process output without normalization; process boundary currently defines no timestamp normalization, so this intentionally equals rawOutputHash.
    */
   normalizedOutputHash: string;
   outputBytes: number;

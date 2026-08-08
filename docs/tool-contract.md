@@ -35,7 +35,10 @@ Schemaの`toolResult`は`kind: "result"`、`status`（`completed`、`timedOut`�
 `cancelled`、`failed`）、requestの識別項目、開始／終了時刻、tool／container
 version、provenance、artifact／evidence ID、stdout／stderr、終了コード、signal、
 retryability、recoverabilityを持ちます。`rawOutputHash`は生バイトのSHA-256、
-`normalizedOutputHash`はtimestamp-only正規化後のSHA-256です。`bytes`相当の
+`normalizedOutputHash`は正規化後のSHA-256です。ただし現在のprocess boundaryでは
+timestamp normalizationを定義していないため、両hashは同じ出力から
+計算されます。この同値はrawとnormalizedの混同ではなく、process出力に正規化を
+適用しないという仕様です。`bytes`相当の
 `outputBytes`も生出力の長さとして保存します。
 
 `toolError`はerror codeを必須とし、taxonomyにない分類を作りません。未分類の
@@ -43,6 +46,9 @@ retryability、recoverabilityを持ちます。`rawOutputHash`は生バイトの
 残します。cancelはerrorではなくresult statusです。timeout、非0終了、起動失敗、
 出力上限超過、強制終了はそれぞれ構造化されたprocess結果と既存taxonomy codeで
 記録します。
+
+同一attemptの再送は同じ`idempotencyKey`でreplayし、新しいattemptはkey末尾の
+`/attempt:<n>`を増分して再実行します。resumeは同じattemptを引き継ぎます。
 
 ## 操作分類
 

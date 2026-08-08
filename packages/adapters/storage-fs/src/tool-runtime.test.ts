@@ -44,13 +44,29 @@ describe("NodeProcessPort", () => {
     expect((await pending).kind).toBe("cancelled");
   });
 
+  it("finishes cancellation on SIGTERM without waiting for grace", async () => {
+    const controller = new AbortController();
+    const pending = new NodeProcessPort().execute({
+      command: process.execPath,
+      args: ["-e", "process.on('SIGTERM', () => process.exit(0)); setInterval(() => {}, 1000)"],
+      timeoutMs: 1000,
+      maxOutputBytes: 1024,
+      killGraceMs: 5000,
+      signal: controller.signal,
+    });
+    controller.abort();
+    const result = await pending;
+    expect(result.kind).toBe("cancelled");
+    expect(result.signal).toBe("SIGTERM");
+  });
+
   it("escalates a timeout to SIGKILL after the grace period", async () => {
     const result = await new NodeProcessPort().execute({
-      command: process.execPath,
-      args: ["-e", "process.on('SIGTERM', () => {}); setInterval(() => {}, 1000)"],
+      command: "/bin/sh",
+      args: ["-c", "trap '' TERM; while :; do sleep 1; done"],
       timeoutMs: 10,
       maxOutputBytes: 1024,
-      killGraceMs: 0,
+      killGraceMs: 50,
     });
     expect(result.kind).toBe("timedOut");
     expect(result.signal).toBe("SIGKILL");
@@ -133,6 +149,108 @@ describe("FileToolInvocationRegistry", () => {
     const second = await boundary.execute(request, spec, metadata);
     expect(second).toEqual(first);
     expect(second.stdout).toBe("one");
+    await registry.close();
+    await rm(root, { recursive: true, force: true });
+  });
+
+  it("records and replays cancellation as a result status", async () => {
+    const root = await mkdtemp(join(tmpdir(), "acd-tool-cancel-replay-"));
+    const registry = new FileToolInvocationRegistry(join(root, "tool-invocations.jsonl"));
+    const boundary = new ToolBoundary(new NodeProcessPort(), registry);
+    const request = {
+      toolName: "node.cancel",
+      contractVersion: "0.1.0",
+      inputHash: `sha256:${"e".repeat(64)}`,
+      graphRevision: 0,
+      correlationId: "correlation-cancel",
+      idempotencyKey: "tool:node.cancel/attempt:0",
+      operationClass: "reversible" as const,
+      timeoutMs: 1000,
+      input: {},
+    };
+    const controller = new AbortController();
+    const pending = boundary.execute(
+      request,
+      {
+        command: process.execPath,
+        args: ["-e", "setInterval(() => {}, 1000)"],
+        timeoutMs: 1000,
+        maxOutputBytes: 1024,
+        killGraceMs: 50,
+        signal: controller.signal,
+      },
+      {
+        toolVersion: process.version,
+        containerVersion: "test",
+        provenance: [{ kind: "tool-output", locator: "node.cancel" }],
+      },
+    );
+    controller.abort();
+    const first = await pending;
+    const replay = await boundary.execute(
+      request,
+      {
+        command: process.execPath,
+        args: ["-e", "throw new Error('must not rerun')"],
+        timeoutMs: 1000,
+        maxOutputBytes: 1024,
+        killGraceMs: 50,
+      },
+      {
+        toolVersion: process.version,
+        containerVersion: "test",
+        provenance: [{ kind: "tool-output", locator: "node.cancel" }],
+      },
+    );
+    expect(first.status).toBe("cancelled");
+    expect(replay.status).toBe("cancelled");
+    expect(replay).toEqual(first);
+    await registry.close();
+    await rm(root, { recursive: true, force: true });
+  });
+
+  it("allows a new attempt to execute under a new idempotency key", async () => {
+    const root = await mkdtemp(join(tmpdir(), "acd-tool-attempt-"));
+    const registry = new FileToolInvocationRegistry(join(root, "tool-invocations.jsonl"));
+    const boundary = new ToolBoundary(new NodeProcessPort(), registry);
+    const base = {
+      toolName: "node.attempt",
+      contractVersion: "0.1.0",
+      inputHash: `sha256:${"f".repeat(64)}`,
+      graphRevision: 0,
+      operationClass: "reversible" as const,
+      timeoutMs: 1000,
+      input: {},
+    };
+    const metadata = {
+      toolVersion: process.version,
+      containerVersion: "test",
+      provenance: [{ kind: "tool-output" as const, locator: "node.attempt" }],
+    };
+    const first = await boundary.execute(
+      { ...base, correlationId: "attempt-0", idempotencyKey: "tool:node.attempt/attempt:0" },
+      {
+        command: process.execPath,
+        args: ["-e", "process.stdout.write('first')"],
+        timeoutMs: 1000,
+        maxOutputBytes: 1024,
+        killGraceMs: 50,
+      },
+      metadata,
+    );
+    const second = await boundary.execute(
+      { ...base, correlationId: "attempt-1", idempotencyKey: "tool:node.attempt/attempt:1" },
+      {
+        command: process.execPath,
+        args: ["-e", "process.stdout.write('second')"],
+        timeoutMs: 1000,
+        maxOutputBytes: 1024,
+        killGraceMs: 50,
+      },
+      metadata,
+    );
+    expect(first.stdout).toBe("first");
+    expect(second.stdout).toBe("second");
     await registry.close();
     await rm(root, { recursive: true, force: true });
   });

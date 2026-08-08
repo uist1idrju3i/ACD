@@ -24,8 +24,6 @@ export class NodeProcessPort implements ProcessPort {
       let termSent = false;
       let settled = false;
       let graceTimer: ReturnType<typeof setTimeout> | undefined;
-      let closed: { exitCode: number | null; signal: NodeJS.Signals | null } | undefined;
-      let escalated = false;
       const outputText = (): { stdout: string; stderr: string } => ({
         stdout: Buffer.concat(stdoutChunks).toString("utf8"),
         stderr: Buffer.concat(stderrChunks).toString("utf8"),
@@ -35,25 +33,7 @@ export class NodeProcessPort implements ProcessPort {
         termSent = true;
         child.kill("SIGTERM");
         graceTimer = setTimeout(() => {
-          escalated = true;
           child.kill("SIGKILL");
-          if (closed) {
-            const output = outputText();
-            finish({
-              kind: timedOut
-                ? "timedOut"
-                : cancelled
-                  ? "cancelled"
-                  : outputLimitExceeded
-                    ? "failed"
-                    : "failed",
-              exitCode: closed.exitCode,
-              signal: "SIGKILL",
-              stdout: output.stdout,
-              stderr: output.stderr,
-              outputBytes,
-            });
-          }
         }, spec.killGraceMs);
       };
       const cancel = (): void => {
@@ -88,10 +68,6 @@ export class NodeProcessPort implements ProcessPort {
       });
       child.on("close", (exitCode, signal) => {
         const output = outputText();
-        if ((timedOut || cancelled || outputLimitExceeded) && graceTimer && !escalated) {
-          closed = { exitCode, signal };
-          return;
-        }
         finish({
           kind: timedOut
             ? "timedOut"
@@ -103,7 +79,7 @@ export class NodeProcessPort implements ProcessPort {
                   ? "completed"
                   : "failed",
           exitCode,
-          signal: escalated ? "SIGKILL" : signal,
+          signal,
           stdout: output.stdout,
           stderr: output.stderr,
           outputBytes,
@@ -119,7 +95,7 @@ type StoredInvocation = {
   idempotencyKey: string;
   correlationId: string;
   inputHash: string;
-  status: "completed" | "failed";
+  status: "completed" | "timedOut" | "cancelled" | "failed";
   result?: ToolResult;
   error?: ToolError;
 };
@@ -133,10 +109,15 @@ const isStoredInvocation = (value: unknown): value is StoredInvocation => {
     typeof value.idempotencyKey !== "string" ||
     typeof value.correlationId !== "string" ||
     typeof value.inputHash !== "string" ||
-    (value.status !== "completed" && value.status !== "failed")
+    (value.status !== "completed" &&
+      value.status !== "timedOut" &&
+      value.status !== "cancelled" &&
+      value.status !== "failed")
   )
     return false;
-  return value.status === "completed" ? isRecord(value.result) : isRecord(value.error);
+  return value.status === "completed" || value.status === "cancelled"
+    ? isRecord(value.result)
+    : isRecord(value.error);
 };
 
 export class FileToolInvocationRegistry {
@@ -148,7 +129,11 @@ export class FileToolInvocationRegistry {
 
   async execute(
     request: ToolRequest,
-    operation: () => Promise<{ result?: ToolResult; error?: ToolError }>,
+    operation: () => Promise<{
+      result?: ToolResult;
+      error?: ToolError;
+      status?: StoredInvocation["status"];
+    }>,
   ): Promise<{ result?: ToolResult; error?: ToolError }> {
     try {
       await this.load();
@@ -172,7 +157,7 @@ export class FileToolInvocationRegistry {
         idempotencyKey: request.idempotencyKey,
         correlationId: request.correlationId,
         inputHash: request.inputHash,
-        status: outcome.result ? "completed" : "failed",
+        status: outcome.status ?? (outcome.result ? "completed" : "failed"),
         ...(outcome.result ? { result: outcome.result } : {}),
         ...(outcome.error ? { error: outcome.error } : {}),
       };
@@ -297,7 +282,35 @@ export class ToolBoundary {
           },
         };
       }
+      if (processResult.kind === "cancelled") {
+        return {
+          status: "cancelled",
+          result: {
+            kind: "result",
+            ...request,
+            status: "cancelled",
+            startedAt,
+            endedAt,
+            toolVersion: metadata.toolVersion,
+            containerVersion: metadata.containerVersion,
+            provenance: metadata.provenance,
+            artifactIds: [],
+            evidenceIds: [],
+            rawOutputHash: outputHash,
+            normalizedOutputHash: outputHash,
+            outputBytes: processResult.outputBytes,
+            exitCode: processResult.exitCode,
+            signal: processResult.signal,
+            stdout: processResult.stdout,
+            stderr: processResult.stderr,
+            retryable: false,
+            recoverable: false,
+          },
+        };
+      }
+      const status = processResult.kind === "timedOut" ? "timedOut" : "failed";
       return {
+        status,
         error: {
           kind: "error",
           code: processResult.kind === "timedOut" ? "tool-timeout" : "tool-failure",

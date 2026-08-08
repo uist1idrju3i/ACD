@@ -104,7 +104,7 @@
         "normalizedOutputHash": {
           "type": "string",
           "pattern": "^sha256:[0-9a-f]{64}$",
-          "description": "SHA-256 after timestamp-only normalization for deterministic comparison."
+          "description": "SHA-256 of process output without normalization; process boundary currently defines no timestamp normalization, so this intentionally equals rawOutputHash."
         },
         "outputBytes": { "type": "integer", "minimum": 0 },
         "exitCode": { "type": ["integer", "null"] },

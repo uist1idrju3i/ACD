@@ -20,6 +20,8 @@ worker/runtime共通で防ぎ、失敗を既存のerror taxonomyで停止させ�
    registryのスコープは1 run内に限定し、run開始時に一意な`runId`を発行して
    `.acd/runs/<runId>/`を選択する。resumeは同じrunIdを引き継ぐが、別runの
    registryは再利用しない。runIdはartifact、hash、`gate-results.json`へ含めない。
+   keyには`/attempt:<n>`を含め、同一attemptはreplayし、新しいattemptは新しい
+   keyで再実行する。resumeは同じattemptを引き継ぐ。
 4. retry budgetはtask ledgerが単独で所有する。tool envelopeにretry loopを持ち込まない。
 5. `correlationId`、`idempotencyKey`、`eventId`を分離する。
 6. 外部依存なしの`ProcessPort`をgraph-coreに置き、Nodeのprocess実装をfilesystem
@@ -37,6 +39,8 @@ worker/runtime共通で防ぎ、失敗を既存のerror taxonomyで停止させ�
    `inputHash`など構造化値のhashにはgraph-coreのcanonical `sha256`を使い、
    両者を同じ関数名で扱わない。これにより、構造化入力のcanonical hashと
    外部artifactの生内容hashを混同しない。
+   process boundaryではtimestamp normalizationを定義しないため、両hashが同値に
+   なることを仕様として明記する。
 8. timeout/cancelではSIGTERMを送信し、猶予後にSIGKILLへエスカレーションする。
    子processの`close`を受信してから結果またはerrorを永続化する。stdoutとstderrは
    別々に収集し、Evidenceからstderrを欠落させない。
