@@ -14,7 +14,9 @@ export type EventType =
   | "fab.feedback.received"
   | "knowledge.candidate.created"
   | "knowledge.transitioned"
-  | "knowledge.applied";
+  | "knowledge.applied"
+  | "task.created"
+  | "task.transitioned";
 
 export type EventEnvelope = {
   eventId: string;
