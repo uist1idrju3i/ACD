@@ -121,7 +121,7 @@ let graphValidator: Awaited<ReturnType<typeof loadSchemaValidator>> | undefined;
 const image =
   process.env.KICAD_IMAGE ??
   "kicad/kicad@sha256:182c8005cb775a2c448a4c18681d489f1ff472a761885eba3e08b07e3c0564de";
-const hash = rawSha256;
+const rawArtifactHash = rawSha256;
 const boundaries = new Map<string, ToolBoundary>();
 const toolRunIds = new WeakMap<StageContext, string>();
 export const setToolRunId = (context: StageContext, runId: string): void => {
@@ -302,7 +302,7 @@ const stage_placement = async (context: StageContext): Promise<void> => {
 const stage_canonical_netlist = async (context: StageContext): Promise<void> => {
   enter(context, 5);
   const canonical = compareNetlists(context.fixture, "", "");
-  const canonicalHash = hash(JSON.stringify(canonical.expected));
+  const canonicalHash = rawArtifactHash(JSON.stringify(canonical.expected));
   context.canonicalNetlistHash = canonicalHash;
   pass(context, 5, {
     pins: canonical.expected.length,
@@ -322,7 +322,7 @@ const stage_electrical_lint = async (context: StageContext): Promise<void> => {
     verdict: context.lint.verdict,
     rulesEvaluated: context.lint.rulesEvaluated.length,
     findings: context.lint.findings.length,
-    findingsHash: hash(JSON.stringify(context.lint.findings)),
+    findingsHash: rawArtifactHash(JSON.stringify(context.lint.findings)),
   });
 };
 
@@ -341,7 +341,7 @@ const stage_design_rationale = async (context: StageContext): Promise<void> => {
     rulesEvaluated: rationale.rulesEvaluated.length,
     subjects: rationale.coverage.length,
     findings: rationale.findings.length,
-    findingsHash: hash(JSON.stringify(rationale.findings)),
+    findingsHash: rawArtifactHash(JSON.stringify(rationale.findings)),
   });
 };
 
@@ -364,7 +364,7 @@ const stage_test_plan = async (context: StageContext): Promise<void> => {
     rulesEvaluated: testPlan.rulesEvaluated.length,
     testItems: testPlan.items.length,
     measurementItems: testPlan.items.filter((item) => item.method === "measurement").length,
-    testPlanHash: hash(JSON.stringify(testPlan.items)),
+    testPlanHash: rawArtifactHash(JSON.stringify(testPlan.items)),
     artifact: "test-plan.json",
   });
 };
@@ -414,7 +414,7 @@ const stage_repair_loop = async (context: StageContext): Promise<void> => {
       (total, entry) => total + Number((entry as { rejected?: number }).rejected ?? 0),
       0,
     ),
-    recordingsHash: hash(JSON.stringify(recordings.proposals)),
+    recordingsHash: rawArtifactHash(JSON.stringify(recordings.proposals)),
     artifact: "repair-loop.json",
   });
 };
@@ -468,8 +468,8 @@ const stage_spice = async (context: StageContext): Promise<void> => {
       models: analysis.models,
       assumptions: analysis.assumptions,
       testItemId: analysis.testItemId,
-      deckHash: hash(analysis.deck),
-      outputHash: hash(stdout),
+      deckHash: rawArtifactHash(analysis.deck),
+      outputHash: rawArtifactHash(stdout),
     };
   });
   await writeFile(join(spiceRoot, "results.json"), `${JSON.stringify(spiceEvidence, null, 2)}\n`);
@@ -480,7 +480,7 @@ const stage_spice = async (context: StageContext): Promise<void> => {
     verdict: spice.verdict,
     analyses: analyses.length,
     rulesEvaluated: spice.rulesEvaluated.length,
-    resultsHash: hash(JSON.stringify(spiceEvidence)),
+    resultsHash: rawArtifactHash(JSON.stringify(spiceEvidence)),
     artifact: "spice/results.json",
   });
 };
@@ -677,7 +677,7 @@ const stage_knowledge_lifecycle = async (context: StageContext): Promise<void> =
       sourceEventId: "event:fab-feedback:prototype-1-jlcpcb-001",
     },
     output: {
-      knowledgeHash: hash(knowledgeText),
+      knowledgeHash: rawArtifactHash(knowledgeText),
       eventCount: knowledgeEvents.length,
     },
     artifact: "knowledge.json",
@@ -797,8 +797,8 @@ const stage_routing = async (context: StageContext): Promise<void> => {
   }
   const sesA = await readFile(join(context.projectRoot, "golden-a.ses"));
   const sesB = await readFile(join(context.projectRoot, "golden-b.ses"));
-  const sesHashA = hash(sesA.toString());
-  const sesHashB = hash(sesB.toString());
+  const sesHashA = rawArtifactHash(sesA.toString());
+  const sesHashB = rawArtifactHash(sesB.toString());
   context.sesHashA = sesHashA;
   context.sesHashB = sesHashB;
   if (sesHashA !== sesHashB)
@@ -828,7 +828,7 @@ const stage_routing = async (context: StageContext): Promise<void> => {
     join(context.projectRoot, "routed.kicad_prl"),
   );
   pass(context, 9, {
-    dsnHash: hash((await readFile(join(context.projectRoot, "golden.dsn"))).toString()),
+    dsnHash: rawArtifactHash((await readFile(join(context.projectRoot, "golden.dsn"))).toString()),
     sesHash: context.sesHashA,
     deterministicSes: true,
     antennaKeepout: { source: "U1 official courtyard", points: antennaPoints },
@@ -902,9 +902,13 @@ const stage_manufacturing = async (context: StageContext): Promise<void> => {
     JSON.stringify(
       {
         board: context.fixture.requirement.board,
-        dsnHash: hash((await readFile(join(context.projectRoot, "golden.dsn"))).toString()),
+        dsnHash: rawArtifactHash(
+          (await readFile(join(context.projectRoot, "golden.dsn"))).toString(),
+        ),
         sesHash: context.sesHashA as string,
-        pcbHash: hash((await readFile(join(context.projectRoot, "routed.kicad_pcb"))).toString()),
+        pcbHash: rawArtifactHash(
+          (await readFile(join(context.projectRoot, "routed.kicad_pcb"))).toString(),
+        ),
         dsnRules: { trackWidthMm: 0.25, clearanceMm: 0.127 },
         bom: context.fixture.bom,
         layerVerification: { reopened: true, layers: ["F.Cu", "B.Cu"] },
@@ -925,8 +929,8 @@ const stage_manufacturing = async (context: StageContext): Promise<void> => {
                 return [
                   name,
                   {
-                    sha256: hash(content),
-                    normalizedSha256: hash(normalizedArtifact(content)),
+                    sha256: rawArtifactHash(content),
+                    normalizedSha256: rawArtifactHash(normalizedArtifact(content)),
                     bytes: content.byteLength,
                   },
                 ];
@@ -1034,7 +1038,7 @@ const stage_library_patch = async (context: StageContext): Promise<void> => {
   );
   const boardPath = join(patchProjectRoot, "design.kicad_pcb");
   const unpatchedBoardContent = await readFile(boardPath, "utf8");
-  const unpatchedBoardHash = hash(unpatchedBoardContent);
+  const unpatchedBoardHash = rawArtifactHash(unpatchedBoardContent);
   const patchedBoardContent = materializeLibraryPatchInBoardSource(
     unpatchedBoardContent,
     libraryPatch.footprintId,
@@ -1060,7 +1064,7 @@ const stage_library_patch = async (context: StageContext): Promise<void> => {
   ) {
     throw new Error("verification-failed: patched board pads lack declared solder mask margin");
   }
-  const patchedBoardHash = hash(patchedBoardContent);
+  const patchedBoardHash = rawArtifactHash(patchedBoardContent);
   await writeFile(boardPath, patchedBoardContent, "utf8");
   let reopen: "passed" | "failed" | "blocked" = "blocked";
   let drc: "passed" | "failed" | "blocked" = "blocked";
@@ -1215,7 +1219,7 @@ const stage_knowledge_application = async (context: StageContext): Promise<void>
           decisions: appliedResult.decisions,
           libraryRevisions: appliedResult.libraryRevisions,
           failureReason: error instanceof Error ? error.message : String(error),
-          inputHash: hash(
+          inputHash: rawArtifactHash(
             JSON.stringify({
               targetContext: targetKnowledgeContext,
               decisions: appliedResult.decisions,
@@ -1349,7 +1353,7 @@ export const createPhase1Context = (input: {
 export const serializeStageContext = (context: StageContext): string => JSON.stringify(context);
 
 export const stageContextHash = (context: StageContext): string =>
-  canonicalSha256(
+  rawArtifactHash(
     serializeStageContext({
       ...context,
       artifactRoot: "<run-root>",

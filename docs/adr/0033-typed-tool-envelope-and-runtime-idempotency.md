@@ -34,11 +34,13 @@ worker/runtime共通で防ぎ、失敗を既存のerror taxonomyで停止させ�
    300秒、出力上限は64 MiBとする。これはPhase 4の外部processが大規模fixtureで
    完了するための固定値であり、retry budgetとは別のprocess watchdogである。
 7. 生出力hashとtimestamp-only正規化後hashを別フィールドで保存する。
-   Evidence／artifactのhashはWP3互換のraw bytes／raw text semanticsを使い、
-   `scripts/golden-shared.mts`の`rawSha256`で計算する。tool envelopeの
-   `inputHash`など構造化値のhashにはgraph-coreのcanonical `sha256`を使い、
-   両者を同じ関数名で扱わない。これにより、構造化入力のcanonical hashと
-   外部artifactの生内容hashを混同しない。
+   Evidence／artifactと、JSON文字列を返す`serializeStageContext`のhashは
+   WP3互換のraw bytes／raw text semanticsを使い、`scripts/golden-shared.mts`の
+   `rawSha256`（コード上の`rawArtifactHash`）で計算する。一方、tool envelopeの
+   `inputHash`など、JSON文字列化する前の構造化値だけにはgraph-coreのcanonical
+   `sha256`（コード上の`canonicalSha256`）を使う。文字列化済みの値をcanonical
+   hashへ渡さないことを境界とし、構造化入力のidentityと外部artifact／contextの
+   生内容hashを混同しない。
    process boundaryではtimestamp normalizationを定義しないため、両hashが同値に
    なることを仕様として明記する。
 8. timeout/cancelではSIGTERMを送信し、猶予後にSIGKILLへエスカレーションする。
