@@ -82,9 +82,33 @@ describe("FileEventLog", () => {
     await appendFile(path, '{"eventId":"partial"');
 
     await expect(log.readAll()).resolves.toEqual([event]);
+    expect((await readFile(path, "utf8")).endsWith('{"eventId":"partial"')).toBe(true);
+    await expect(log.recover()).resolves.toEqual({
+      truncatedBytes: '{"eventId":"partial"'.length,
+      finalEventId: event.eventId,
+      eventPosition: 1,
+    });
     expect((await readFile(path, "utf8")).endsWith("\n")).toBe(true);
 
     await log.close();
+  });
+
+  it("does not mutate the log when a non-owner reads a trailing partial line", async () => {
+    const directory = await mkdtemp(join(tmpdir(), "acd-event-log-"));
+    const path = join(directory, "events.jsonl");
+    const owner = new FileEventLog(path);
+    const observer = new FileEventLog(path);
+
+    await owner.append(event);
+    await appendFile(path, '{"eventId":"partial"');
+    const before = await readFile(path);
+
+    await expect(observer.readAll()).resolves.toEqual([event]);
+    await expect(observer.recover()).rejects.toThrow(/writer lock already held/);
+    expect(await readFile(path)).toEqual(before);
+
+    await owner.close();
+    await observer.close();
   });
 
   it("stops on corruption in a complete non-trailing line", async () => {

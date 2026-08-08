@@ -60,6 +60,45 @@ describe("knowledge lifecycle", () => {
     ).toBe(false);
   });
 
+  it("propagates deprecated knowledge through checkpoint references", () => {
+    const verification = {
+      id: "verification:test",
+      type: "VerificationResult",
+      revision: 0,
+      gate: "gate:test",
+      status: "passed",
+      inputRevision: 1,
+      toolVersion: "tool:test",
+      checkedAt: "2026-01-01T00:00:00.000Z",
+    } as Entity;
+    const checkpoint = {
+      id: "checkpoint:test",
+      type: "Checkpoint",
+      revision: 0,
+      status: "verified",
+      verificationResultIds: [verification.id],
+      knowledgeItemStatuses: [{ knowledgeItemId: item().id, status: "adopted" }],
+      links: [],
+    } as Entity;
+
+    const result = propagateKnowledgeDeprecation(
+      { entities: [item(), verification, checkpoint] },
+      item().id,
+      "knowledge superseded",
+    );
+
+    expect(result.staleEntityIds).toEqual(["checkpoint:test"]);
+    const verificationResult = propagateKnowledgeDeprecation(
+      { entities: [item(), verification, checkpoint] },
+      verification.id,
+      "verification superseded",
+    );
+    expect(verificationResult.staleEntityIds).toEqual(["checkpoint:test"]);
+    expect(result.traversalBasis).toContain(
+      "checkpoint:test:Checkpoint:verificationResultIds,knowledgeItemStatuses,links",
+    );
+  });
+
   it("creates deterministic candidates from passing intake findings", () => {
     const input = {
       finding: {
