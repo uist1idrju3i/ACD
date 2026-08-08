@@ -3,6 +3,7 @@ import { InMemoryEventLog } from "./event-log.js";
 import { GraphCoreError } from "./errors.js";
 import {
   TaskLedgerRuntime,
+  listTaskLedgerAttention,
   transitionTask,
   type ClockPort,
   type IdPort,
@@ -56,6 +57,77 @@ describe("task ledger", () => {
     expect(running.attemptCount).toBe(1);
     expect(running.revision).toBe(2);
     expect(() => transitionTask(running, "completed", [], { resultId: "result:1" })).not.toThrow();
+  });
+
+  it("lists blocked, failed, and approval-pending entries in ID order", () => {
+    const listed = listTaskLedgerAttention([
+      entry({ id: "task:z", status: "failed", stopReason: "tool failed" }),
+      entry({ id: "task:m", approvalState: "pending" }),
+      entry({ id: "task:a", status: "blocked", stopReason: "waiting for dependency" }),
+      entry({ id: "task:ok", status: "pending" }),
+    ]);
+
+    expect(listed.map((item) => item.taskId)).toEqual(["task:a", "task:m", "task:z"]);
+    expect(listed).toMatchObject([
+      {
+        taskId: "task:a",
+        status: "blocked",
+        stopReason: "waiting for dependency",
+        waitingReason: null,
+      },
+      {
+        taskId: "task:m",
+        status: "pending",
+        stopReason: null,
+        waitingReason: "approval-pending",
+      },
+      {
+        taskId: "task:z",
+        status: "failed",
+        stopReason: "tool failed",
+        waitingReason: null,
+      },
+    ]);
+  });
+
+  it("restores unfinished dependent entries after a runtime restart", async () => {
+    const eventLog = new InMemoryEventLog();
+    const runtime = new TaskLedgerRuntime("project:test", "test", eventLog, clock, ids);
+    await runtime.create(entry({ id: "task:dependency" }));
+    await runtime.create(entry({ id: "task:main", dependencyIds: ["task:dependency"] }));
+    await runtime.create(entry({ id: "task:waiting", approvalState: "pending" }));
+    await runtime.create(entry({ id: "task:active" }));
+    await runtime.transition("task:dependency", "running");
+    await runtime.transition("task:dependency", "blocked", {
+      stopReason: "dependency tool stopped",
+    });
+    await runtime.transition("task:waiting", "blocked", {
+      stopReason: "approval required",
+    });
+    await runtime.transition("task:active", "running");
+
+    const restarted = new TaskLedgerRuntime("project:test", "test", eventLog, clock, ids);
+    const restored = await restarted.load();
+
+    expect(restored.entries["task:main"]).toMatchObject({
+      status: "pending",
+      attemptCount: 0,
+      dependencyIds: ["task:dependency"],
+    });
+    expect(restored.entries["task:dependency"]).toMatchObject({
+      status: "blocked",
+      attemptCount: 1,
+      stopReason: "dependency tool stopped",
+    });
+    expect(restored.entries["task:waiting"]).toMatchObject({
+      status: "blocked",
+      attemptCount: 0,
+      stopReason: "approval required",
+    });
+    expect(restored.entries["task:active"]).toMatchObject({
+      status: "running",
+      attemptCount: 1,
+    });
   });
 
   it("reconstructs state from events and stops on held-state mismatch", async () => {

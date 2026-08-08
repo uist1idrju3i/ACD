@@ -7,7 +7,7 @@ import {
   verifyEvent,
   verifyReplay,
 } from "./event-log.js";
-import { canonicalize } from "./hash.js";
+import { canonicalize, compareIds } from "./hash.js";
 
 export type TaskLedgerEntry = SchemaTaskLedgerEntry & {
   dependencyIds: string[];
@@ -28,6 +28,15 @@ export type TaskTransitionContext = {
 export type TaskLedgerState = {
   revision: number;
   entries: Record<string, TaskLedgerEntry>;
+};
+
+export type TaskLedgerAttention = {
+  taskId: string;
+  status: TaskLedgerStatus;
+  approvalState: ApprovalState;
+  stopReason: string | null;
+  waitingReason: string | null;
+  entry: TaskLedgerEntry;
 };
 
 export interface ClockPort {
@@ -74,6 +83,30 @@ export const validateTaskLedgerEntry = (entry: TaskLedgerEntry): void => {
   }
   if (entry.acceptanceCriteria.length === 0) fail(`missing acceptance criteria: ${entry.id}`);
 };
+
+export const listTaskLedgerAttention = (
+  entries: readonly TaskLedgerEntry[],
+): TaskLedgerAttention[] =>
+  entries
+    .map((entry) => {
+      validateTaskLedgerEntry(entry);
+      return entry;
+    })
+    .filter(
+      (entry) =>
+        entry.status === "blocked" ||
+        entry.status === "failed" ||
+        entry.approvalState === "pending",
+    )
+    .sort((left, right) => compareIds(left.id, right.id))
+    .map((entry) => ({
+      taskId: entry.id,
+      status: entry.status,
+      approvalState: entry.approvalState,
+      stopReason: entry.stopReason ?? null,
+      waitingReason: entry.approvalState === "pending" ? "approval-pending" : null,
+      entry: structuredClone(entry),
+    }));
 
 const dependencyEntries = (
   entry: TaskLedgerEntry,

@@ -25,7 +25,6 @@ describe("FileEventLog", () => {
 
     await first.append(event);
     await expect(second.append(event)).rejects.toThrow(/writer lock already held/);
-    await second.close();
     await first.append({
       ...event,
       eventId: "event:storage:2",
@@ -42,7 +41,35 @@ describe("FileEventLog", () => {
     );
 
     await first.close();
-    await second.append(event);
+    await second.close();
+  });
+
+  it("does not let a rejected writer close the existing lock", async () => {
+    const directory = await mkdtemp(join(tmpdir(), "acd-event-log-"));
+    const path = join(directory, "events.jsonl");
+    const first = new FileEventLog(path);
+    const second = new FileEventLog(path);
+
+    await first.append(event);
+    await expect(second.append(event)).rejects.toThrow(/writer lock already held/);
+    await second.close();
+    await expect(
+      first.append({ ...event, eventId: "event:storage:2", resultRevision: 2, baseRevision: 1 }),
+    ).resolves.toBeUndefined();
+
+    await first.close();
+  });
+
+  it("allows a new writer after the original writer releases the lock", async () => {
+    const directory = await mkdtemp(join(tmpdir(), "acd-event-log-"));
+    const path = join(directory, "events.jsonl");
+    const first = new FileEventLog(path);
+    const second = new FileEventLog(path);
+
+    await first.append(event);
+    await first.close();
+    await expect(second.append(event)).resolves.toBeUndefined();
+
     await second.close();
   });
 });
