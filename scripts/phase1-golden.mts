@@ -1,5 +1,4 @@
 import { execFileSync, spawnSync } from "node:child_process";
-import { createHash } from "node:crypto";
 import { copyFile, mkdir, readFile, readdir, rm, writeFile } from "node:fs/promises";
 import { join, resolve } from "node:path";
 import {
@@ -66,6 +65,7 @@ import {
 
 import type { ACDPhase1Fixture } from "../packages/schema/src/generated/phase1-fixture.js";
 import preOrder from "./pre-order.ts";
+import { sha256 } from "./golden-shared.mts";
 
 const root = resolve(import.meta.dirname, "..");
 const fixture = JSON.parse(
@@ -93,8 +93,7 @@ let currentGate = 0;
 let currentName = "golden";
 let adoptedKnowledgeForLibraryPatch: KnowledgeItem | undefined;
 let adoptedLibraryPatch: ReturnType<typeof createLibraryPatchCandidate> | undefined;
-const hash = (content: string): string =>
-  `sha256:${createHash("sha256").update(content).digest("hex")}`;
+const hash = sha256;
 const run = (command: string, args: string[]): string =>
   execFileSync(command, args, { cwd: root, encoding: "utf8", stdio: ["ignore", "pipe", "pipe"] });
 const dockerArgs = (args: string[]): string[] => [

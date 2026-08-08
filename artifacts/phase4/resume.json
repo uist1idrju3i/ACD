@@ -1,0 +1,773 @@
+{
+  "runner": "phase4-resume",
+  "interruptionCases": [
+    {
+      "caseId": "after-routing",
+      "interruptionStageId": "gate:routing",
+      "resumedCheckpoint": "checkpoint:checkpoint:gate:routing:0",
+      "rerunStageIds": [
+        "gate:drc",
+        "gate:pre-order",
+        "gate:knowledge-lifecycle",
+        "gate:knowledge-application"
+      ],
+      "skippedStageIds": [
+        "gate:placement",
+        "gate:routing"
+      ],
+      "actualExecutedStageIds": [
+        "gate:drc",
+        "gate:pre-order",
+        "gate:knowledge-lifecycle",
+        "gate:knowledge-application"
+      ],
+      "actualStageExecution": [
+        {
+          "id": "gate:placement",
+          "gate": 4,
+          "evidence": {
+            "artifact": "outputs/gate-placement.json",
+            "artifactHash": "sha256:a6fcdc6c736b17789c7572eed10053a65c519c2de36b1981dcc525dc27aea433",
+            "stage": "gate:placement",
+            "gate": 4,
+            "status": "passed"
+          }
+        },
+        {
+          "id": "gate:routing",
+          "gate": 9,
+          "evidence": {
+            "artifact": "outputs/gate-routing.json",
+            "artifactHash": "sha256:723fc352906724fb6d832d9e04048e8792ddeaf0ee2b5b223275ec26d95917e8",
+            "stage": "gate:routing",
+            "gate": 9,
+            "status": "passed"
+          }
+        },
+        {
+          "id": "gate:drc",
+          "gate": 10,
+          "evidence": {
+            "artifact": "outputs/gate-drc.json",
+            "artifactHash": "sha256:d75b1dd3a2edd467ab32c3ba4344ba3e558bdd92e0831fc89d71cb127b7ef528",
+            "stage": "gate:drc",
+            "gate": 10,
+            "status": "passed"
+          }
+        },
+        {
+          "id": "gate:pre-order",
+          "gate": 12,
+          "evidence": {
+            "artifact": "outputs/gate-pre-order.json",
+            "artifactHash": "sha256:ae273b849b989148e5b98374b932e7319b4b78e27e34b95f80836e77227b3396",
+            "stage": "gate:pre-order",
+            "gate": 12,
+            "status": "passed"
+          }
+        },
+        {
+          "id": "gate:knowledge-lifecycle",
+          "gate": 20,
+          "evidence": {
+            "artifact": "outputs/gate-knowledge-lifecycle.json",
+            "artifactHash": "sha256:1279710b76f10e8a0ba3e7f3638273b9b10227518fb1e9a1f92a92b865964767",
+            "stage": "gate:knowledge-lifecycle",
+            "gate": 20,
+            "status": "passed"
+          }
+        },
+        {
+          "id": "gate:knowledge-application",
+          "gate": 22,
+          "evidence": {
+            "artifact": "outputs/gate-knowledge-application.json",
+            "artifactHash": "sha256:50c46bb30994d29801b4b73c10f65efd11b37235b94e54d43e84aaa51cf797c6",
+            "stage": "gate:knowledge-application",
+            "gate": 22,
+            "status": "passed"
+          }
+        }
+      ],
+      "artifactHashComparison": {
+        "baseline": {
+          "gate-drc.json": "sha256:ce618c1140449398964a70c03d0aca7524230f45d2cca2f7d0c3b387c39cf812",
+          "gate-knowledge-application.json": "sha256:15e00d209b2a1a5f4c0cee0109e9bb1dd18fbd8858440106dd469f14e5b9904b",
+          "gate-knowledge-lifecycle.json": "sha256:104b0af5bc003af7ccb7b07e54448884a653dc122b314874441e3dd1b9f6c166",
+          "gate-placement.json": "sha256:714ef4e893eaeac53f7c98aedb9cc9588068f2f32ff5b79b25969c5a20b2544d",
+          "gate-pre-order.json": "sha256:f068792dcb32e7dc7adbb378586a6085d7cb9e31f747a9351f939ca083ec272e",
+          "gate-routing.json": "sha256:580e72873b5057a19722c53e7d936558a5373da9142fbb448e0bdbdc0222517a"
+        },
+        "resumed": {
+          "gate-drc.json": "sha256:ce618c1140449398964a70c03d0aca7524230f45d2cca2f7d0c3b387c39cf812",
+          "gate-knowledge-application.json": "sha256:15e00d209b2a1a5f4c0cee0109e9bb1dd18fbd8858440106dd469f14e5b9904b",
+          "gate-knowledge-lifecycle.json": "sha256:104b0af5bc003af7ccb7b07e54448884a653dc122b314874441e3dd1b9f6c166",
+          "gate-placement.json": "sha256:714ef4e893eaeac53f7c98aedb9cc9588068f2f32ff5b79b25969c5a20b2544d",
+          "gate-pre-order.json": "sha256:f068792dcb32e7dc7adbb378586a6085d7cb9e31f747a9351f939ca083ec272e",
+          "gate-routing.json": "sha256:580e72873b5057a19722c53e7d936558a5373da9142fbb448e0bdbdc0222517a"
+        },
+        "equal": true
+      },
+      "gateResultComparison": {
+        "baseline": [
+          {
+            "id": "gate:placement",
+            "gate": 4,
+            "evidence": {
+              "artifact": "outputs/gate-placement.json",
+              "artifactHash": "sha256:a6fcdc6c736b17789c7572eed10053a65c519c2de36b1981dcc525dc27aea433",
+              "stage": "gate:placement",
+              "gate": 4,
+              "status": "passed"
+            }
+          },
+          {
+            "id": "gate:routing",
+            "gate": 9,
+            "evidence": {
+              "artifact": "outputs/gate-routing.json",
+              "artifactHash": "sha256:723fc352906724fb6d832d9e04048e8792ddeaf0ee2b5b223275ec26d95917e8",
+              "stage": "gate:routing",
+              "gate": 9,
+              "status": "passed"
+            }
+          },
+          {
+            "id": "gate:drc",
+            "gate": 10,
+            "evidence": {
+              "artifact": "outputs/gate-drc.json",
+              "artifactHash": "sha256:d75b1dd3a2edd467ab32c3ba4344ba3e558bdd92e0831fc89d71cb127b7ef528",
+              "stage": "gate:drc",
+              "gate": 10,
+              "status": "passed"
+            }
+          },
+          {
+            "id": "gate:pre-order",
+            "gate": 12,
+            "evidence": {
+              "artifact": "outputs/gate-pre-order.json",
+              "artifactHash": "sha256:ae273b849b989148e5b98374b932e7319b4b78e27e34b95f80836e77227b3396",
+              "stage": "gate:pre-order",
+              "gate": 12,
+              "status": "passed"
+            }
+          },
+          {
+            "id": "gate:knowledge-lifecycle",
+            "gate": 20,
+            "evidence": {
+              "artifact": "outputs/gate-knowledge-lifecycle.json",
+              "artifactHash": "sha256:1279710b76f10e8a0ba3e7f3638273b9b10227518fb1e9a1f92a92b865964767",
+              "stage": "gate:knowledge-lifecycle",
+              "gate": 20,
+              "status": "passed"
+            }
+          },
+          {
+            "id": "gate:knowledge-application",
+            "gate": 22,
+            "evidence": {
+              "artifact": "outputs/gate-knowledge-application.json",
+              "artifactHash": "sha256:50c46bb30994d29801b4b73c10f65efd11b37235b94e54d43e84aaa51cf797c6",
+              "stage": "gate:knowledge-application",
+              "gate": 22,
+              "status": "passed"
+            }
+          }
+        ],
+        "resumed": [
+          {
+            "id": "gate:placement",
+            "gate": 4,
+            "evidence": {
+              "artifact": "outputs/gate-placement.json",
+              "artifactHash": "sha256:a6fcdc6c736b17789c7572eed10053a65c519c2de36b1981dcc525dc27aea433",
+              "stage": "gate:placement",
+              "gate": 4,
+              "status": "passed"
+            }
+          },
+          {
+            "id": "gate:routing",
+            "gate": 9,
+            "evidence": {
+              "artifact": "outputs/gate-routing.json",
+              "artifactHash": "sha256:723fc352906724fb6d832d9e04048e8792ddeaf0ee2b5b223275ec26d95917e8",
+              "stage": "gate:routing",
+              "gate": 9,
+              "status": "passed"
+            }
+          },
+          {
+            "id": "gate:drc",
+            "gate": 10,
+            "evidence": {
+              "artifact": "outputs/gate-drc.json",
+              "artifactHash": "sha256:d75b1dd3a2edd467ab32c3ba4344ba3e558bdd92e0831fc89d71cb127b7ef528",
+              "stage": "gate:drc",
+              "gate": 10,
+              "status": "passed"
+            }
+          },
+          {
+            "id": "gate:pre-order",
+            "gate": 12,
+            "evidence": {
+              "artifact": "outputs/gate-pre-order.json",
+              "artifactHash": "sha256:ae273b849b989148e5b98374b932e7319b4b78e27e34b95f80836e77227b3396",
+              "stage": "gate:pre-order",
+              "gate": 12,
+              "status": "passed"
+            }
+          },
+          {
+            "id": "gate:knowledge-lifecycle",
+            "gate": 20,
+            "evidence": {
+              "artifact": "outputs/gate-knowledge-lifecycle.json",
+              "artifactHash": "sha256:1279710b76f10e8a0ba3e7f3638273b9b10227518fb1e9a1f92a92b865964767",
+              "stage": "gate:knowledge-lifecycle",
+              "gate": 20,
+              "status": "passed"
+            }
+          },
+          {
+            "id": "gate:knowledge-application",
+            "gate": 22,
+            "evidence": {
+              "artifact": "outputs/gate-knowledge-application.json",
+              "artifactHash": "sha256:50c46bb30994d29801b4b73c10f65efd11b37235b94e54d43e84aaa51cf797c6",
+              "stage": "gate:knowledge-application",
+              "gate": 22,
+              "status": "passed"
+            }
+          }
+        ],
+        "equal": true
+      },
+      "eventSequenceComparison": {
+        "equalExcludingInterruptions": true,
+        "excludedEvents": [
+          "run.stopped",
+          "run.resumed"
+        ]
+      },
+      "baselineEventCount": 30,
+      "resumedEventCount": 32
+    },
+    {
+      "caseId": "after-drc",
+      "interruptionStageId": "gate:drc",
+      "resumedCheckpoint": "checkpoint:checkpoint:gate:drc:0",
+      "rerunStageIds": [
+        "gate:pre-order",
+        "gate:knowledge-lifecycle",
+        "gate:knowledge-application"
+      ],
+      "skippedStageIds": [
+        "gate:placement",
+        "gate:routing",
+        "gate:drc"
+      ],
+      "actualExecutedStageIds": [
+        "gate:pre-order",
+        "gate:knowledge-lifecycle",
+        "gate:knowledge-application"
+      ],
+      "actualStageExecution": [
+        {
+          "id": "gate:placement",
+          "gate": 4,
+          "evidence": {
+            "artifact": "outputs/gate-placement.json",
+            "artifactHash": "sha256:a6fcdc6c736b17789c7572eed10053a65c519c2de36b1981dcc525dc27aea433",
+            "stage": "gate:placement",
+            "gate": 4,
+            "status": "passed"
+          }
+        },
+        {
+          "id": "gate:routing",
+          "gate": 9,
+          "evidence": {
+            "artifact": "outputs/gate-routing.json",
+            "artifactHash": "sha256:723fc352906724fb6d832d9e04048e8792ddeaf0ee2b5b223275ec26d95917e8",
+            "stage": "gate:routing",
+            "gate": 9,
+            "status": "passed"
+          }
+        },
+        {
+          "id": "gate:drc",
+          "gate": 10,
+          "evidence": {
+            "artifact": "outputs/gate-drc.json",
+            "artifactHash": "sha256:d75b1dd3a2edd467ab32c3ba4344ba3e558bdd92e0831fc89d71cb127b7ef528",
+            "stage": "gate:drc",
+            "gate": 10,
+            "status": "passed"
+          }
+        },
+        {
+          "id": "gate:pre-order",
+          "gate": 12,
+          "evidence": {
+            "artifact": "outputs/gate-pre-order.json",
+            "artifactHash": "sha256:ae273b849b989148e5b98374b932e7319b4b78e27e34b95f80836e77227b3396",
+            "stage": "gate:pre-order",
+            "gate": 12,
+            "status": "passed"
+          }
+        },
+        {
+          "id": "gate:knowledge-lifecycle",
+          "gate": 20,
+          "evidence": {
+            "artifact": "outputs/gate-knowledge-lifecycle.json",
+            "artifactHash": "sha256:1279710b76f10e8a0ba3e7f3638273b9b10227518fb1e9a1f92a92b865964767",
+            "stage": "gate:knowledge-lifecycle",
+            "gate": 20,
+            "status": "passed"
+          }
+        },
+        {
+          "id": "gate:knowledge-application",
+          "gate": 22,
+          "evidence": {
+            "artifact": "outputs/gate-knowledge-application.json",
+            "artifactHash": "sha256:50c46bb30994d29801b4b73c10f65efd11b37235b94e54d43e84aaa51cf797c6",
+            "stage": "gate:knowledge-application",
+            "gate": 22,
+            "status": "passed"
+          }
+        }
+      ],
+      "artifactHashComparison": {
+        "baseline": {
+          "gate-drc.json": "sha256:ce618c1140449398964a70c03d0aca7524230f45d2cca2f7d0c3b387c39cf812",
+          "gate-knowledge-application.json": "sha256:15e00d209b2a1a5f4c0cee0109e9bb1dd18fbd8858440106dd469f14e5b9904b",
+          "gate-knowledge-lifecycle.json": "sha256:104b0af5bc003af7ccb7b07e54448884a653dc122b314874441e3dd1b9f6c166",
+          "gate-placement.json": "sha256:714ef4e893eaeac53f7c98aedb9cc9588068f2f32ff5b79b25969c5a20b2544d",
+          "gate-pre-order.json": "sha256:f068792dcb32e7dc7adbb378586a6085d7cb9e31f747a9351f939ca083ec272e",
+          "gate-routing.json": "sha256:580e72873b5057a19722c53e7d936558a5373da9142fbb448e0bdbdc0222517a"
+        },
+        "resumed": {
+          "gate-drc.json": "sha256:ce618c1140449398964a70c03d0aca7524230f45d2cca2f7d0c3b387c39cf812",
+          "gate-knowledge-application.json": "sha256:15e00d209b2a1a5f4c0cee0109e9bb1dd18fbd8858440106dd469f14e5b9904b",
+          "gate-knowledge-lifecycle.json": "sha256:104b0af5bc003af7ccb7b07e54448884a653dc122b314874441e3dd1b9f6c166",
+          "gate-placement.json": "sha256:714ef4e893eaeac53f7c98aedb9cc9588068f2f32ff5b79b25969c5a20b2544d",
+          "gate-pre-order.json": "sha256:f068792dcb32e7dc7adbb378586a6085d7cb9e31f747a9351f939ca083ec272e",
+          "gate-routing.json": "sha256:580e72873b5057a19722c53e7d936558a5373da9142fbb448e0bdbdc0222517a"
+        },
+        "equal": true
+      },
+      "gateResultComparison": {
+        "baseline": [
+          {
+            "id": "gate:placement",
+            "gate": 4,
+            "evidence": {
+              "artifact": "outputs/gate-placement.json",
+              "artifactHash": "sha256:a6fcdc6c736b17789c7572eed10053a65c519c2de36b1981dcc525dc27aea433",
+              "stage": "gate:placement",
+              "gate": 4,
+              "status": "passed"
+            }
+          },
+          {
+            "id": "gate:routing",
+            "gate": 9,
+            "evidence": {
+              "artifact": "outputs/gate-routing.json",
+              "artifactHash": "sha256:723fc352906724fb6d832d9e04048e8792ddeaf0ee2b5b223275ec26d95917e8",
+              "stage": "gate:routing",
+              "gate": 9,
+              "status": "passed"
+            }
+          },
+          {
+            "id": "gate:drc",
+            "gate": 10,
+            "evidence": {
+              "artifact": "outputs/gate-drc.json",
+              "artifactHash": "sha256:d75b1dd3a2edd467ab32c3ba4344ba3e558bdd92e0831fc89d71cb127b7ef528",
+              "stage": "gate:drc",
+              "gate": 10,
+              "status": "passed"
+            }
+          },
+          {
+            "id": "gate:pre-order",
+            "gate": 12,
+            "evidence": {
+              "artifact": "outputs/gate-pre-order.json",
+              "artifactHash": "sha256:ae273b849b989148e5b98374b932e7319b4b78e27e34b95f80836e77227b3396",
+              "stage": "gate:pre-order",
+              "gate": 12,
+              "status": "passed"
+            }
+          },
+          {
+            "id": "gate:knowledge-lifecycle",
+            "gate": 20,
+            "evidence": {
+              "artifact": "outputs/gate-knowledge-lifecycle.json",
+              "artifactHash": "sha256:1279710b76f10e8a0ba3e7f3638273b9b10227518fb1e9a1f92a92b865964767",
+              "stage": "gate:knowledge-lifecycle",
+              "gate": 20,
+              "status": "passed"
+            }
+          },
+          {
+            "id": "gate:knowledge-application",
+            "gate": 22,
+            "evidence": {
+              "artifact": "outputs/gate-knowledge-application.json",
+              "artifactHash": "sha256:50c46bb30994d29801b4b73c10f65efd11b37235b94e54d43e84aaa51cf797c6",
+              "stage": "gate:knowledge-application",
+              "gate": 22,
+              "status": "passed"
+            }
+          }
+        ],
+        "resumed": [
+          {
+            "id": "gate:placement",
+            "gate": 4,
+            "evidence": {
+              "artifact": "outputs/gate-placement.json",
+              "artifactHash": "sha256:a6fcdc6c736b17789c7572eed10053a65c519c2de36b1981dcc525dc27aea433",
+              "stage": "gate:placement",
+              "gate": 4,
+              "status": "passed"
+            }
+          },
+          {
+            "id": "gate:routing",
+            "gate": 9,
+            "evidence": {
+              "artifact": "outputs/gate-routing.json",
+              "artifactHash": "sha256:723fc352906724fb6d832d9e04048e8792ddeaf0ee2b5b223275ec26d95917e8",
+              "stage": "gate:routing",
+              "gate": 9,
+              "status": "passed"
+            }
+          },
+          {
+            "id": "gate:drc",
+            "gate": 10,
+            "evidence": {
+              "artifact": "outputs/gate-drc.json",
+              "artifactHash": "sha256:d75b1dd3a2edd467ab32c3ba4344ba3e558bdd92e0831fc89d71cb127b7ef528",
+              "stage": "gate:drc",
+              "gate": 10,
+              "status": "passed"
+            }
+          },
+          {
+            "id": "gate:pre-order",
+            "gate": 12,
+            "evidence": {
+              "artifact": "outputs/gate-pre-order.json",
+              "artifactHash": "sha256:ae273b849b989148e5b98374b932e7319b4b78e27e34b95f80836e77227b3396",
+              "stage": "gate:pre-order",
+              "gate": 12,
+              "status": "passed"
+            }
+          },
+          {
+            "id": "gate:knowledge-lifecycle",
+            "gate": 20,
+            "evidence": {
+              "artifact": "outputs/gate-knowledge-lifecycle.json",
+              "artifactHash": "sha256:1279710b76f10e8a0ba3e7f3638273b9b10227518fb1e9a1f92a92b865964767",
+              "stage": "gate:knowledge-lifecycle",
+              "gate": 20,
+              "status": "passed"
+            }
+          },
+          {
+            "id": "gate:knowledge-application",
+            "gate": 22,
+            "evidence": {
+              "artifact": "outputs/gate-knowledge-application.json",
+              "artifactHash": "sha256:50c46bb30994d29801b4b73c10f65efd11b37235b94e54d43e84aaa51cf797c6",
+              "stage": "gate:knowledge-application",
+              "gate": 22,
+              "status": "passed"
+            }
+          }
+        ],
+        "equal": true
+      },
+      "eventSequenceComparison": {
+        "equalExcludingInterruptions": true,
+        "excludedEvents": [
+          "run.stopped",
+          "run.resumed"
+        ]
+      },
+      "baselineEventCount": 30,
+      "resumedEventCount": 32
+    },
+    {
+      "caseId": "after-gate-20",
+      "interruptionStageId": "gate:knowledge-lifecycle",
+      "resumedCheckpoint": "checkpoint:checkpoint:gate:knowledge-lifecycle:0",
+      "rerunStageIds": [
+        "gate:knowledge-application"
+      ],
+      "skippedStageIds": [
+        "gate:placement",
+        "gate:routing",
+        "gate:drc",
+        "gate:pre-order",
+        "gate:knowledge-lifecycle"
+      ],
+      "actualExecutedStageIds": [
+        "gate:knowledge-application"
+      ],
+      "actualStageExecution": [
+        {
+          "id": "gate:placement",
+          "gate": 4,
+          "evidence": {
+            "artifact": "outputs/gate-placement.json",
+            "artifactHash": "sha256:a6fcdc6c736b17789c7572eed10053a65c519c2de36b1981dcc525dc27aea433",
+            "stage": "gate:placement",
+            "gate": 4,
+            "status": "passed"
+          }
+        },
+        {
+          "id": "gate:routing",
+          "gate": 9,
+          "evidence": {
+            "artifact": "outputs/gate-routing.json",
+            "artifactHash": "sha256:723fc352906724fb6d832d9e04048e8792ddeaf0ee2b5b223275ec26d95917e8",
+            "stage": "gate:routing",
+            "gate": 9,
+            "status": "passed"
+          }
+        },
+        {
+          "id": "gate:drc",
+          "gate": 10,
+          "evidence": {
+            "artifact": "outputs/gate-drc.json",
+            "artifactHash": "sha256:d75b1dd3a2edd467ab32c3ba4344ba3e558bdd92e0831fc89d71cb127b7ef528",
+            "stage": "gate:drc",
+            "gate": 10,
+            "status": "passed"
+          }
+        },
+        {
+          "id": "gate:pre-order",
+          "gate": 12,
+          "evidence": {
+            "artifact": "outputs/gate-pre-order.json",
+            "artifactHash": "sha256:ae273b849b989148e5b98374b932e7319b4b78e27e34b95f80836e77227b3396",
+            "stage": "gate:pre-order",
+            "gate": 12,
+            "status": "passed"
+          }
+        },
+        {
+          "id": "gate:knowledge-lifecycle",
+          "gate": 20,
+          "evidence": {
+            "artifact": "outputs/gate-knowledge-lifecycle.json",
+            "artifactHash": "sha256:1279710b76f10e8a0ba3e7f3638273b9b10227518fb1e9a1f92a92b865964767",
+            "stage": "gate:knowledge-lifecycle",
+            "gate": 20,
+            "status": "passed"
+          }
+        },
+        {
+          "id": "gate:knowledge-application",
+          "gate": 22,
+          "evidence": {
+            "artifact": "outputs/gate-knowledge-application.json",
+            "artifactHash": "sha256:50c46bb30994d29801b4b73c10f65efd11b37235b94e54d43e84aaa51cf797c6",
+            "stage": "gate:knowledge-application",
+            "gate": 22,
+            "status": "passed"
+          }
+        }
+      ],
+      "artifactHashComparison": {
+        "baseline": {
+          "gate-drc.json": "sha256:ce618c1140449398964a70c03d0aca7524230f45d2cca2f7d0c3b387c39cf812",
+          "gate-knowledge-application.json": "sha256:15e00d209b2a1a5f4c0cee0109e9bb1dd18fbd8858440106dd469f14e5b9904b",
+          "gate-knowledge-lifecycle.json": "sha256:104b0af5bc003af7ccb7b07e54448884a653dc122b314874441e3dd1b9f6c166",
+          "gate-placement.json": "sha256:714ef4e893eaeac53f7c98aedb9cc9588068f2f32ff5b79b25969c5a20b2544d",
+          "gate-pre-order.json": "sha256:f068792dcb32e7dc7adbb378586a6085d7cb9e31f747a9351f939ca083ec272e",
+          "gate-routing.json": "sha256:580e72873b5057a19722c53e7d936558a5373da9142fbb448e0bdbdc0222517a"
+        },
+        "resumed": {
+          "gate-drc.json": "sha256:ce618c1140449398964a70c03d0aca7524230f45d2cca2f7d0c3b387c39cf812",
+          "gate-knowledge-application.json": "sha256:15e00d209b2a1a5f4c0cee0109e9bb1dd18fbd8858440106dd469f14e5b9904b",
+          "gate-knowledge-lifecycle.json": "sha256:104b0af5bc003af7ccb7b07e54448884a653dc122b314874441e3dd1b9f6c166",
+          "gate-placement.json": "sha256:714ef4e893eaeac53f7c98aedb9cc9588068f2f32ff5b79b25969c5a20b2544d",
+          "gate-pre-order.json": "sha256:f068792dcb32e7dc7adbb378586a6085d7cb9e31f747a9351f939ca083ec272e",
+          "gate-routing.json": "sha256:580e72873b5057a19722c53e7d936558a5373da9142fbb448e0bdbdc0222517a"
+        },
+        "equal": true
+      },
+      "gateResultComparison": {
+        "baseline": [
+          {
+            "id": "gate:placement",
+            "gate": 4,
+            "evidence": {
+              "artifact": "outputs/gate-placement.json",
+              "artifactHash": "sha256:a6fcdc6c736b17789c7572eed10053a65c519c2de36b1981dcc525dc27aea433",
+              "stage": "gate:placement",
+              "gate": 4,
+              "status": "passed"
+            }
+          },
+          {
+            "id": "gate:routing",
+            "gate": 9,
+            "evidence": {
+              "artifact": "outputs/gate-routing.json",
+              "artifactHash": "sha256:723fc352906724fb6d832d9e04048e8792ddeaf0ee2b5b223275ec26d95917e8",
+              "stage": "gate:routing",
+              "gate": 9,
+              "status": "passed"
+            }
+          },
+          {
+            "id": "gate:drc",
+            "gate": 10,
+            "evidence": {
+              "artifact": "outputs/gate-drc.json",
+              "artifactHash": "sha256:d75b1dd3a2edd467ab32c3ba4344ba3e558bdd92e0831fc89d71cb127b7ef528",
+              "stage": "gate:drc",
+              "gate": 10,
+              "status": "passed"
+            }
+          },
+          {
+            "id": "gate:pre-order",
+            "gate": 12,
+            "evidence": {
+              "artifact": "outputs/gate-pre-order.json",
+              "artifactHash": "sha256:ae273b849b989148e5b98374b932e7319b4b78e27e34b95f80836e77227b3396",
+              "stage": "gate:pre-order",
+              "gate": 12,
+              "status": "passed"
+            }
+          },
+          {
+            "id": "gate:knowledge-lifecycle",
+            "gate": 20,
+            "evidence": {
+              "artifact": "outputs/gate-knowledge-lifecycle.json",
+              "artifactHash": "sha256:1279710b76f10e8a0ba3e7f3638273b9b10227518fb1e9a1f92a92b865964767",
+              "stage": "gate:knowledge-lifecycle",
+              "gate": 20,
+              "status": "passed"
+            }
+          },
+          {
+            "id": "gate:knowledge-application",
+            "gate": 22,
+            "evidence": {
+              "artifact": "outputs/gate-knowledge-application.json",
+              "artifactHash": "sha256:50c46bb30994d29801b4b73c10f65efd11b37235b94e54d43e84aaa51cf797c6",
+              "stage": "gate:knowledge-application",
+              "gate": 22,
+              "status": "passed"
+            }
+          }
+        ],
+        "resumed": [
+          {
+            "id": "gate:placement",
+            "gate": 4,
+            "evidence": {
+              "artifact": "outputs/gate-placement.json",
+              "artifactHash": "sha256:a6fcdc6c736b17789c7572eed10053a65c519c2de36b1981dcc525dc27aea433",
+              "stage": "gate:placement",
+              "gate": 4,
+              "status": "passed"
+            }
+          },
+          {
+            "id": "gate:routing",
+            "gate": 9,
+            "evidence": {
+              "artifact": "outputs/gate-routing.json",
+              "artifactHash": "sha256:723fc352906724fb6d832d9e04048e8792ddeaf0ee2b5b223275ec26d95917e8",
+              "stage": "gate:routing",
+              "gate": 9,
+              "status": "passed"
+            }
+          },
+          {
+            "id": "gate:drc",
+            "gate": 10,
+            "evidence": {
+              "artifact": "outputs/gate-drc.json",
+              "artifactHash": "sha256:d75b1dd3a2edd467ab32c3ba4344ba3e558bdd92e0831fc89d71cb127b7ef528",
+              "stage": "gate:drc",
+              "gate": 10,
+              "status": "passed"
+            }
+          },
+          {
+            "id": "gate:pre-order",
+            "gate": 12,
+            "evidence": {
+              "artifact": "outputs/gate-pre-order.json",
+              "artifactHash": "sha256:ae273b849b989148e5b98374b932e7319b4b78e27e34b95f80836e77227b3396",
+              "stage": "gate:pre-order",
+              "gate": 12,
+              "status": "passed"
+            }
+          },
+          {
+            "id": "gate:knowledge-lifecycle",
+            "gate": 20,
+            "evidence": {
+              "artifact": "outputs/gate-knowledge-lifecycle.json",
+              "artifactHash": "sha256:1279710b76f10e8a0ba3e7f3638273b9b10227518fb1e9a1f92a92b865964767",
+              "stage": "gate:knowledge-lifecycle",
+              "gate": 20,
+              "status": "passed"
+            }
+          },
+          {
+            "id": "gate:knowledge-application",
+            "gate": 22,
+            "evidence": {
+              "artifact": "outputs/gate-knowledge-application.json",
+              "artifactHash": "sha256:50c46bb30994d29801b4b73c10f65efd11b37235b94e54d43e84aaa51cf797c6",
+              "stage": "gate:knowledge-application",
+              "gate": 22,
+              "status": "passed"
+            }
+          }
+        ],
+        "equal": true
+      },
+      "eventSequenceComparison": {
+        "equalExcludingInterruptions": true,
+        "excludedEvents": [
+          "run.stopped",
+          "run.resumed"
+        ]
+      },
+      "baselineEventCount": 30,
+      "resumedEventCount": 32
+    }
+  ],
+  "comparison": {
+    "outputHashes": "SHA-256 over deterministic stage artifacts",
+    "eventSequence": "canonical event type/payload comparison excluding run.stopped/run.resumed"
+  }
+}

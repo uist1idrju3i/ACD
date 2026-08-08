@@ -98,3 +98,24 @@ jobs:
           name: phase1-smoke-evidence
           path: artifacts/phase1-smoke
           if-no-files-found: warn
+
+  phase4-resume:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 11.18.0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm phase4:resume
+      - name: Upload Phase 4 resume evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: phase4-resume-evidence
+          path: artifacts/phase4
+          if-no-files-found: warn
