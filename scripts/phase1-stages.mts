@@ -1,4 +1,3 @@
-import { execFileSync, spawnSync } from "node:child_process";
 import { copyFile, mkdir, readFile, readdir, writeFile } from "node:fs/promises";
 import { join, resolve } from "node:path";
 import {
@@ -62,6 +61,7 @@ import {
   loadGateMatrix,
   validatePhase1FixtureReferences,
 } from "../packages/schema/src/index.js";
+import { runProcessSync } from "../packages/adapters/storage-fs/src/index.js";
 
 import type { ACDPhase1Fixture } from "../packages/schema/src/generated/phase1-fixture.js";
 import preOrder from "./pre-order.ts";
@@ -117,7 +117,7 @@ const image =
   "kicad/kicad@sha256:182c8005cb775a2c448a4c18681d489f1ff472a761885eba3e08b07e3c0564de";
 const hash = sha256;
 const run = (command: string, args: string[]): string =>
-  execFileSync(command, args, { cwd: root, encoding: "utf8", stdio: ["ignore", "pipe", "pipe"] });
+  runProcessSync(command, args, { cwd: root });
 const dockerArgs = (context: StageContext, args: string[]): string[] => [
   "run",
   "--rm",
@@ -138,19 +138,7 @@ const dockerOutput = (
   context: StageContext,
   args: string[],
 ): { stdout: string; stderr: string } => {
-  const result = spawnSync("docker", dockerArgs(context, args), {
-    cwd: root,
-    encoding: "utf8",
-    stdio: ["ignore", "pipe", "pipe"],
-  });
-  if (result.error) throw result.error;
-  if (result.status !== 0)
-    throw Object.assign(new Error(`docker ${args.join(" ")} exited ${String(result.status)}`), {
-      stdout: result.stdout,
-      stderr: result.stderr,
-      status: result.status ?? 1,
-    });
-  return { stdout: result.stdout, stderr: result.stderr };
+  return { stdout: runProcessSync("docker", dockerArgs(context, args), { cwd: root }), stderr: "" };
 };
 const freerouting = (context: StageContext, args: string[]): string =>
   run("docker", [

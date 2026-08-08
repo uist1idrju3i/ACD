@@ -10,6 +10,7 @@ import {
   componentLibrarySchemaPath,
   patchSchemaPath,
   phase1FixtureSchemaPath,
+  toolEnvelopeSchemaPath,
 } from "./paths.js";
 
 export type SchemaName =
@@ -20,7 +21,8 @@ export type SchemaName =
   | "error-taxonomy"
   | "phase1-fixture"
   | "library-patch"
-  | "component-library";
+  | "component-library"
+  | "tool-envelope";
 
 const paths: Record<SchemaName, string> = {
   "design-graph": designGraphSchemaPath,
@@ -31,6 +33,7 @@ const paths: Record<SchemaName, string> = {
   "phase1-fixture": phase1FixtureSchemaPath,
   "library-patch": libraryPatchSchemaPath,
   "component-library": componentLibrarySchemaPath,
+  "tool-envelope": toolEnvelopeSchemaPath,
 };
 
 export const createSchemaValidator = (): Ajv2020 => {
@@ -43,6 +46,10 @@ export const createSchemaValidator = (): Ajv2020 => {
 
 export const loadSchemaValidator = async (name: SchemaName): Promise<ValidateFunction> => {
   const ajv = createSchemaValidator();
+  if (name === "tool-envelope") {
+    const designGraph = JSON.parse(await readFile(designGraphSchemaPath, "utf8")) as object;
+    ajv.addSchema(designGraph, "design-graph.schema.json");
+  }
   const schema = JSON.parse(await readFile(paths[name], "utf8")) as object;
   return ajv.compile(schema);
 };

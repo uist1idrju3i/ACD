@@ -1,0 +1,167 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://acd.example.invalid/schemas/tool-envelope.schema.json",
+  "title": "ACD Typed Tool Envelope",
+  "oneOf": [
+    { "$ref": "#/$defs/toolRequest" },
+    { "$ref": "#/$defs/toolResult" },
+    { "$ref": "#/$defs/toolError" }
+  ],
+  "$defs": {
+    "provenance": {
+      "$ref": "https://acd.example.invalid/schemas/design-graph.schema.json#/$defs/provenance"
+    },
+    "evidenceId": {
+      "$ref": "https://acd.example.invalid/schemas/design-graph.schema.json#/$defs/id"
+    },
+    "toolRequest": {
+      "type": "object",
+      "required": [
+        "toolName",
+        "contractVersion",
+        "inputHash",
+        "graphRevision",
+        "correlationId",
+        "idempotencyKey",
+        "operationClass",
+        "timeoutMs",
+        "input"
+      ],
+      "properties": {
+        "toolName": { "type": "string", "minLength": 1 },
+        "contractVersion": { "type": "string", "minLength": 1 },
+        "inputHash": { "type": "string", "pattern": "^sha256:[0-9a-f]{64}$" },
+        "graphRevision": { "type": "integer", "minimum": 0 },
+        "correlationId": { "type": "string", "minLength": 1 },
+        "idempotencyKey": { "type": "string", "minLength": 1 },
+        "operationClass": { "enum": ["read", "reversible", "irreversible"] },
+        "timeoutMs": { "type": "integer", "minimum": 0 },
+        "maxOutputBytes": { "type": "integer", "minimum": 1 },
+        "approvalId": { "type": "string", "minLength": 1 },
+        "input": {}
+      },
+      "allOf": [
+        {
+          "if": { "properties": { "operationClass": { "const": "irreversible" } } },
+          "then": { "required": ["approvalId"] }
+        }
+      ],
+      "additionalProperties": false
+    },
+    "toolResult": {
+      "type": "object",
+      "required": [
+        "kind",
+        "toolName",
+        "contractVersion",
+        "inputHash",
+        "graphRevision",
+        "correlationId",
+        "idempotencyKey",
+        "operationClass",
+        "status",
+        "timeoutMs",
+        "startedAt",
+        "endedAt",
+        "toolVersion",
+        "containerVersion",
+        "provenance",
+        "artifactIds",
+        "evidenceIds",
+        "rawOutputHash",
+        "normalizedOutputHash",
+        "outputBytes",
+        "exitCode",
+        "signal",
+        "stdout",
+        "stderr",
+        "retryable",
+        "recoverable"
+      ],
+      "properties": {
+        "kind": { "const": "result" },
+        "toolName": { "type": "string", "minLength": 1 },
+        "contractVersion": { "type": "string", "minLength": 1 },
+        "inputHash": { "type": "string", "pattern": "^sha256:[0-9a-f]{64}$" },
+        "graphRevision": { "type": "integer", "minimum": 0 },
+        "correlationId": { "type": "string", "minLength": 1 },
+        "idempotencyKey": { "type": "string", "minLength": 1 },
+        "operationClass": { "enum": ["read", "reversible", "irreversible"] },
+        "status": { "enum": ["completed", "timedOut", "cancelled", "failed"] },
+        "timeoutMs": { "type": "integer", "minimum": 0 },
+        "startedAt": { "type": "string", "format": "date-time" },
+        "endedAt": { "type": "string", "format": "date-time" },
+        "toolVersion": { "type": "string", "minLength": 1 },
+        "containerVersion": { "type": "string", "minLength": 1 },
+        "provenance": { "type": "array", "items": { "$ref": "#/$defs/provenance" } },
+        "artifactIds": { "type": "array", "items": { "$ref": "#/$defs/evidenceId" } },
+        "evidenceIds": { "type": "array", "items": { "$ref": "#/$defs/evidenceId" } },
+        "rawOutputHash": {
+          "type": "string",
+          "pattern": "^sha256:[0-9a-f]{64}$",
+          "description": "SHA-256 of the raw generated output bytes."
+        },
+        "normalizedOutputHash": {
+          "type": "string",
+          "pattern": "^sha256:[0-9a-f]{64}$",
+          "description": "SHA-256 after timestamp-only normalization for deterministic comparison."
+        },
+        "outputBytes": { "type": "integer", "minimum": 0 },
+        "exitCode": { "type": ["integer", "null"] },
+        "signal": { "type": ["string", "null"] },
+        "stdout": { "type": "string" },
+        "stderr": { "type": "string" },
+        "retryable": { "type": "boolean" },
+        "recoverable": { "type": "boolean" },
+        "result": {},
+        "error": { "$ref": "#/$defs/toolError" }
+      },
+      "additionalProperties": false
+    },
+    "toolError": {
+      "type": "object",
+      "required": [
+        "kind",
+        "code",
+        "severity",
+        "message",
+        "retryable",
+        "recoverable",
+        "context",
+        "evidenceIds"
+      ],
+      "properties": {
+        "kind": { "const": "error" },
+        "code": {
+          "enum": [
+            "schema-invalid",
+            "reference-integrity",
+            "patch-conflict",
+            "revision-invalid",
+            "event-replay-failure",
+            "tool-timeout",
+            "tool-failure",
+            "reopen-failure",
+            "convergence-failure",
+            "verification-failed",
+            "stale-result",
+            "license-restriction",
+            "approval-required",
+            "budget-exceeded",
+            "unknown-impact",
+            "fab-feedback-unknown",
+            "patent-concern"
+          ]
+        },
+        "severity": { "enum": ["warning", "error", "critical"] },
+        "message": { "type": "string", "minLength": 1 },
+        "retryable": { "type": "boolean" },
+        "recoverable": { "type": "boolean" },
+        "context": { "type": "object", "additionalProperties": true },
+        "evidenceIds": { "type": "array", "items": { "$ref": "#/$defs/evidenceId" } },
+        "recoveryAction": { "type": "string", "minLength": 1 }
+      },
+      "additionalProperties": false
+    }
+  }
+}

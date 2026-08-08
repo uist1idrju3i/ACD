@@ -22,6 +22,7 @@ import {
   physicalEvidenceSamplePath,
   physicalEvidenceSchemaPath,
   repositoryRoot,
+  toolEnvelopeSchemaPath,
 } from "./paths.js";
 import { validatePhase1FixtureReferences } from "./phase1-semantic.js";
 import { gateMatrixSectionMatches, type GateMatrix } from "./gate-matrix.js";
@@ -36,6 +37,10 @@ export const createValidator = (): Ajv2020 => {
 
 export const loadValidator = async (schemaPath: string): Promise<ValidateFunction> => {
   const ajv = createValidator();
+  if (schemaPath === toolEnvelopeSchemaPath) {
+    const designGraph = JSON.parse(await readFile(designGraphSchemaPath, "utf8")) as object;
+    ajv.addSchema(designGraph);
+  }
   const schema = JSON.parse(await readFile(schemaPath, "utf8")) as object;
   return ajv.compile(schema);
 };
@@ -55,6 +60,7 @@ const samplePaths = [
   gateMatrixSchemaPath,
   libraryPatchSchemaPath,
   componentLibrarySchemaPath,
+  toolEnvelopeSchemaPath,
 ];
 for (const schemaPath of samplePaths) {
   await loadValidator(schemaPath);

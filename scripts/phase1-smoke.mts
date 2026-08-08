@@ -1,8 +1,8 @@
 import { createHash } from "node:crypto";
-import { execFileSync } from "node:child_process";
 import { cp, mkdir, readFile, readdir, rm, writeFile } from "node:fs/promises";
 import { join, relative, resolve } from "node:path";
 import { GraphCoreError } from "../packages/graph-core/src/index.js";
+import { runProcessSync } from "../packages/adapters/storage-fs/src/index.js";
 import { compareNetlists, projectToKicad } from "../packages/adapters/kicad/src/index.js";
 import {
   gateByOrder,
@@ -38,7 +38,7 @@ const hash = (content: string | Buffer): string =>
   `sha256:${createHash("sha256").update(content).digest("hex")}`;
 
 const run = (command: string, args: string[], cwd = root): string =>
-  execFileSync(command, args, { cwd, encoding: "utf8", stdio: ["ignore", "pipe", "pipe"] });
+  runProcessSync(command, args, { cwd });
 
 const docker = (args: string[]): string =>
   run("docker", [

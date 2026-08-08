@@ -14,6 +14,7 @@ export type { ACDPhase1Fixture as Phase1Fixture } from "./generated/phase1-fixtu
 export type { ACDPhase1PhysicalEvidence as PhysicalEvidence } from "./generated/physical-evidence.js";
 export type { ACDFabFeedbackReport as FabFeedbackReport } from "./generated/fab-feedback.js";
 export type { ACDLibraryOverlayPatch as LibraryOverlayPatch } from "./generated/library-patch.js";
+export type { ToolRequest, ToolResult, ToolError } from "./generated/tool-envelope.js";
 export type { RawFinding, Reference } from "./generated/fab-feedback.js";
 export { validatePhase1FixtureReferences } from "./phase1-semantic.js";
 export { loadSchemaValidator } from "./validator.js";

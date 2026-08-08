@@ -55,3 +55,4 @@ ADRはACDの技術選定を、理由・代替案・前提・結果とともに�
 - [`0030-wasm-rust-fixed-point-supplement.md`](0030-wasm-rust-fixed-point-supplement.md)
 - [`0031-browser-ui-canvas2d-sse-supplement.md`](0031-browser-ui-canvas2d-sse-supplement.md)
 - [`0032-deterministic-specctra-ses-projection.md`](0032-deterministic-specctra-ses-projection.md)
+- [`0033-typed-tool-envelope-and-runtime-idempotency.md`](0033-typed-tool-envelope-and-runtime-idempotency.md)

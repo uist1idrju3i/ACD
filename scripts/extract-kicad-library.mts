@@ -1,7 +1,7 @@
 import { createHash } from "node:crypto";
-import { execFileSync } from "node:child_process";
 import { readFile, writeFile } from "node:fs/promises";
 import { join, relative } from "node:path";
+import { runProcessSync } from "../packages/adapters/storage-fs/src/index.js";
 
 const root = join(import.meta.dirname, "..");
 const image = "kicad/kicad@sha256:182c8005cb775a2c448a4c18681d489f1ff472a761885eba3e08b07e3c0564de";
@@ -40,23 +40,19 @@ const sha256 = (value: string): string =>
   `sha256:${createHash("sha256").update(value).digest("hex")}`;
 
 const dockerRead = (path: string): string =>
-  execFileSync(
-    "docker",
-    [
-      "run",
-      "--rm",
-      "--user",
-      "root",
-      "-e",
-      "HOME=/tmp",
-      "-e",
-      "KICAD_CONFIG_HOME=/tmp/kicad-config",
-      image,
-      "cat",
-      path,
-    ],
-    { encoding: "utf8", maxBuffer: 64 * 1024 * 1024 },
-  );
+  runProcessSync("docker", [
+    "run",
+    "--rm",
+    "--user",
+    "root",
+    "-e",
+    "HOME=/tmp",
+    "-e",
+    "KICAD_CONFIG_HOME=/tmp/kicad-config",
+    image,
+    "cat",
+    path,
+  ]);
 
 const blockAt = (text: string, start: number): string => {
   let depth = 0;
@@ -311,10 +307,7 @@ const main = async (): Promise<void> => {
   await writeFile(join(root, "spikes/kicad-library/manifest.json"), manifestText, "utf8");
   for (const { path, fixture } of fixtures) {
     await writeFile(path, `${JSON.stringify(fixture, null, 2)}\n`, "utf8");
-    execFileSync("pnpm", ["exec", "prettier", "--write", path], {
-      cwd: root,
-      stdio: "ignore",
-    });
+    runProcessSync("pnpm", ["exec", "prettier", "--write", path], { cwd: root });
   }
 
   const symbolsForFixture = (fixture: Fixture): string => {

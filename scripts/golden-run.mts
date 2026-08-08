@@ -1,4 +1,3 @@
-import { execFileSync } from "node:child_process";
 import { mkdir, readFile, readdir, rm, writeFile } from "node:fs/promises";
 import { join, relative, resolve } from "node:path";
 import {
@@ -19,6 +18,7 @@ import {
 } from "../packages/adapters/kicad/src/index.js";
 import { loadSchemaValidator, type PatchEnvelope } from "../packages/schema/src/index.js";
 import { normalizedArtifact, sha256 } from "./golden-shared.mts";
+import { runProcessSync } from "../packages/adapters/storage-fs/src/index.js";
 
 const root = resolve(import.meta.dirname, "..");
 const goldenRoot = join(root, "fixtures/golden");
@@ -53,7 +53,7 @@ type Observed = {
 const hash = sha256;
 
 const dockerRun = (workDirectory: string, args: string[]): string =>
-  execFileSync(
+  runProcessSync(
     "docker",
     [
       "run",
@@ -69,7 +69,7 @@ const dockerRun = (workDirectory: string, args: string[]): string =>
       image,
       ...args,
     ],
-    { cwd: root, encoding: "utf8", stdio: ["ignore", "pipe", "pipe"] },
+    { cwd: root },
   );
 
 const filesUnder = async (directory: string): Promise<string[]> => {

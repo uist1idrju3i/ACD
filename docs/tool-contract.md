@@ -13,24 +13,36 @@ Phase 1以降の外部tool、worker、LLM adapterを同じ決定論的境界へ�
 {
   "toolName": "kicad.project.export",
   "contractVersion": "0.1.0",
-  "inputHash": "sha256:...",
+  "inputHash": "sha256:<64 lowercase hex digits>",
   "graphRevision": 3,
+  "correlationId": "run:example/invocation:1",
   "idempotencyKey": "project:example/tool:kicad.project.export/rev:3/input:...",
   "operationClass": "reversible",
+  "timeoutMs": 300000,
+  "maxOutputBytes": 10485760,
   "input": {}
 }
 ```
 
 必須項目は`toolName`、`contractVersion`、`inputHash`、`graphRevision`、
-`idempotencyKey`、`operationClass`、typed `input`です。input hashはcanonical
-JSONに対して計算し、同じkeyで別inputを送らない。
+`correlationId`、`idempotencyKey`、`operationClass`、`timeoutMs`、typed `input`です。
+`irreversible`では`approvalId`も必須です。input hashはcanonical JSONに対して
+計算し、同じkeyで別inputを送らない。
 
 ## Result／Error
 
-成功結果はtyped `result`、`toolName`、contract version、input hash、graph
-revision、idempotency key、開始／終了時刻、tool version、artifact／evidence ID
-を持ちます。失敗結果は[`error-taxonomy.md`](error-taxonomy.md)のerror envelope
-を持ち、stdout/stderr、終了コード、retryability、recovery actionを保存します。
+Schemaの`toolResult`は`kind: "result"`、`status`（`completed`、`timedOut`、
+`cancelled`、`failed`）、requestの識別項目、開始／終了時刻、tool／container
+version、provenance、artifact／evidence ID、stdout／stderr、終了コード、signal、
+retryability、recoverabilityを持ちます。`rawOutputHash`は生バイトのSHA-256、
+`normalizedOutputHash`はtimestamp-only正規化後のSHA-256です。`bytes`相当の
+`outputBytes`も生出力の長さとして保存します。
+
+`toolError`はerror codeを必須とし、taxonomyにない分類を作りません。未分類の
+失敗は`tool-failure`として停止し、`context`とEvidence IDに分類不能だった事実を
+残します。cancelはerrorではなくresult statusです。timeout、非0終了、起動失敗、
+出力上限超過、強制終了はそれぞれ構造化されたprocess結果と既存taxonomy codeで
+記録します。
 
 ## 操作分類
 
@@ -42,10 +54,16 @@ revision、idempotency key、開始／終了時刻、tool version、artifact／e
 
 ## 冪等性、timeout、cancel
 
-同じidempotency keyは一度だけ確定する。再送時は以前のresultまたはerrorを返し、
-二重patch・二重発注を起こさない。各toolはtimeout、cancel、retry budget、
-最大出力サイズを明示する。cancel後の外部processは終了を確認してから停止済み
-と記録する。
+worker/runtime共通registryを`.acd/runs/<runId>/tool-invocations.jsonl`に置く。
+appendごとにsyncし、single-writer lockを使い、末尾部分行だけを回復する。保持は
+無期限である。同じidempotency keyは一度だけ確定し、再送時は保存済みresultまたは
+errorを返して外部processを再実行しない。同じkeyでinput hashが違えば
+`reference-integrity`で停止し、上書きしない。`correlationId`はinvocationを関連
+付ける値であり、`idempotencyKey`および各eventの`eventId`とは別である。
+
+retry loopとretry budgetの所有者はtask ledgerだけである。tool envelopeは
+`retryable`、timeout、cancel、終了情報を返すが、独自のnested retry budgetを持たない。
+cancel後の外部processは終了を確認してから`cancelled`として記録する。
 
 ## 決定論的ゲート
 
