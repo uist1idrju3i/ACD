@@ -87,16 +87,18 @@ These boundaries come from README §7 and the detailed Phase 0 plan:
   fixture. The ESP32-class golden task MUST use an external routing tool
   (Freerouting DSN/SES) or a future approved ADR. Target-state Step 4 firmware
   output is excluded from Phase 1 acceptance and output verification; it becomes
-  active in Phase 5.
+  active in Phase 6.
 - **Phase 2 — Verification and rationale:** MUST NOT add high-fidelity SI or thermal
   analysis.
 - **Phase 3 — Knowledge loop:** MUST NOT implement organization-wide knowledge
   sharing.
 - **Phase 4 — Runtime and browser UX:** MUST NOT WASM-ify every engine.
-- **Phase 5 — Firmware and virtual hardware:** MUST NOT build a proprietary simulator.
-- **Phase 6 — Autonomous ordering:** MUST NOT target large-scale boards.
-- **Phase 7 — Scale and operations:** preserve all regression and audit gates.
-- **Phase 8 — Local manufacturing:** preserve printer/manufacturing-profile
+- **Phase 5 — AI orchestration and requirements dialogue:** MUST NOT train a
+  proprietary model or implement organization-wide knowledge sharing.
+- **Phase 6 — Firmware and virtual hardware:** MUST NOT build a proprietary simulator.
+- **Phase 7 — Autonomous ordering:** MUST NOT target large-scale boards.
+- **Phase 8 — Scale and operations:** preserve all regression and audit gates.
+- **Phase 9 — Local manufacturing:** preserve printer/manufacturing-profile
   verification.
 
 Phase 0 uses the reversible provisional profile in

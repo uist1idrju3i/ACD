@@ -3,6 +3,7 @@ dist/
 coverage/
 .pnpm-store/
 artifacts/
+.acd/
 *.log
 *.tsbuildinfo
 .env

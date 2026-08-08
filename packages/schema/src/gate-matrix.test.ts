@@ -42,7 +42,7 @@ describe("gate matrix", () => {
   it("runs a gate declaring runsAfter directly after the gate it names", () => {
     const orders = gatesInExecutionOrder(matrix).map((gate) => gate.order);
     expect(orders).toEqual([
-      1, 2, 3, 4, 5, 14, 15, 16, 17, 18, 19, 20, 6, 7, 8, 9, 10, 11, 12, 21, 22, 13,
+      1, 2, 3, 4, 5, 14, 15, 16, 17, 18, 19, 20, 6, 7, 8, 9, 10, 11, 12, 21, 22, 23, 24, 25, 13,
     ]);
     expect(gateByOrder(matrix, 14).runsAfter).toBe("gate:netlist-consistency");
     expect(gateByOrder(matrix, 15).runsAfter).toBe("gate:electrical-lint");
@@ -58,7 +58,7 @@ describe("gate matrix", () => {
       1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11,
     ]);
     expect(gatesForScope(matrix, "golden").map((gate) => gate.order)).toEqual([
-      1, 2, 3, 4, 5, 14, 15, 16, 17, 18, 19, 20, 6, 7, 8, 9, 10, 11, 12, 21, 22, 13,
+      1, 2, 3, 4, 5, 14, 15, 16, 17, 18, 19, 20, 6, 7, 8, 9, 10, 11, 12, 21, 22, 23, 24, 25, 13,
     ]);
     expect(gateByOrder(matrix, 13).status).toBe("contract-only");
   });

@@ -210,7 +210,7 @@ golden routingと`unrouted=0`はWP4で実装する。
 - 自動発注、checkout、支払い
 - read-only最小投影を越えるviewer
 - 一般用途router、独自WASM engine、独自SPICE engine
-- FirmwarePackageとPhase 5の仮想組込み検証
+- FirmwarePackageとPhase 6の仮想組込み検証
 
 ## レトロスペクティブ
 
