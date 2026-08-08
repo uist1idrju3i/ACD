@@ -16,8 +16,8 @@ README §7の完了条件にある「1枚目…2枚目」は、本計画では�
 READMEの「やらないこと」により、Phase 3では**組織間の知識共有**を実装しません。
 `library-wide`は[`knowledge-base.md`](knowledge-base.md)の定義どおり「同一ユーザーが
 複数プロジェクトで再利用する個人ライブラリ」に限定し、テナント、fab共有、コミュニティ
-配布は対象外です。ブラウザUX、タスク台帳、チェックポイント再開はPhase 4、FWパッケージは
-Phase 5、自働発注はPhase 6の範囲であり、本フェーズでは扱いません。
+配布は対象外です。ブラウザUX、タスク台帳、チェックポイント再開はPhase 4、AIオーケストレーションは
+Phase 5、FWパッケージはPhase 6、自働発注はPhase 7の範囲であり、本フェーズでは扱いません。
 
 ## Phase 2からの入力
 
@@ -193,7 +193,7 @@ KnowledgeItemとWP3 overlay revisionを適用し、同findingが0件になるこ
 
 **やらないこと**
 
-- 在庫・価格のlive sourcing API連携（Phase 6／7）。
+- 在庫・価格のlive sourcing API連携（Phase 5）、自働発注（Phase 7）。
 
 ### WP7：docsとschemaの同期、振り返り
 

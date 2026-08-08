@@ -1,6 +1,6 @@
 # Phase 4実装計画
 
-**ステータス：Draft（未着手。ADR-0024〜0027はAccepted）**
+**ステータス：Accepted（実装未着手。ADR-0024〜0031はAccepted）**
 
 ## 目的と権威範囲
 
@@ -13,7 +13,9 @@ Phase 4はREADME §7の「4 実行基盤とブラウザUX」を実装するフ�
 READMEの「やらないこと」により、Phase 4では**全エンジンのWASM化**を行いません。
 WASM化は§9の「高速チェック」に限定し、外部processで動く`kicad-cli`とngspiceの置き換えは
 対象外です（[`adr/0020-spice-engine-ngspice-external-process.md`](adr/0020-spice-engine-ngspice-external-process.md)）。
-FWパッケージと仮想実機はPhase 5、自働発注はPhase 6、cron型の常設運用はPhase 7の範囲です。
+実LLM接続、自然言語要件対話、実sourcing／データシートAPI、token／moneyの実計測は
+Phase 5の範囲です。FWパッケージと仮想実機はPhase 6、自働発注はPhase 7、cron型の
+常設運用はPhase 8の範囲です。
 
 ## Phase 3からの入力
 
@@ -28,30 +30,32 @@ FWパッケージと仮想実機はPhase 5、自働発注はPhase 6、cron型の
   - `checkpoint.created`／`run.resumed`はイベント型としてあるが、checkpointを書き、
     そこから再開するorchestratorが無い。
   - 予算・ウォッチドッグ・無進捗検知は[`agent-runtime.md`](agent-runtime.md)の記述のみ。
+    Phase 4は実LLMを呼ばず、Phase 2と同じ記録済み提案を駆動源とする。token／moneyは
+    スキーマへ保持するが計測せず、unknownとして保持する。
   - tool request／result／error envelopeは[`tool-contract.md`](tool-contract.md)と
     [`error-taxonomy.md`](error-taxonomy.md)の記述のみで、機械検証可能なschemaが無い。
   - ブラウザUI、viewer、WASMモジュールは未実装（`apps/`は存在しない）。
 - 現状のPhase 1〜3のrunは`scripts/*.mts`の単発runnerであり、途中終了すると先頭から
   やり直します。README §7 Phase 4の完了条件は、この構造では測定できません。
 
-## 決定事項（ADR-0024〜0027）
+## 決定事項（ADR-0024〜0031）
 
-長時間ランの所有、checkpoint、WASM対象、ブラウザUI範囲の設計判断は、Acceptedの
-ADR-0024〜0027に記録済みです。残る未決定事項は、ADR-0026のWASM実装言語と
-ADR-0027のUIフレームワークであり、それぞれWP7／WP6着手時に別ADRとして記録します。
+長時間ランの所有、checkpoint、WASM対象、ブラウザUI範囲、WASM実装言語、UI技術、
+JSONL耐久性の設計判断は、AcceptedのADR-0024〜0031に記録済みです。
 
-| #        | 決定事項                         | 決定                                                                                                                                                                                                                                                                                                                                                                                | 影響          |
-| -------- | -------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------- |
-| ADR-0024 | 長時間ランの所有者と永続化形式   | [ADR-0024](adr/0024-long-running-run-ownership-and-persistence.md)：ランはworker processが所有し、台帳・checkpointはappend-only JSONL（`.acd/runs/<runId>/`）で保持する。ブラウザは再接続して状態を見る端末に限定し、IndexedDB／OPFSはPhase 4では採用しない                                                                                                                         | WP1、WP2、WP6 |
-| ADR-0025 | checkpointの粒度と無効化条件     | [ADR-0025](adr/0025-checkpoint-granularity-and-invalidation.md)：checkpointはgate境界単位。input revision／hash、tool／model／library／container version、provenance、measurement-system qualification、fab／manufacturing profile、参照KnowledgeItem statusのいずれかが変わったcheckpointはstaleとして再実行する（再利用しない）。完了条件の受入測定はworker process強制終了とする | WP2、WP3      |
-| ADR-0026 | 高速チェックのWASM対象と実装言語 | [ADR-0026](adr/0026-fast-check-wasm-scope-and-language.md)：対象は幾何系の高速チェック（pad間クリアランス、mask sliver、courtyard重なり）に限定。native TS実装を正とし、WASMは同一入力で同一結果を返すparityテスト付きの高速経路として追加する。言語は未決定（Rust推奨）                                                                                                            | WP7           |
-| ADR-0027 | ブラウザUIの技術選択と範囲       | [ADR-0027](adr/0027-browser-ui-scope-and-technology.md)：README §7更新後のPhase 4受入対象をread-onlyの投影ビューア（2D）、リビジョン差分レビュー、タスク台帳／停止理由の表示に限定し、編集UI、3Dビューア、タブレット最適化は後続フェーズへ移す。UIフレームワークは未決定                                                                                                            | WP6           |
+| #             | 決定事項                         | 決定                                                                                                                                                                                                                                                                                                                                                                                | 影響          |
+| ------------- | -------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------- |
+| ADR-0024      | 長時間ランの所有者と永続化形式   | [ADR-0024](adr/0024-long-running-run-ownership-and-persistence.md)：ランはworker processが所有し、台帳・checkpointはappend-only JSONL（`.acd/runs/<runId>/`）で保持する。ブラウザは再接続して状態を見る端末に限定し、IndexedDB／OPFSはPhase 4では採用しない                                                                                                                         | WP1、WP2、WP6 |
+| ADR-0025      | checkpointの粒度と無効化条件     | [ADR-0025](adr/0025-checkpoint-granularity-and-invalidation.md)：checkpointはgate境界単位。input revision／hash、tool／model／library／container version、provenance、measurement-system qualification、fab／manufacturing profile、参照KnowledgeItem statusのいずれかが変わったcheckpointはstaleとして再実行する（再利用しない）。完了条件の受入測定はworker process強制終了とする | WP2、WP3      |
+| ADR-0026/0030 | 高速チェックのWASM対象と実装言語 | [ADR-0026](adr/0026-fast-check-wasm-scope-and-language.md)／[ADR-0030](adr/0030-wasm-rust-fixed-point-supplement.md)：対象は幾何系の高速チェックに限定。Rust、nm単位の整数固定小数点、正規化findingsの完全一致、CIビルドdigest、native TSへの決定論的fallbackを採用する                                                                                                             | WP7           |
+| ADR-0027/0031 | ブラウザUIの技術選択と範囲       | [ADR-0027](adr/0027-browser-ui-scope-and-technology.md)／[ADR-0031](adr/0031-browser-ui-canvas2d-sse-supplement.md)：read-only 2D投影を依存なし素TS＋Canvas2Dで実装し、ACD投影ジオメトリを正とする。`apps/web`はVite、worker伝送はローカルHTTP＋SSE、回帰はPlaywright Chromium限定                                                                                                  | WP6           |
+| ADR-0029      | JSONL耐久・回復                  | [ADR-0029](adr/0029-jsonl-durability-and-recovery-semantics.md)：毎appendのsync、run単位の単一writerロック、末尾部分行のみ切り捨て回復、途中行破損は即停止unknown、無期限保持・圧縮なし                                                                                                                                                                                             | WP1、WP2      |
 
 ## Work packages
 
 ### WP1：タスク台帳runtime（gate 23）
 
-**状態：未着手。** gate契約案はgate 23（`gate:task-ledger-integrity`、`runsAfter: gate:knowledge-application`）。
+**状態：未着手。** gate契約案はgate 23（`gate:task-ledger`、`runsAfter: gate:knowledge-application`）。
 
 **作業**
 
@@ -64,6 +68,11 @@ ADR-0027のUIフレームワークであり、それぞれWP7／WP6着手時に�
   （[`agent-runtime.md`](agent-runtime.md)の契約を参照し、状態名の権威は
   [`../schemas/design-graph.schema.json`](../schemas/design-graph.schema.json)とする）。
 - 永続化は`packages/adapters/storage-fs`にappend-onlyで実装し、coreはfilesystemを知らない。
+- Phase 4の駆動源は実LLMではなく、Phase 2と同じhash固定の記録済み提案とする。
+- 台帳の時間／トークン／金額予算フィールドは保持するが、Phase 4でtoken／moneyを計測しない。
+  未計測項目はpassにせずunknownとして保持する。計測対象はattempt回数、注入clock時間、
+  tool呼び出し回数とする。
+- JSONLはADR-0029に従い、毎appendでsyncし、run単位の単一writerロックを取得する。
 - 台帳の各遷移をevent logへ追記し、event列から台帳状態を再構成できることをテストで固定する。
 - ラン所有者をworker processとする前提は、AcceptedのADR-0004（browser-first、optional
   workers）および[`architecture.md`](architecture.md)のブラウザのみ／ワーカーモードを
@@ -85,7 +94,7 @@ ADR-0027のUIフレームワークであり、それぞれWP7／WP6着手時に�
 
 ### WP2：チェックポイントと再開（gate 24）
 
-**状態：未着手。** gate契約案はgate 24（`gate:checkpoint-resume`、`runsAfter: gate:task-ledger-integrity`）。
+**状態：未着手。** gate契約案はgate 24（`gate:checkpoint-resume`、`runsAfter: gate:task-ledger`）。
 
 **作業**
 
@@ -97,6 +106,9 @@ ADR-0027のUIフレームワークであり、それぞれWP7／WP6着手時に�
   そこから続行する。checkpointの前提が変わっている場合は再利用せず再実行する（ADR-0025）。
 - 再開は冪等とし、同じ副作用を二重に起こさない。再開時は`run.resumed`を追記する。
 - checkpointの読み書きは明示的なport越しに行い、決定論的テストで差し替えられるようにする。
+- JSONLの末尾部分行は最後の完全行まで切り捨てて回復する。途中行のハッシュ不整合は
+  即停止・unknownとし、passへ変換しない。Phase 4では無期限保持し、圧縮しない
+  （[`ADR-0029`](adr/0029-jsonl-durability-and-recovery-semantics.md)）。
 
 **受入基準**
 
@@ -137,11 +149,13 @@ ADR-0027のUIフレームワークであり、それぞれWP7／WP6着手時に�
 
 ### WP4：予算、ウォッチドッグ、無進捗検知（gate 25）
 
-**状態：未着手。** gate契約案はgate 25（`gate:run-budget-watchdog`、`runsAfter: gate:checkpoint-resume`）。
+**状態：未着手。** gate契約案はgate 25（`gate:budget-watchdog`、`runsAfter: gate:checkpoint-resume`）。
 
 **作業**
 
 - ランとタスクに、時間、ツール呼び出し回数、トークン、金額、反復回数の上限を持たせる。
+  Phase 4で計測するのはattempt回数、注入clock時間、tool呼び出し回数だけとし、
+  token／moneyはunknownとして台帳とEvidenceへ保持する。
 - 上限に達する**前**に停止するウォッチドッグを実装する。clockは明示的なportにする。
 - 無進捗検知を実装する：同一入力hashに対する同一修正の反復、成果物hashの変化なし、
   gate結果の改善なし、修復の振動。
@@ -179,12 +193,14 @@ ADR-0027のUIフレームワークであり、それぞれWP7／WP6着手時に�
 
 **作業**
 
-- `apps/web`を追加し、台帳、gate結果、停止理由、checkpoint、Evidenceをread-onlyで表示する。
+- `apps/web`をpnpm workspaceへ追加し、Viteでビルドする。UIは依存なしの素TypeScript＋
+  Canvas2Dとし、台帳、gate結果、停止理由、checkpoint、Evidenceをread-onlyで表示する。
 - 設計グラフのrevision間差分レビュー（変更したnet、部品、配置、gate結果、根拠）を表示する。
 - 2Dの投影ビューア（pad、track、via、courtyard、mask）をread-onlyで表示する。
-  表示は成果物からの投影に限定し、UIが正のデータを作らない。
+  描画入力の正本はKiCad成果物やGerberではなくACD投影ジオメトリとし、UIが正のデータを作らない。
+- workerとの伝送はローカルHTTP＋SSEとし、再接続時はイベント位置から再送する。WebSocketは使わない。
 - ブラウザ切断・再接続でランが継続していることを表示できる（ランの所有者はworker）。
-- 実ブラウザをPlaywrightで強制終了し、再接続後もworkerがランを継続していることを
+- 実ブラウザをPlaywright Chromiumで強制終了し、再接続後もworkerがランを継続していることを
   表示できるUI回帰を追加する。
 - README §7更新後のPhase 4範囲として、3Dビューア／タブレット対応は後続フェーズへ移し、
   Phase 4ではread-only 2Dビューアを受け入れる（[`ADR-0027`](adr/0027-browser-ui-scope-and-technology.md)）。
@@ -209,7 +225,9 @@ ADR-0027のUIフレームワークであり、それぞれWP7／WP6着手時に�
 **作業**
 
 - 対象は幾何系の高速チェックに限定する（pad間クリアランス、mask sliver、courtyard重なり）。
-- native TS実装を正とし、WASM経路は同一入力で同一結果になるparityテストを必須にする。
+- Rustで実装し、nm単位の整数固定小数点と正規化findingsの完全一致を使う。native TS実装を
+  正とし、WASM経路は同一入力で同一結果になるparityテストを必須にする。
+- `.wasm`はリポジトリへコミットせず、CIでRustからビルドし、build digestをprovenanceへ記録する。
 - WASMモジュールのversion、build digest、tool chainをEvidenceへ記録する。
 
 **受入基準**
@@ -229,10 +247,13 @@ ADR-0027のUIフレームワークであり、それぞれWP7／WP6着手時に�
 **作業**
 
 - gate 23〜25をgate matrixへ登録し、[`gates.md`](gates.md)を再生成する。
+- CIでPlaywright Chromium回帰とworker kill/resume goldenを必須実行し、KiCadコンテナ依存の
+  重い経路は既存どおり分離する。
+- `.acd/runs/`はgitignore対象とし、受入証跡は`artifacts/phase4/resume.json`のみコミット対象とする。
 - [`agent-runtime.md`](agent-runtime.md)、[`architecture.md`](architecture.md)、
   [`repo-structure.md`](repo-structure.md)、[`event-log.md`](event-log.md)、
   [`error-taxonomy.md`](error-taxonomy.md)を実装に合わせて更新する。
-- ADR-0024〜0027を実装に合わせて更新し、[`architecture.md`](architecture.md)のブラウザのみ
+- ADR-0024〜0031を実装に合わせて更新し、[`architecture.md`](architecture.md)のブラウザのみ
   モードとPhase 4のworker側正規永続化の関係、および[`adr/0006-implementation-language-storage.md`](adr/0006-implementation-language-storage.md)
   の候補記述との同期を行う。`docs/phase4-retrospective.md`に測定結果と教訓を残す。
 
@@ -260,22 +281,23 @@ Phase 4完了条件には含まれないため、Phase 4の受入gateには入�
 ## 実行順の案
 
 ```text
-WP1 → WP2 → WP3 → WP4 → WP5 → WP6 → WP7 → WP8
+WP1 → WP2 → WP3 → WP5 → WP4 → WP6 → WP7 → WP8
 ```
 
-WP3はWP1・WP2の完成後に測定できます。WP5はWP4と独立に進められますが、WP6・WP7が
+WP3はWP1・WP2の完成後に測定できます。WP5はWP4と独立に進め、WP4より先に完了させます。
+WP6・WP7が
 外部境界を増やす前に入れる方が手戻りが小さくなります。WP9はPhase 4の受入とは独立です。
 
 ## リスク登録簿
 
-| リスク                          | 影響                               | 現在の対策                                                                                                      | 次の判断                       |
-| ------------------------------- | ---------------------------------- | --------------------------------------------------------------------------------------------------------------- | ------------------------------ |
-| 汎用workflow engineへの過剰投資 | 実装が肥大しループが止まる         | 台帳＋不変revision＋checkpoint APIというengine非依存契約から始める                                              | 必要になった時点でADRで判断    |
-| checkpointの誤再利用            | 古い前提の結果を合格として引き継ぐ | 無効化条件を[ADR-0025](adr/0025-checkpoint-granularity-and-invalidation.md)で固定し、staleは再実行              | 実装時にstale判定を検証        |
-| WASMとnativeの結果差            | 高速経路が別の判定を出す           | parityテスト必須、不一致で停止（[ADR-0026](adr/0026-fast-check-wasm-scope-and-language.md)）                    | 差が出た場合はWASM経路を無効化 |
-| ブラウザUIが正のデータを作る    | 設計グラフの権威が崩れる           | UIはread-only、表示値をEvidence IDへ紐付け（[ADR-0027](adr/0027-browser-ui-scope-and-technology.md)）           | 編集UIは範囲外として明示       |
-| 完了条件の測定方法の解釈差      | 完走を主張できない                 | worker process強制終了を受入gateの正として[ADR-0025](adr/0025-checkpoint-granularity-and-invalidation.md)で固定 | WP3／WP6の測定を分離           |
-| フェーズ境界の逸脱              | 全エンジンWASM化やPhase 5/6へ拡大  | READMEの「やらないこと」を受入基準に反映                                                                        | 逸脱時は停止しエスカレート     |
+| リスク                          | 影響                                | 現在の対策                                                                                                      | 次の判断                       |
+| ------------------------------- | ----------------------------------- | --------------------------------------------------------------------------------------------------------------- | ------------------------------ |
+| 汎用workflow engineへの過剰投資 | 実装が肥大しループが止まる          | 台帳＋不変revision＋checkpoint APIというengine非依存契約から始める                                              | 必要になった時点でADRで判断    |
+| checkpointの誤再利用            | 古い前提の結果を合格として引き継ぐ  | 無効化条件を[ADR-0025](adr/0025-checkpoint-granularity-and-invalidation.md)で固定し、staleは再実行              | 実装時にstale判定を検証        |
+| WASMとnativeの結果差            | 高速経路が別の判定を出す            | parityテスト必須、不一致で停止（[ADR-0026](adr/0026-fast-check-wasm-scope-and-language.md)）                    | 差が出た場合はWASM経路を無効化 |
+| ブラウザUIが正のデータを作る    | 設計グラフの権威が崩れる            | UIはread-only、表示値をEvidence IDへ紐付け（[ADR-0027](adr/0027-browser-ui-scope-and-technology.md)）           | 編集UIは範囲外として明示       |
+| 完了条件の測定方法の解釈差      | 完走を主張できない                  | worker process強制終了を受入gateの正として[ADR-0025](adr/0025-checkpoint-granularity-and-invalidation.md)で固定 | WP3／WP6の測定を分離           |
+| フェーズ境界の逸脱              | 全エンジンWASM化やPhase 5/6/7へ拡大 | READMEの「やらないこと」を受入基準に反映                                                                        | 逸脱時は停止しエスカレート     |
 
 ## 関連文書
 

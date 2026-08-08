@@ -50,3 +50,7 @@ ADRはACDの技術選定を、理由・代替案・前提・結果とともに�
 - [`0025-checkpoint-granularity-and-invalidation.md`](0025-checkpoint-granularity-and-invalidation.md)
 - [`0026-fast-check-wasm-scope-and-language.md`](0026-fast-check-wasm-scope-and-language.md)
 - [`0027-browser-ui-scope-and-technology.md`](0027-browser-ui-scope-and-technology.md)
+- [`0028-phase5-roadmap-revision.md`](0028-phase5-roadmap-revision.md)
+- [`0029-jsonl-durability-and-recovery-semantics.md`](0029-jsonl-durability-and-recovery-semantics.md)
+- [`0030-wasm-rust-fixed-point-supplement.md`](0030-wasm-rust-fixed-point-supplement.md)
+- [`0031-browser-ui-canvas2d-sse-supplement.md`](0031-browser-ui-canvas2d-sse-supplement.md)

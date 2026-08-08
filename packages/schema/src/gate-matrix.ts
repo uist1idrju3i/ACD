@@ -64,7 +64,10 @@ export const missingExecutedGates = (
   { includeContractOnly = false }: { includeContractOnly?: boolean } = {},
 ): GateDefinition[] =>
   gatesForScope(matrix, scope)
-    .filter((gate) => includeContractOnly || gate.status === "implemented")
+    .filter(
+      (gate) =>
+        gate.status === "implemented" || (includeContractOnly && gate.status === "contract-only"),
+    )
     .filter((gate) => !executedOrders.includes(gate.order));
 
 export const gateMatrixSectionStart = "<!-- generated:gate-matrix:start -->";
