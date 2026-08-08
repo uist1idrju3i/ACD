@@ -23,8 +23,7 @@ export type BudgetCheckResult = {
   reasonCode?: Extract<ErrorCode, "budget-exceeded" | "unknown-impact">;
 };
 
-const nonNegative = (value: number | undefined, name: string): number | undefined => {
-  if (value === undefined) return undefined;
+const nonNegative = (value: number, name: string): number => {
   if (!Number.isFinite(value) || value < 0) {
     throw new GraphCoreError("schema-invalid", `${name} must be a finite non-negative number`);
   }
@@ -39,13 +38,13 @@ export const createBudgetUsageSnapshot = (input: {
   logicalToolRequests?: number;
 }): BudgetUsageSnapshot => ({
   scope: input.scope,
-  attempts: nonNegative(input.attempts ?? 0, "attempts")!,
-  elapsedSeconds: nonNegative(input.elapsedSeconds ?? 0, "elapsedSeconds")!,
+  attempts: nonNegative(input.attempts ?? 0, "attempts"),
+  elapsedSeconds: nonNegative(input.elapsedSeconds ?? 0, "elapsedSeconds"),
   externalProcessExecutions: nonNegative(
     input.externalProcessExecutions ?? 0,
     "externalProcessExecutions",
-  )!,
-  logicalToolRequests: nonNegative(input.logicalToolRequests ?? 0, "logicalToolRequests")!,
+  ),
+  logicalToolRequests: nonNegative(input.logicalToolRequests ?? 0, "logicalToolRequests"),
   tokens: { status: "unknown" },
   money: { status: "unknown" },
 });

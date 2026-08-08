@@ -11,10 +11,6 @@ export const ERROR_CODES = [
   "tool-failure",
   "budget-exceeded",
   "unknown-impact",
-  "convergence-failure",
-  "license-restriction",
-  "approval-required",
-  "patent-concern",
   "fab-feedback-unknown",
 ] as const;
 

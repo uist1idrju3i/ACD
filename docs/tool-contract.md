@@ -101,3 +101,6 @@ runtime observationでは、logical request、registry replay、external process
 process startだけを数え、registry replayを二重計上しない。契約の詳細は
 [`adr/0034-budget-watchdog-core-contract.md`](adr/0034-budget-watchdog-core-contract.md)
 を参照する。
+Phase 4 runnerのbudget usageでは、task ledgerの`retryBudget`がattempt上限を所有し、
+tool call上限は外部process startだけを数える。各操作の実行前にrun/task capを確認し、
+停止時のstop recordは既存のresume証跡とは別ファイルへ保存する。

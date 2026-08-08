@@ -75,7 +75,7 @@ describe("budget and watchdog core contracts", () => {
           stateHash: "state:a",
         },
         {
-          artifactHash: "artifact:b",
+          artifactHash: "artifact:a",
           proposalHash: "proposal:b",
           inputHash: "input:b",
           stateHash: "state:b",
@@ -98,6 +98,31 @@ describe("budget and watchdog core contracts", () => {
         oscillation: 2,
       }),
     ).toContain(expected);
+  });
+
+  it.each([
+    ["finding reduction", { unresolvedFindingCount: 1 }, "unchanged-artifact"],
+    ["gate improvement", { gateStatus: "passed" as const }, "unchanged-gate"],
+    ["artifact change", { artifactHash: "artifact:b" }, "repeated-proposal"],
+  ])("does not stop while %s continues", (_name, improvement, forbidden) => {
+    const observations = [observation(), observation(improvement), observation(improvement)];
+    expect(
+      detectNoProgress(observations, {
+        repeatedProposal: 2,
+        unchangedArtifact: 2,
+        unchangedGate: 2,
+        oscillation: 2,
+      }),
+    ).not.toContain(forbidden);
+  });
+
+  it("does not stop on oscillation while findings improve", () => {
+    const observations = [
+      observation({ stateHash: "state:a" }),
+      observation({ stateHash: "state:b", unresolvedFindingCount: 1 }),
+      observation({ stateHash: "state:a", unresolvedFindingCount: 0 }),
+    ];
+    expect(detectNoProgress(observations)).not.toContain("oscillation");
   });
 
   it("rejects a stop record without required decision context", () => {

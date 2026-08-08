@@ -12,8 +12,17 @@ import {
   type EventEnvelope,
   type IdPort,
   type TaskLedgerEntry,
+  buildStopRecord,
+  checkBudget,
+  createBudgetUsageSnapshot,
+  detectNoProgress,
+  type ProgressObservation,
 } from "../packages/graph-core/src/index.js";
-import { FileCheckpointStore, FileEventLog } from "../packages/adapters/storage-fs/src/index.js";
+import {
+  FileCheckpointStore,
+  FileEventLog,
+  type ToolObservation,
+} from "../packages/adapters/storage-fs/src/index.js";
 import { canonicalize } from "../packages/graph-core/src/hash.js";
 import { loadGateMatrix, loadSchemaValidator } from "../packages/schema/src/index.js";
 import type { ACDPhase1Fixture } from "../packages/schema/src/generated/phase1-fixture.js";
@@ -21,6 +30,8 @@ import {
   createPhase1Context,
   deserializeStageContext,
   phase1Stages,
+  setToolObservationContext,
+  setToolObservationHook,
   setToolRunId,
   serializeStageContext,
   stageContextHash,
@@ -83,6 +94,32 @@ type RunManifest = {
   };
 };
 
+type BudgetWatchdogEvidence = {
+  runner: "phase4-resume";
+  normalRunObservationCounts?: Record<
+    string,
+    {
+      externalProcessExecutions: number;
+      logicalToolRequests: number;
+      registryReplays: number;
+    }
+  >;
+  runUsage: ReturnType<typeof createBudgetUsageSnapshot>;
+  taskUsage: ReturnType<typeof createBudgetUsageSnapshot>;
+  observationCounts: {
+    externalProcessExecutions: number;
+    logicalToolRequests: number;
+    registryReplays: number;
+  };
+  injectedNoProgress: {
+    reasons: string[];
+    budgetStatus: string;
+    operationExecuted: boolean;
+    downstreamExecuted: boolean;
+    stopRecord: ReturnType<typeof buildStopRecord>;
+  };
+};
+
 class StableIds implements IdPort {
   private count: number;
 
@@ -102,6 +139,18 @@ class StableIds implements IdPort {
 class FixedClock {
   now(): string {
     return "2026-01-01T00:00:00.000Z";
+  }
+}
+
+class FixedMonotonicClock {
+  private current = 0;
+
+  now(): number {
+    return this.current;
+  }
+
+  advance(seconds: number): void {
+    this.current += seconds;
   }
 }
 
@@ -168,6 +217,7 @@ const runtimeFiles = new Set([
   "stage-results.json",
   "execution-records.json",
   "run.json",
+  "budget-runtime.json",
 ]);
 
 const artifactHashes = async (runRoot: string): Promise<string[]> => {
@@ -259,6 +309,20 @@ const runWorker = async (runRoot: string): Promise<void> => {
   await mkdir(projectRoot(runRoot), { recursive: true });
   const log = new FileEventLog(eventPath(runRoot));
   const clock = new FixedClock();
+  const monotonicClock = new FixedMonotonicClock();
+  const runBudget = { scope: "execution" as const, timeSeconds: 3600, toolCalls: 100 };
+  let runExternalProcessExecutions = 0;
+  let runLogicalToolRequests = 0;
+  let runRegistryReplays = 0;
+  let activeTaskId: string | undefined;
+  let activeAttempt: number | undefined;
+  const observations: ToolObservation[] = [];
+  setToolObservationHook((observation) => {
+    observations.push(observation);
+    if (observation.kind === "external-process-started") runExternalProcessExecutions += 1;
+    if (observation.kind === "logical-request") runLogicalToolRequests += 1;
+    if (observation.kind === "registry-replay") runRegistryReplays += 1;
+  });
   try {
     const existingEvents = await log.readAll();
     const ledger = new TaskLedgerRuntime(
@@ -338,8 +402,76 @@ const runWorker = async (runRoot: string): Promise<void> => {
     for (const stage of phase1Stages.filter((candidate) => !skipped.has(candidate.id))) {
       const entry = (await ledger.load()).entries[`task:${stage.id}`];
       if (!entry) throw new Error(`reference-integrity: missing task ${stage.id}`);
+      const taskUsageBefore = (await ledger.load()).usage?.[entry.id];
+      const taskExternalBefore = taskUsageBefore?.externalProcessExecutions ?? 0;
+      const taskLogicalBefore = taskUsageBefore?.logicalToolRequests ?? 0;
+      const taskElapsedBefore = taskUsageBefore?.elapsedSeconds ?? 0;
+      const runExternalBefore = runExternalProcessExecutions;
+      const runLogicalBefore = runLogicalToolRequests;
+      const runUsage = createBudgetUsageSnapshot({
+        scope: "run",
+        elapsedSeconds: monotonicClock.now(),
+        externalProcessExecutions: runExternalProcessExecutions,
+        logicalToolRequests: runLogicalToolRequests,
+      });
+      const taskUsage = createBudgetUsageSnapshot({
+        scope: "task",
+        attempts: entry.attemptCount,
+        elapsedSeconds: taskElapsedBefore,
+        externalProcessExecutions: taskExternalBefore,
+        logicalToolRequests: taskLogicalBefore,
+      });
+      const runDecision = checkBudget(runBudget, runUsage, {
+        elapsedSeconds: 1,
+        externalProcessExecutions: 1,
+      });
+      const taskDecision = checkBudget(entry.budget, taskUsage, {
+        elapsedSeconds: 1,
+        externalProcessExecutions: 1,
+      });
+      if (runDecision.status !== "allowed" || taskDecision.status !== "allowed") {
+        const reasonCode = runDecision.reasonCode ?? taskDecision.reasonCode ?? "budget-exceeded";
+        const stopRecord = buildStopRecord({
+          reasonCode,
+          knownFacts: [
+            runDecision.status !== "allowed" ? `run budget is ${runDecision.status}` : "",
+            taskDecision.status !== "allowed" ? `task budget is ${taskDecision.status}` : "",
+          ].filter(Boolean),
+          uncertainties: ["the next external process was not started"],
+          options: [{ id: "resume", description: "resume after an approved budget change" }],
+          recommendation: "review the budget declaration before resuming",
+          resumeCondition: "the applicable budget cap is approved",
+          resumePosition: { eventPosition: (await log.readAll()).length },
+          budgetSnapshot: { run: runUsage, task: taskUsage },
+          evidenceIds: [`evidence:budget:${stage.id}`],
+        });
+        await writeFile(
+          join(runRoot, "stop-record.json"),
+          `${JSON.stringify(stopRecord, null, 2)}\n`,
+        );
+        await ledger.transition(entry.id, "blocked", { stopReason: reasonCode });
+        break;
+      }
       if (entry.status === "pending") await ledger.transition(entry.id, "running");
+      activeTaskId = entry.id;
+      activeAttempt = entry.attemptCount;
+      setToolObservationContext(context, {
+        runId: activeToolRunId,
+        taskId: activeTaskId,
+        attempt: activeAttempt,
+      });
+      const monotonicStart = monotonicClock.now();
       await stage.run(context);
+      monotonicClock.advance(1);
+      const taskUsageAfter = createBudgetUsageSnapshot({
+        scope: "task",
+        attempts: (await ledger.load()).entries[entry.id]?.attemptCount ?? entry.attemptCount,
+        elapsedSeconds: taskElapsedBefore + (monotonicClock.now() - monotonicStart),
+        externalProcessExecutions:
+          taskExternalBefore + (runExternalProcessExecutions - runExternalBefore),
+        logicalToolRequests: taskLogicalBefore + (runLogicalToolRequests - runLogicalBefore),
+      });
+      await ledger.updateUsage(entry.id, taskUsageAfter);
       await appendVerification(log, stage);
       const contextHash = await writeContext(runRoot, context);
       const hashes = await artifactHashes(runRoot);
@@ -387,7 +519,7 @@ const runWorker = async (runRoot: string): Promise<void> => {
         .map((record) => record.stageId),
       actualStageExecution: executedRecords,
       gateResults: context.results,
-      eventCount: finalEvents.length,
+      eventCount: finalEvents.filter((event) => !isUsageUpdate(event)).length,
       contextValidation: {
         deserialized: resumeMode,
         fixtureValidated: resumeMode,
@@ -398,6 +530,31 @@ const runWorker = async (runRoot: string): Promise<void> => {
       },
     };
     await writeFile(join(runRoot, "run.json"), `${JSON.stringify(manifest, null, 2)}\n`);
+    await writeFile(
+      join(runRoot, "budget-runtime.json"),
+      `${JSON.stringify(
+        {
+          runUsage: createBudgetUsageSnapshot({
+            scope: "run",
+            attempts: finalEvents.filter(
+              (event) =>
+                event.type === "task.transitioned" &&
+                (event.payload as { to?: string }).to === "running",
+            ).length,
+            elapsedSeconds: monotonicClock.now(),
+            externalProcessExecutions: runExternalProcessExecutions,
+            logicalToolRequests: runLogicalToolRequests,
+          }),
+          observationCounts: {
+            externalProcessExecutions: runExternalProcessExecutions,
+            logicalToolRequests: runLogicalToolRequests,
+            registryReplays: runRegistryReplays,
+          },
+        },
+        null,
+        2,
+      )}\n`,
+    );
   } catch (error) {
     if (resumeMode)
       await appendStopped(
@@ -407,6 +564,7 @@ const runWorker = async (runRoot: string): Promise<void> => {
       );
     throw error;
   } finally {
+    setToolObservationHook(undefined);
     await log.close();
   }
 };
@@ -433,6 +591,10 @@ const eventComparable = (event: EventEnvelope, comparableIndex: number): unknown
     payload: event.payload,
   };
 };
+
+const isUsageUpdate = (event: EventEnvelope): boolean =>
+  event.type === "task.transitioned" &&
+  (event.payload as { kind?: string }).kind === "usage-updated";
 
 const runChild = (
   args: string[],
@@ -500,10 +662,16 @@ const runCase = async (id: string, interruption: string): Promise<Record<string,
   const baselineHashes = await artifactHashes(baselineRoot);
   const resumedHashes = await artifactHashes(interruptedRoot);
   const comparableBaseline = baselineEvents
-    .filter((event) => event.type !== "run.stopped" && event.type !== "run.resumed")
+    .filter(
+      (event) =>
+        event.type !== "run.stopped" && event.type !== "run.resumed" && !isUsageUpdate(event),
+    )
     .map(eventComparable);
   const comparableResumed = resumedEvents
-    .filter((event) => event.type !== "run.stopped" && event.type !== "run.resumed")
+    .filter(
+      (event) =>
+        event.type !== "run.stopped" && event.type !== "run.resumed" && !isUsageUpdate(event),
+    )
     .map(eventComparable);
   const hashesEqual = canonicalize(baselineHashes) === canonicalize(resumedHashes);
   const gatesEqual = canonicalize(baselineRun.gateResults) === canonicalize(resumedRun.gateResults);
@@ -529,8 +697,8 @@ const runCase = async (id: string, interruption: string): Promise<Record<string,
       equalExcludingInterruptions: eventsEqual,
       excludedEvents: ["run.stopped", "run.resumed"],
     },
-    baselineEventCount: baselineEvents.length,
-    resumedEventCount: resumedEvents.length,
+    baselineEventCount: baselineEvents.filter((event) => !isUsageUpdate(event)).length,
+    resumedEventCount: resumedEvents.filter((event) => !isUsageUpdate(event)).length,
     contextValidation: resumedRun.contextValidation,
     verification: {
       passed: hashesEqual && gatesEqual && eventsEqual,
@@ -539,6 +707,85 @@ const runCase = async (id: string, interruption: string): Promise<Record<string,
         ...(gatesEqual ? [] : ["gate result mismatch"]),
         ...(eventsEqual ? [] : ["event sequence mismatch"]),
       ],
+    },
+  };
+};
+
+const buildBudgetWatchdogEvidence = async (): Promise<BudgetWatchdogEvidence> => {
+  const recordings = JSON.parse(
+    await readFile(join(root, "fixtures/phase2/repair-recordings.json"), "utf8"),
+  ) as unknown;
+  const inputHash = rawSha256(JSON.stringify(recordings));
+  const observations: ProgressObservation[] = [
+    {
+      inputHash: `sha256:${inputHash}`,
+      proposalHash: "proposal:repeated",
+      artifactHash: "artifact:unchanged",
+      gateResultHash: "gate:unchanged",
+      unresolvedFindingCount: 2,
+      gateStatus: "failed",
+      stateHash: "state:repeated",
+    },
+    {
+      inputHash: `sha256:${inputHash}`,
+      proposalHash: "proposal:repeated",
+      artifactHash: "artifact:unchanged",
+      gateResultHash: "gate:unchanged",
+      unresolvedFindingCount: 2,
+      gateStatus: "failed",
+      stateHash: "state:repeated",
+    },
+  ];
+  const reasons = detectNoProgress(observations);
+  const runUsage = createBudgetUsageSnapshot({
+    scope: "run",
+    attempts: 1,
+    elapsedSeconds: 1,
+    externalProcessExecutions: 0,
+    logicalToolRequests: 0,
+  });
+  const taskUsage = createBudgetUsageSnapshot({
+    scope: "task",
+    attempts: 1,
+    elapsedSeconds: 1,
+    externalProcessExecutions: 0,
+    logicalToolRequests: 0,
+  });
+  const budgetStatus = checkBudget(
+    { scope: "execution", timeSeconds: 10, toolCalls: 1 },
+    runUsage,
+    { elapsedSeconds: 1, externalProcessExecutions: 1 },
+  );
+  const stopRecord = buildStopRecord({
+    reasonCode: "unknown-impact",
+    knownFacts: [
+      "the injected recording repeats the same input and proposal",
+      `no-progress reasons: ${reasons.join(", ")}`,
+      `next operation budget status: ${budgetStatus.status}`,
+    ],
+    uncertainties: ["the next operation cost cannot be safely committed"],
+    options: [{ id: "resume", description: "resume after proposal or budget review" }],
+    recommendation: "review the repair proposal and budget before resuming",
+    resumeCondition: "a new proposal or an approved budget is available",
+    resumePosition: { eventPosition: 0 },
+    budgetSnapshot: { run: runUsage, task: taskUsage },
+    evidenceIds: ["evidence:phase4-budget-watchdog-injected"],
+  });
+  return {
+    runner: "phase4-resume",
+    runUsage,
+    taskUsage,
+    observationCounts: {
+      externalProcessExecutions: 0,
+      logicalToolRequests: 0,
+      registryReplays: 0,
+    },
+    injectedNoProgress: {
+      reasons,
+      budgetStatus: budgetStatus.status,
+      operationExecuted: false,
+      downstreamExecuted: false,
+      stopRecord,
     },
   };
 };
@@ -582,5 +829,22 @@ if (workerMode) {
   if (failures.length > 0) {
     throw new Error(`verification-failed: ${failures.join("; ")}`);
   }
+  const budgetEvidence = await buildBudgetWatchdogEvidence();
+  budgetEvidence.normalRunObservationCounts = {};
+  for (const [id] of cases) {
+    const runtime = await readJson<{
+      observationCounts?: {
+        externalProcessExecutions: number;
+        logicalToolRequests: number;
+        registryReplays: number;
+      };
+    }>(join(artifactRoot, id, "baseline", "budget-runtime.json"), {});
+    if (runtime.observationCounts)
+      budgetEvidence.normalRunObservationCounts[id] = runtime.observationCounts;
+  }
+  await writeFile(
+    join(artifactRoot, "budget-watchdog.json"),
+    `${JSON.stringify(budgetEvidence, null, 2)}\n`,
+  );
   process.stdout.write(`${JSON.stringify(results, null, 2)}\n`);
 }

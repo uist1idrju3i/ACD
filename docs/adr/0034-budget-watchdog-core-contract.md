@@ -2,7 +2,7 @@
 
 ## ステータス
 
-Accepted（Step A のコア契約。runner統合とGate 25証跡は後続handoff）
+Accepted（Step Aのコア契約とStep Bのrunner接続。Gate 25のstatus変更は範囲外）
 
 ## 決定
 
@@ -20,6 +20,9 @@ Accepted（Step A のコア契約。runner統合とGate 25証跡は後続handoff
    1回、時間は呼び出し側が宣言する秒数を見積りとする。必要な見積りがない場合は
    `unknown-impact`として実行せず停止する。上限到達または到達見込みは
    `budget-exceeded`とする。
+   attempt上限の所有者はtask ledgerの`retryBudget`であり、`usage.attempts`は
+   実測値として記録するだけである。既存ledgerは`pending -> running`遷移前に
+   retry budgetを検査するため、到達後ではなく次のattempt実行前に停止する。
 6. 無進捗の改善は、未解決finding数の減少、gate statusの改善、成果物hashの変化
    のいずれかとする。同一input＋proposal、成果物不変、gate結果の非改善、既訪問
    state hashへの復帰を、引数で与えた閾値で検知する。既定値2回は、1回の再試行を
@@ -29,6 +32,10 @@ Accepted（Step A のコア契約。runner統合とGate 25証跡は後続handoff
    は人間向け互換情報として残す。
 8. tool observationはlogical request、registry replay、external process startを
    相関情報（run/task/attempt）付きで区別する。replayは外部実行数に加算しない。
+9. Step Bのrunnerはrun/taskそれぞれのcapを操作前に判定し、停止時に
+   `artifacts/phase4/budget-watchdog.json`を出力する。injected clock、attempt、
+   observation counter、stop recordは既存のresume証跡から分離し、既存の
+   `artifacts/phase4/resume.json`およびgate結果へ混入させない。
 
 ## 代替案と理由
 
@@ -38,5 +45,8 @@ Accepted（Step A のコア契約。runner統合とGate 25証跡は後続handoff
 
 ## 範囲外
 
-`scripts/phase4-resume.mts`、`scripts/phase1-stages.mts`のrunner統合、
-Gate 25の証跡出力、Gate matrixのstatus変更は後続作業とする。
+Gate matrixのstatus変更、Gate 25の受入status確定は範囲外とする。
+
+なお、taxonomyには存在する`convergence-failure`、`license-restriction`、
+`approval-required`、`patent-concern`が、既存コード側の`ERROR_CODES`には未同期で
+残っている。この差分は各error codeを所有する後続WPで整理する。

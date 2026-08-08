@@ -1,5 +1,5 @@
 import type { StopRecord } from "@acd/schema";
-import { GraphCoreError, type ErrorCode } from "./errors.js";
+import { GraphCoreError } from "./errors.js";
 
 export type StopRecordInput = StopRecord;
 
@@ -9,7 +9,7 @@ export const buildStopRecord = (input: StopRecordInput): StopRecord => {
 };
 
 export const validateStopRecord = (record: StopRecord): void => {
-  const reasonCodes: ErrorCode[] = [
+  const reasonCodes: StopRecord["reasonCode"][] = [
     "schema-invalid",
     "reference-integrity",
     "patch-conflict",
@@ -28,7 +28,7 @@ export const validateStopRecord = (record: StopRecord): void => {
     "unknown-impact",
     "patent-concern",
   ];
-  if (!reasonCodes.includes(record.reasonCode as ErrorCode)) {
+  if (!reasonCodes.includes(record.reasonCode)) {
     throw new GraphCoreError("schema-invalid", `invalid stop reason: ${record.reasonCode}`);
   }
   if (

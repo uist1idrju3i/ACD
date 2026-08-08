@@ -68,6 +68,19 @@ const noGateImprovementCount = (observations: readonly ProgressObservation[]): n
   return count + (observations.length > 0 ? 1 : 0);
 };
 
+const hasImprovementInTail = (
+  observations: readonly ProgressObservation[],
+  count: number,
+): boolean => {
+  const start = Math.max(1, observations.length - count + 1);
+  for (let index = start; index < observations.length; index += 1) {
+    const previous = observations[index - 1];
+    const current = observations[index];
+    if (previous && current && hasImprovement(previous, current)) return true;
+  }
+  return false;
+};
+
 export const detectNoProgress = (
   observations: readonly ProgressObservation[],
   thresholds: NoProgressThresholds = defaultNoProgressThresholds,
@@ -79,29 +92,35 @@ export const detectNoProgress = (
   }
   if (observations.length === 0) return [];
   const reasons: NoProgressReason[] = [];
+  const repeatedProposalCount = tailRepeatCount(
+    observations,
+    (previous, current) =>
+      previous.inputHash === current.inputHash && previous.proposalHash === current.proposalHash,
+  );
   if (
-    tailRepeatCount(
-      observations,
-      (previous, current) =>
-        previous.inputHash === current.inputHash && previous.proposalHash === current.proposalHash,
-    ) >= thresholds.repeatedProposal
+    repeatedProposalCount >= thresholds.repeatedProposal &&
+    !hasImprovementInTail(observations, repeatedProposalCount)
   ) {
     reasons.push("repeated-proposal");
   }
+  const unchangedArtifactCount = tailRepeatCount(
+    observations,
+    (previous, current) => previous.artifactHash === current.artifactHash,
+  );
   if (
-    tailRepeatCount(
-      observations,
-      (previous, current) => previous.artifactHash === current.artifactHash,
-    ) >= thresholds.unchangedArtifact
+    unchangedArtifactCount >= thresholds.unchangedArtifact &&
+    !hasImprovementInTail(observations, unchangedArtifactCount)
   ) {
     reasons.push("unchanged-artifact");
   }
+  const unchangedGateCount = tailRepeatCount(
+    observations,
+    (previous, current) => previous.gateResultHash === current.gateResultHash,
+  );
   if (
-    tailRepeatCount(
-      observations,
-      (previous, current) => previous.gateResultHash === current.gateResultHash,
-    ) >= thresholds.unchangedGate ||
-    noGateImprovementCount(observations) >= thresholds.unchangedGate
+    (unchangedGateCount >= thresholds.unchangedGate ||
+      noGateImprovementCount(observations) >= thresholds.unchangedGate) &&
+    !hasImprovementInTail(observations, Math.max(unchangedGateCount, thresholds.unchangedGate))
   ) {
     reasons.push("unchanged-gate");
   }
@@ -110,6 +129,12 @@ export const detectNoProgress = (
     .slice(0, -1)
     .map((observation) => observation.stateHash)
     .filter((stateHash) => stateHash === last?.stateHash).length;
-  if (last && prior >= thresholds.oscillation - 1) reasons.push("oscillation");
+  if (
+    last &&
+    prior >= thresholds.oscillation - 1 &&
+    !hasImprovementInTail(observations, observations.length)
+  ) {
+    reasons.push("oscillation");
+  }
   return reasons;
 };

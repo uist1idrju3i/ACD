@@ -67,6 +67,8 @@ import {
   FileToolInvocationRegistry,
   NodeProcessPort,
   ToolBoundary,
+  type ToolObservationContext,
+  type ToolObservationHook,
 } from "../packages/adapters/storage-fs/src/index.js";
 
 import type { ACDPhase1Fixture } from "../packages/schema/src/generated/phase1-fixture.js";
@@ -124,8 +126,19 @@ const image =
 const rawArtifactHash = rawSha256;
 const boundaries = new Map<string, ToolBoundary>();
 const toolRunIds = new WeakMap<StageContext, string>();
+const toolObservationContexts = new WeakMap<StageContext, ToolObservationContext>();
+let toolObservationHook: ToolObservationHook | undefined;
 export const setToolRunId = (context: StageContext, runId: string): void => {
   toolRunIds.set(context, runId);
+};
+export const setToolObservationHook = (hook: ToolObservationHook | undefined): void => {
+  toolObservationHook = hook;
+};
+export const setToolObservationContext = (
+  context: StageContext,
+  observationContext: ToolObservationContext,
+): void => {
+  toolObservationContexts.set(context, observationContext);
 };
 const boundaryFor = (context: StageContext): ToolBoundary => {
   const runId = toolRunIds.get(context) ?? randomUUID();
@@ -133,7 +146,11 @@ const boundaryFor = (context: StageContext): ToolBoundary => {
   const path = join(root, ".acd", "runs", runId, "tool-invocations.jsonl");
   const existing = boundaries.get(path);
   if (existing) return existing;
-  const boundary = new ToolBoundary(new NodeProcessPort(), new FileToolInvocationRegistry(path));
+  const boundary = new ToolBoundary(
+    new NodeProcessPort(),
+    new FileToolInvocationRegistry(path, toolObservationHook),
+    toolObservationHook,
+  );
   boundaries.set(path, boundary);
   return boundary;
 };
@@ -191,6 +208,7 @@ const run = async (
       containerVersion: image,
       provenance: [{ kind: "tool-output", locator: toolName, capturedBy: "phase1" }],
     },
+    toolObservationContexts.get(context),
   );
   return { stdout: result.stdout, stderr: result.stderr };
 };

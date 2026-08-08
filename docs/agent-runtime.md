@@ -39,6 +39,9 @@ registry replayはlogical requestの別カウンタとする。tokensとmoneyは
 usageに明示的な`unknown`を保持する。停止の機械可読な正本はStop Recordであり、
 既知事実、不確実性、選択肢、推奨、再開条件、再開位置、予算snapshot、Evidence IDを
 保存する。詳細は[`adr/0034-budget-watchdog-core-contract.md`](adr/0034-budget-watchdog-core-contract.md)を参照する。
+Phase 4 runnerはrun/task capを操作前に独立判定し、到達見込みならdownstreamを実行せず、
+`artifacts/phase4/budget-watchdog.json`へ決定論的な停止証跡を保存する。既存のresume証跡と
+gate結果は変更しない。
 
 ## 割り込み
 
