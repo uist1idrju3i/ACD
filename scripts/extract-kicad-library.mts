@@ -1,7 +1,7 @@
 import { createHash } from "node:crypto";
-import { execFileSync } from "node:child_process";
 import { readFile, writeFile } from "node:fs/promises";
 import { join, relative } from "node:path";
+import { NodeProcessPort } from "../packages/adapters/storage-fs/src/index.js";
 
 const root = join(import.meta.dirname, "..");
 const image = "kicad/kicad@sha256:182c8005cb775a2c448a4c18681d489f1ff472a761885eba3e08b07e3c0564de";
@@ -39,10 +39,11 @@ type Pad = {
 const sha256 = (value: string): string =>
   `sha256:${createHash("sha256").update(value).digest("hex")}`;
 
-const dockerRead = (path: string): string =>
-  execFileSync(
-    "docker",
-    [
+const processPort = new NodeProcessPort();
+const dockerRead = async (path: string): Promise<string> => {
+  const result = await processPort.execute({
+    command: "docker",
+    args: [
       "run",
       "--rm",
       "--user",
@@ -55,8 +56,16 @@ const dockerRead = (path: string): string =>
       "cat",
       path,
     ],
-    { encoding: "utf8", maxBuffer: 64 * 1024 * 1024 },
-  );
+    cwd: root,
+    timeoutMs: 300_000,
+    maxOutputBytes: 64 * 1024 * 1024,
+    killGraceMs: 5_000,
+  });
+  if (result.kind !== "completed") {
+    throw new Error(`docker failed: ${result.stderr || result.signal || result.kind}`);
+  }
+  return result.stdout;
+};
 
 const blockAt = (text: string, start: number): string => {
   let depth = 0;
@@ -228,7 +237,7 @@ const main = async (): Promise<void> => {
 
   for (const mapping of symbolRequests) {
     const symbolPath = `/usr/share/kicad/symbols/${mapping.symbolLibraryId}.kicad_sym`;
-    const symbolSource = dockerRead(symbolPath);
+    const symbolSource = await dockerRead(symbolPath);
     const symbolBlock = namedSymbol(symbolSource, mapping.symbolLibraryId, mapping.symbolName);
     const symbolRelative = `symbols/${mapping.symbolLibraryId}_${mapping.symbolName}.kicad_sym`;
     files[symbolRelative] = symbolBlock;
@@ -249,7 +258,7 @@ const main = async (): Promise<void> => {
   const footprintHashes = new Map<string, string>();
   for (const mapping of uniqueFootprints) {
     const sourcePath = `/usr/share/kicad/footprints/${mapping.footprintLibraryId}.pretty/${mapping.footprintName}.kicad_mod`;
-    const footprintSource = dockerRead(sourcePath);
+    const footprintSource = await dockerRead(sourcePath);
     parsePads(footprintSource, mapping.footprintName);
     const footprintRelative = `footprints/${mapping.footprintName}.kicad_mod`;
     files[footprintRelative] = footprintSource;
@@ -311,9 +320,14 @@ const main = async (): Promise<void> => {
   await writeFile(join(root, "spikes/kicad-library/manifest.json"), manifestText, "utf8");
   for (const { path, fixture } of fixtures) {
     await writeFile(path, `${JSON.stringify(fixture, null, 2)}\n`, "utf8");
-    execFileSync("pnpm", ["exec", "prettier", "--write", path], {
+    await processPort.execute({
+      command: "pnpm",
+      args: ["exec", "prettier", "--write", path],
       cwd: root,
-      stdio: "ignore",
+      environment: { PWD: root },
+      timeoutMs: 300_000,
+      maxOutputBytes: 64 * 1024 * 1024,
+      killGraceMs: 5_000,
     });
   }
 

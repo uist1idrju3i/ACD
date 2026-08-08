@@ -19,3 +19,4 @@ export * from "./semantic.js";
 export * from "./test-items.js";
 export * from "./task-ledger.js";
 export * from "./verification.js";
+export * from "./tool-process.js";

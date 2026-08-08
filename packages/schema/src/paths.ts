@@ -38,6 +38,7 @@ export const physicalEvidenceSchemaPath = resolve(
   repositoryRoot,
   "schemas/physical-evidence.schema.json",
 );
+export const toolEnvelopeSchemaPath = resolve(repositoryRoot, "schemas/tool-envelope.schema.json");
 export const physicalEvidenceSamplePath = resolve(
   repositoryRoot,
   "fixtures/phase1/physical-evidence-pending.json",

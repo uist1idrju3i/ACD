@@ -1,5 +1,5 @@
-import { execFileSync, spawnSync } from "node:child_process";
-import { copyFile, mkdir, readFile, readdir, writeFile } from "node:fs/promises";
+import { createHash, randomUUID } from "node:crypto";
+import { copyFile, mkdir, readFile, readdir, stat, writeFile } from "node:fs/promises";
 import { join, resolve } from "node:path";
 import {
   compareNetlists,
@@ -47,6 +47,7 @@ import {
   unresolvedRationaleFindings,
   unresolvedTestPlanFindings,
   compareIds,
+  sha256 as canonicalSha256,
   reproductionConditionsForFabProfile,
   type FixturePatchOperation,
   type RecordedProposal,
@@ -62,10 +63,15 @@ import {
   loadGateMatrix,
   validatePhase1FixtureReferences,
 } from "../packages/schema/src/index.js";
+import {
+  FileToolInvocationRegistry,
+  NodeProcessPort,
+  ToolBoundary,
+} from "../packages/adapters/storage-fs/src/index.js";
 
 import type { ACDPhase1Fixture } from "../packages/schema/src/generated/phase1-fixture.js";
 import preOrder from "./pre-order.ts";
-import { sha256 } from "./golden-shared.mts";
+import { rawSha256 } from "./golden-shared.mts";
 
 export type JsonValue =
   | string
@@ -115,9 +121,79 @@ let graphValidator: Awaited<ReturnType<typeof loadSchemaValidator>> | undefined;
 const image =
   process.env.KICAD_IMAGE ??
   "kicad/kicad@sha256:182c8005cb775a2c448a4c18681d489f1ff472a761885eba3e08b07e3c0564de";
-const hash = sha256;
-const run = (command: string, args: string[]): string =>
-  execFileSync(command, args, { cwd: root, encoding: "utf8", stdio: ["ignore", "pipe", "pipe"] });
+const rawArtifactHash = rawSha256;
+const boundaries = new Map<string, ToolBoundary>();
+const toolRunIds = new WeakMap<StageContext, string>();
+export const setToolRunId = (context: StageContext, runId: string): void => {
+  toolRunIds.set(context, runId);
+};
+const boundaryFor = (context: StageContext): ToolBoundary => {
+  const runId = toolRunIds.get(context) ?? randomUUID();
+  toolRunIds.set(context, runId);
+  const path = join(root, ".acd", "runs", runId, "tool-invocations.jsonl");
+  const existing = boundaries.get(path);
+  if (existing) return existing;
+  const boundary = new ToolBoundary(new NodeProcessPort(), new FileToolInvocationRegistry(path));
+  boundaries.set(path, boundary);
+  return boundary;
+};
+let invocationSequence = 0;
+const run = async (
+  context: StageContext,
+  toolName: string,
+  command: string,
+  args: string[],
+  timeoutMs: number,
+  attempt = 0,
+): Promise<{ stdout: string; stderr: string }> => {
+  const runId = toolRunIds.get(context) ?? randomUUID();
+  toolRunIds.set(context, runId);
+  const inputFileHashes: Record<string, string> = {};
+  for (const arg of args) {
+    if (!arg.startsWith("/work/")) continue;
+    const path = join(context.artifactRoot, arg.slice("/work/".length));
+    try {
+      if ((await stat(path)).isFile()) {
+        inputFileHashes[arg] = `sha256:${createHash("sha256")
+          .update(await readFile(path))
+          .digest("hex")}`;
+      }
+    } catch {
+      // The external process reports missing inputs through its typed failure.
+    }
+  }
+  const input = { command, args, inputFileHashes };
+  const inputHash = canonicalSha256(input);
+  const request = {
+    toolName,
+    contractVersion: "0.1.0",
+    inputHash,
+    graphRevision: 0,
+    correlationId: `run:${runId}/invocation:${++invocationSequence}`,
+    idempotencyKey: `tool:${toolName}/input:${inputHash}/attempt:${attempt}`,
+    operationClass: "reversible" as const,
+    timeoutMs,
+    maxOutputBytes: 64 * 1024 * 1024,
+    input,
+  };
+  const result = await boundaryFor(context).execute(
+    request,
+    {
+      command,
+      args,
+      cwd: root,
+      timeoutMs,
+      maxOutputBytes: 64 * 1024 * 1024,
+      killGraceMs: 5_000,
+    },
+    {
+      toolVersion: "unknown",
+      containerVersion: image,
+      provenance: [{ kind: "tool-output", locator: toolName, capturedBy: "phase1" }],
+    },
+  );
+  return { stdout: result.stdout, stderr: result.stderr };
+};
 const dockerArgs = (context: StageContext, args: string[]): string[] => [
   "run",
   "--rm",
@@ -132,42 +208,37 @@ const dockerArgs = (context: StageContext, args: string[]): string[] => [
   image,
   ...args,
 ];
-const docker = (context: StageContext, args: string[]): string =>
-  run("docker", dockerArgs(context, args));
+const docker = async (context: StageContext, args: string[]): Promise<string> =>
+  (await run(context, "docker", "docker", dockerArgs(context, args), 600_000)).stdout;
 const dockerOutput = (
   context: StageContext,
   args: string[],
-): { stdout: string; stderr: string } => {
-  const result = spawnSync("docker", dockerArgs(context, args), {
-    cwd: root,
-    encoding: "utf8",
-    stdio: ["ignore", "pipe", "pipe"],
-  });
-  if (result.error) throw result.error;
-  if (result.status !== 0)
-    throw Object.assign(new Error(`docker ${args.join(" ")} exited ${String(result.status)}`), {
-      stdout: result.stdout,
-      stderr: result.stderr,
-      status: result.status ?? 1,
-    });
-  return { stdout: result.stdout, stderr: result.stderr };
-};
-const freerouting = (context: StageContext, args: string[]): string =>
-  run("docker", [
-    "run",
-    "--rm",
-    "--user",
-    "root",
-    "-e",
-    "HOME=/tmp",
-    "-v",
-    `${context.artifactRoot}:/work`,
-    "ghcr.io/freerouting/freerouting@sha256:0d010c6bf13b562551e8cb41fb298090006033fa2850e5bfc678c98ecf47111e",
-    "java",
-    "-jar",
-    "/app/freerouting-executable.jar",
-    ...args,
-  ]);
+): Promise<{ stdout: string; stderr: string }> =>
+  run(context, "docker", "docker", dockerArgs(context, args), 600_000);
+const freerouting = async (context: StageContext, args: string[]): Promise<string> =>
+  (
+    await run(
+      context,
+      "freerouting",
+      "docker",
+      [
+        "run",
+        "--rm",
+        "--user",
+        "root",
+        "-e",
+        "HOME=/tmp",
+        "-v",
+        `${context.artifactRoot}:/work`,
+        "ghcr.io/freerouting/freerouting@sha256:0d010c6bf13b562551e8cb41fb298090006033fa2850e5bfc678c98ecf47111e",
+        "java",
+        "-jar",
+        "/app/freerouting-executable.jar",
+        ...args,
+      ],
+      1_800_000,
+    )
+  ).stdout;
 const enter = (context: StageContext, gate: number): void => {
   if (!context.gateMatrix.gates.some((candidate) => candidate.order === gate))
     throw new Error(`reference-integrity: unknown gate ${gate}`);
@@ -233,7 +304,7 @@ const stage_placement = async (context: StageContext): Promise<void> => {
 const stage_canonical_netlist = async (context: StageContext): Promise<void> => {
   enter(context, 5);
   const canonical = compareNetlists(context.fixture, "", "");
-  const canonicalHash = hash(JSON.stringify(canonical.expected));
+  const canonicalHash = rawArtifactHash(JSON.stringify(canonical.expected));
   context.canonicalNetlistHash = canonicalHash;
   pass(context, 5, {
     pins: canonical.expected.length,
@@ -253,7 +324,7 @@ const stage_electrical_lint = async (context: StageContext): Promise<void> => {
     verdict: context.lint.verdict,
     rulesEvaluated: context.lint.rulesEvaluated.length,
     findings: context.lint.findings.length,
-    findingsHash: hash(JSON.stringify(context.lint.findings)),
+    findingsHash: rawArtifactHash(JSON.stringify(context.lint.findings)),
   });
 };
 
@@ -272,7 +343,7 @@ const stage_design_rationale = async (context: StageContext): Promise<void> => {
     rulesEvaluated: rationale.rulesEvaluated.length,
     subjects: rationale.coverage.length,
     findings: rationale.findings.length,
-    findingsHash: hash(JSON.stringify(rationale.findings)),
+    findingsHash: rawArtifactHash(JSON.stringify(rationale.findings)),
   });
 };
 
@@ -295,7 +366,7 @@ const stage_test_plan = async (context: StageContext): Promise<void> => {
     rulesEvaluated: testPlan.rulesEvaluated.length,
     testItems: testPlan.items.length,
     measurementItems: testPlan.items.filter((item) => item.method === "measurement").length,
-    testPlanHash: hash(JSON.stringify(testPlan.items)),
+    testPlanHash: rawArtifactHash(JSON.stringify(testPlan.items)),
     artifact: "test-plan.json",
   });
 };
@@ -345,7 +416,7 @@ const stage_repair_loop = async (context: StageContext): Promise<void> => {
       (total, entry) => total + Number((entry as { rejected?: number }).rejected ?? 0),
       0,
     ),
-    recordingsHash: hash(JSON.stringify(recordings.proposals)),
+    recordingsHash: rawArtifactHash(JSON.stringify(recordings.proposals)),
     artifact: "repair-loop.json",
   });
 };
@@ -366,12 +437,14 @@ const stage_spice = async (context: StageContext): Promise<void> => {
     try {
       // ngspice prints its banner, version and most diagnostics on stderr even when the run
       // succeeds, so the log keeps both streams.
-      const output = dockerOutput(context, ["ngspice", "-b", `/work/spice/${deckName}`]);
+      const output = await dockerOutput(context, ["ngspice", "-b", `/work/spice/${deckName}`]);
       stdout = `${output.stdout}${output.stderr}`;
     } catch (error) {
-      const failure = error as { stdout?: string; stderr?: string; status?: number };
-      stdout = `${failure.stdout ?? ""}${failure.stderr ?? ""}`;
-      exitCode = failure.status ?? 1;
+      const failure = error as {
+        context?: { stdout?: string; stderr?: string; exitCode?: number | null };
+      };
+      stdout = `${failure.context?.stdout ?? ""}${failure.context?.stderr ?? ""}`;
+      exitCode = failure.context?.exitCode ?? 1;
     }
     await writeFile(join(spiceRoot, `${deckName}.log`), stdout);
     spiceRuns.push({ analysisId: analysis.id, stdout, exitCode });
@@ -397,8 +470,8 @@ const stage_spice = async (context: StageContext): Promise<void> => {
       models: analysis.models,
       assumptions: analysis.assumptions,
       testItemId: analysis.testItemId,
-      deckHash: hash(analysis.deck),
-      outputHash: hash(stdout),
+      deckHash: rawArtifactHash(analysis.deck),
+      outputHash: rawArtifactHash(stdout),
     };
   });
   await writeFile(join(spiceRoot, "results.json"), `${JSON.stringify(spiceEvidence, null, 2)}\n`);
@@ -409,7 +482,7 @@ const stage_spice = async (context: StageContext): Promise<void> => {
     verdict: spice.verdict,
     analyses: analyses.length,
     rulesEvaluated: spice.rulesEvaluated.length,
-    resultsHash: hash(JSON.stringify(spiceEvidence)),
+    resultsHash: rawArtifactHash(JSON.stringify(spiceEvidence)),
     artifact: "spice/results.json",
   });
 };
@@ -606,7 +679,7 @@ const stage_knowledge_lifecycle = async (context: StageContext): Promise<void> =
       sourceEventId: "event:fab-feedback:prototype-1-jlcpcb-001",
     },
     output: {
-      knowledgeHash: hash(knowledgeText),
+      knowledgeHash: rawArtifactHash(knowledgeText),
       eventCount: knowledgeEvents.length,
     },
     artifact: "knowledge.json",
@@ -616,7 +689,7 @@ const stage_knowledge_lifecycle = async (context: StageContext): Promise<void> =
 const stage_kicad_projection = async (context: StageContext): Promise<void> => {
   enter(context, 6);
   await projectToKicad(context.fixture, context.projectRoot);
-  docker(context, [
+  await docker(context, [
     "kicad-cli",
     "sch",
     "export",
@@ -625,7 +698,7 @@ const stage_kicad_projection = async (context: StageContext): Promise<void> => {
     "/work/project/design.net",
     "/work/project/design.kicad_sch",
   ]);
-  docker(context, [
+  await docker(context, [
     "kicad-cli",
     "pcb",
     "export",
@@ -654,7 +727,7 @@ const stage_kicad_readback = async (context: StageContext): Promise<void> => {
 const stage_erc = async (context: StageContext): Promise<void> => {
   enter(context, 8);
   try {
-    docker(context, [
+    await docker(context, [
       "kicad-cli",
       "sch",
       "erc",
@@ -711,9 +784,9 @@ const stage_routing = async (context: StageContext): Promise<void> => {
     "pcbnew.ExportSpecctraDSN(b,'/work/project/golden.dsn')",
   ].join("; ");
   await mkdir(join(context.projectRoot, "manufacturing"), { recursive: true });
-  docker(context, ["python3", "-c", routePython]);
+  await docker(context, ["python3", "-c", routePython]);
   for (const suffix of ["a", "b"]) {
-    freerouting(context, [
+    await freerouting(context, [
       "-de",
       "/work/project/golden.dsn",
       "-do",
@@ -726,8 +799,8 @@ const stage_routing = async (context: StageContext): Promise<void> => {
   }
   const sesA = await readFile(join(context.projectRoot, "golden-a.ses"));
   const sesB = await readFile(join(context.projectRoot, "golden-b.ses"));
-  const sesHashA = hash(sesA.toString());
-  const sesHashB = hash(sesB.toString());
+  const sesHashA = rawArtifactHash(sesA.toString());
+  const sesHashB = rawArtifactHash(sesB.toString());
   context.sesHashA = sesHashA;
   context.sesHashB = sesHashB;
   if (sesHashA !== sesHashB)
@@ -757,7 +830,7 @@ const stage_routing = async (context: StageContext): Promise<void> => {
     join(context.projectRoot, "routed.kicad_prl"),
   );
   pass(context, 9, {
-    dsnHash: hash((await readFile(join(context.projectRoot, "golden.dsn"))).toString()),
+    dsnHash: rawArtifactHash((await readFile(join(context.projectRoot, "golden.dsn"))).toString()),
     sesHash: context.sesHashA,
     deterministicSes: true,
     antennaKeepout: { source: "U1 official courtyard", points: antennaPoints },
@@ -776,7 +849,7 @@ const stage_routing = async (context: StageContext): Promise<void> => {
 const stage_drc = async (context: StageContext): Promise<void> => {
   enter(context, 10);
   try {
-    docker(context, [
+    await docker(context, [
       "kicad-cli",
       "pcb",
       "drc",
@@ -804,7 +877,7 @@ const stage_drc = async (context: StageContext): Promise<void> => {
 
 const stage_manufacturing = async (context: StageContext): Promise<void> => {
   enter(context, 11);
-  docker(context, [
+  await docker(context, [
     "kicad-cli",
     "pcb",
     "export",
@@ -813,7 +886,7 @@ const stage_manufacturing = async (context: StageContext): Promise<void> => {
     "/work/project/manufacturing/",
     "/work/project/routed.kicad_pcb",
   ]);
-  docker(context, [
+  await docker(context, [
     "kicad-cli",
     "pcb",
     "export",
@@ -831,9 +904,13 @@ const stage_manufacturing = async (context: StageContext): Promise<void> => {
     JSON.stringify(
       {
         board: context.fixture.requirement.board,
-        dsnHash: hash((await readFile(join(context.projectRoot, "golden.dsn"))).toString()),
+        dsnHash: rawArtifactHash(
+          (await readFile(join(context.projectRoot, "golden.dsn"))).toString(),
+        ),
         sesHash: context.sesHashA as string,
-        pcbHash: hash((await readFile(join(context.projectRoot, "routed.kicad_pcb"))).toString()),
+        pcbHash: rawArtifactHash(
+          (await readFile(join(context.projectRoot, "routed.kicad_pcb"))).toString(),
+        ),
         dsnRules: { trackWidthMm: 0.25, clearanceMm: 0.127 },
         bom: context.fixture.bom,
         layerVerification: { reopened: true, layers: ["F.Cu", "B.Cu"] },
@@ -854,8 +931,8 @@ const stage_manufacturing = async (context: StageContext): Promise<void> => {
                 return [
                   name,
                   {
-                    sha256: hash(content),
-                    normalizedSha256: hash(normalizedArtifact(content)),
+                    sha256: rawArtifactHash(content),
+                    normalizedSha256: rawArtifactHash(normalizedArtifact(content)),
                     bytes: content.byteLength,
                   },
                 ];
@@ -963,7 +1040,7 @@ const stage_library_patch = async (context: StageContext): Promise<void> => {
   );
   const boardPath = join(patchProjectRoot, "design.kicad_pcb");
   const unpatchedBoardContent = await readFile(boardPath, "utf8");
-  const unpatchedBoardHash = hash(unpatchedBoardContent);
+  const unpatchedBoardHash = rawArtifactHash(unpatchedBoardContent);
   const patchedBoardContent = materializeLibraryPatchInBoardSource(
     unpatchedBoardContent,
     libraryPatch.footprintId,
@@ -989,13 +1066,13 @@ const stage_library_patch = async (context: StageContext): Promise<void> => {
   ) {
     throw new Error("verification-failed: patched board pads lack declared solder mask margin");
   }
-  const patchedBoardHash = hash(patchedBoardContent);
+  const patchedBoardHash = rawArtifactHash(patchedBoardContent);
   await writeFile(boardPath, patchedBoardContent, "utf8");
   let reopen: "passed" | "failed" | "blocked" = "blocked";
   let drc: "passed" | "failed" | "blocked" = "blocked";
   let failureEvidence: string | undefined;
   try {
-    docker(context, [
+    await docker(context, [
       "kicad-cli",
       "sch",
       "export",
@@ -1004,7 +1081,7 @@ const stage_library_patch = async (context: StageContext): Promise<void> => {
       "/work/library-patch-project/design.net",
       "/work/library-patch-project/design.kicad_sch",
     ]);
-    docker(context, [
+    await docker(context, [
       "kicad-cli",
       "pcb",
       "export",
@@ -1019,7 +1096,7 @@ const stage_library_patch = async (context: StageContext): Promise<void> => {
     failureEvidence = error instanceof Error ? error.message : String(error);
   }
   try {
-    docker(context, [
+    await docker(context, [
       "kicad-cli",
       "pcb",
       "drc",
@@ -1144,7 +1221,7 @@ const stage_knowledge_application = async (context: StageContext): Promise<void>
           decisions: appliedResult.decisions,
           libraryRevisions: appliedResult.libraryRevisions,
           failureReason: error instanceof Error ? error.message : String(error),
-          inputHash: hash(
+          inputHash: rawArtifactHash(
             JSON.stringify({
               targetContext: targetKnowledgeContext,
               decisions: appliedResult.decisions,
@@ -1278,7 +1355,7 @@ export const createPhase1Context = (input: {
 export const serializeStageContext = (context: StageContext): string => JSON.stringify(context);
 
 export const stageContextHash = (context: StageContext): string =>
-  sha256(
+  rawArtifactHash(
     serializeStageContext({
       ...context,
       artifactRoot: "<run-root>",

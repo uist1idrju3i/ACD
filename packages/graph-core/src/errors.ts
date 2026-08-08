@@ -8,6 +8,7 @@ export const ERROR_CODES = [
   "verification-failed",
   "reopen-failure",
   "tool-timeout",
+  "tool-failure",
   "fab-feedback-unknown",
 ] as const;
 

@@ -1,3 +1,4 @@
+import { randomUUID } from "node:crypto";
 import { mkdir, readFile, rm, writeFile } from "node:fs/promises";
 import { join, resolve } from "node:path";
 import {
@@ -6,7 +7,12 @@ import {
   missingExecutedGates,
 } from "../packages/schema/src/index.js";
 import type { ACDPhase1Fixture } from "../packages/schema/src/generated/phase1-fixture.js";
-import { createPhase1Context, runPhase1Stages, type Result } from "./phase1-stages.mts";
+import {
+  createPhase1Context,
+  runPhase1Stages,
+  setToolRunId,
+  type Result,
+} from "./phase1-stages.mts";
 
 const root = resolve(import.meta.dirname, "..");
 const fixture = JSON.parse(
@@ -27,6 +33,7 @@ const context = createPhase1Context({
   gateMatrix,
   designGraphValidator,
 });
+setToolRunId(context, randomUUID());
 
 try {
   await runPhase1Stages(context);

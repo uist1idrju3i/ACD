@@ -9,6 +9,7 @@ import {
   patchSchemaPath,
   phase1FixtureSchemaPath,
   physicalEvidenceSchemaPath,
+  toolEnvelopeSchemaPath,
 } from "./paths.js";
 
 const generatedDirectory = new URL("./generated/", import.meta.url);
@@ -22,11 +23,30 @@ const definitions = [
   ["physical-evidence.schema.json", physicalEvidenceSchemaPath],
   ["gate-matrix.schema.json", gateMatrixSchemaPath],
   ["library-patch.schema.json", libraryPatchSchemaPath],
+  ["tool-envelope.schema.json", toolEnvelopeSchemaPath],
 ] as const;
 
 for (const [filename, schemaPath] of definitions) {
-  const schema = JSON.parse(await readFile(schemaPath, "utf8")) as object;
-  const types = await compile(schema, filename.replace(".schema.json", ""), {
+  const schema = JSON.parse(await readFile(schemaPath, "utf8")) as {
+    $defs?: Record<string, unknown>;
+    [key: string]: unknown;
+  };
+  const designGraph = JSON.parse(await readFile(designGraphSchemaPath, "utf8")) as {
+    $defs?: Record<string, unknown>;
+  };
+  const compilationSchema =
+    filename === "tool-envelope.schema.json"
+      ? {
+          ...schema,
+          $defs: {
+            ...designGraph.$defs,
+            ...schema.$defs,
+            provenance: designGraph.$defs?.provenance,
+            evidenceId: designGraph.$defs?.id,
+          },
+        }
+      : schema;
+  const types = await compile(compilationSchema, filename.replace(".schema.json", ""), {
     unreachableDefinitions: filename === "design-graph.schema.json",
   });
   await writeFile(
