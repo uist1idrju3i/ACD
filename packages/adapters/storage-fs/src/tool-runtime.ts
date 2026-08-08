@@ -1,9 +1,10 @@
-import { spawn, spawnSync } from "node:child_process";
+import { spawn } from "node:child_process";
+import { createHash } from "node:crypto";
 import { mkdir, open, readFile, unlink } from "node:fs/promises";
 import type { FileHandle } from "node:fs/promises";
 import { dirname } from "node:path";
 import type { ProcessPort, ProcessResult, ProcessSpec } from "@acd/graph-core";
-import { canonicalize } from "@acd/graph-core";
+import { canonicalize, GraphCoreError } from "@acd/graph-core";
 import type { ToolError, ToolRequest, ToolResult } from "@acd/schema";
 
 export class NodeProcessPort implements ProcessPort {
@@ -16,84 +17,96 @@ export class NodeProcessPort implements ProcessPort {
       let stdout = "";
       let stderr = "";
       let outputBytes = 0;
-      let settled = false;
       let timedOut = false;
       let cancelled = false;
+      let outputLimitExceeded = false;
+      let termSent = false;
+      let settled = false;
+      let graceTimer: ReturnType<typeof setTimeout> | undefined;
+      let closed: { exitCode: number | null; signal: NodeJS.Signals | null } | undefined;
+      let escalated = false;
+      const terminate = (): void => {
+        if (termSent) return;
+        termSent = true;
+        child.kill("SIGTERM");
+        graceTimer = setTimeout(() => {
+          escalated = true;
+          child.kill("SIGKILL");
+          if (closed) {
+            finish({
+              kind: timedOut
+                ? "timedOut"
+                : cancelled
+                  ? "cancelled"
+                  : outputLimitExceeded
+                    ? "failed"
+                    : "failed",
+              exitCode: closed.exitCode,
+              signal: "SIGKILL",
+              stdout,
+              stderr,
+              outputBytes,
+            });
+          }
+        }, spec.killGraceMs);
+      };
+      const cancel = (): void => {
+        cancelled = true;
+        terminate();
+      };
+      const timeout = setTimeout(() => {
+        timedOut = true;
+        terminate();
+      }, spec.timeoutMs);
       const finish = (result: ProcessResult): void => {
         if (settled) return;
         settled = true;
         clearTimeout(timeout);
+        if (graceTimer) clearTimeout(graceTimer);
         spec.signal?.removeEventListener("abort", cancel);
         resolve(result);
       };
-      const limit = (chunk: Buffer, target: "stdout" | "stderr"): void => {
+      const collect = (chunk: Buffer, target: "stdout" | "stderr"): void => {
         outputBytes += chunk.byteLength;
-        if (outputBytes > spec.maxOutputBytes) {
-          child.kill("SIGKILL");
-          finish({
-            kind: "failed",
-            exitCode: null,
-            signal: "SIGKILL",
-            stdout,
-            stderr,
-            outputBytes,
-          });
-          return;
-        }
         if (target === "stdout") stdout += chunk.toString("utf8");
         else stderr += chunk.toString("utf8");
+        if (outputBytes > spec.maxOutputBytes) {
+          outputLimitExceeded = true;
+          terminate();
+        }
       };
-      const cancel = (): void => {
-        cancelled = true;
-        child.kill("SIGTERM");
-      };
-      const timeout = setTimeout(() => {
-        timedOut = true;
-        child.kill("SIGTERM");
-      }, spec.timeoutMs);
-      child.stdout.on("data", (chunk: Buffer) => limit(chunk, "stdout"));
-      child.stderr.on("data", (chunk: Buffer) => limit(chunk, "stderr"));
+      child.stdout.on("data", (chunk: Buffer) => collect(chunk, "stdout"));
+      child.stderr.on("data", (chunk: Buffer) => collect(chunk, "stderr"));
       child.on("error", (error: Error) => {
         stderr += error.message;
-        finish({ kind: "failed", exitCode: null, signal: null, stdout, stderr, outputBytes });
       });
       child.on("close", (exitCode, signal) => {
-        const kind = timedOut
-          ? "timedOut"
-          : cancelled
-            ? "cancelled"
-            : exitCode === 0
-              ? "completed"
-              : "failed";
-        finish({ kind, exitCode, signal, stdout, stderr, outputBytes });
+        if ((timedOut || cancelled || outputLimitExceeded) && graceTimer && !escalated) {
+          closed = { exitCode, signal };
+          return;
+        }
+        finish({
+          kind: timedOut
+            ? "timedOut"
+            : cancelled
+              ? "cancelled"
+              : outputLimitExceeded
+                ? "failed"
+                : exitCode === 0
+                  ? "completed"
+                  : "failed",
+          exitCode,
+          signal: escalated ? "SIGKILL" : signal,
+          stdout,
+          stderr,
+          outputBytes,
+        });
       });
       if (spec.signal?.aborted) cancel();
       else spec.signal?.addEventListener("abort", cancel, { once: true });
     });
   }
 }
-
-export const runProcessSync = (
-  command: string,
-  args: string[],
-  options: { cwd?: string; environment?: Readonly<Record<string, string>> } = {},
-): string => {
-  const result = spawnSync(command, args, {
-    cwd: options.cwd,
-    env: { ...process.env, ...options.environment },
-    encoding: "utf8",
-    stdio: ["ignore", "pipe", "pipe"],
-  });
-  if (result.error) throw result.error;
-  if (result.status !== 0) {
-    throw Object.assign(new Error(`${command} exited ${String(result.status)}`), {
-      stdout: result.stdout,
-      stderr: result.stderr,
-      status: result.status ?? 1,
-    });
-  }
-  return result.stdout;
-};
 
 type StoredInvocation = {
   idempotencyKey: string;
@@ -102,6 +115,21 @@ type StoredInvocation = {
   status: "completed" | "failed";
   result?: ToolResult;
   error?: ToolError;
+};
+
+const isRecord = (value: unknown): value is Record<string, unknown> =>
+  typeof value === "object" && value !== null;
+
+const isStoredInvocation = (value: unknown): value is StoredInvocation => {
+  if (!isRecord(value)) return false;
+  if (
+    typeof value.idempotencyKey !== "string" ||
+    typeof value.correlationId !== "string" ||
+    typeof value.inputHash !== "string" ||
+    (value.status !== "completed" && value.status !== "failed")
+  )
+    return false;
+  return value.status === "completed" ? isRecord(value.result) : isRecord(value.error);
 };
 
 export class FileToolInvocationRegistry {
@@ -115,40 +143,38 @@ export class FileToolInvocationRegistry {
     request: ToolRequest,
     operation: () => Promise<{ result?: ToolResult; error?: ToolError }>,
   ): Promise<{ result?: ToolResult; error?: ToolError }> {
-    await this.load();
-    const previous = this.records?.get(request.idempotencyKey);
-    if (previous) {
-      if (previous.inputHash !== request.inputHash) {
+    try {
+      await this.load();
+      const previous = this.records?.get(request.idempotencyKey);
+      if (previous) {
+        if (previous.inputHash !== request.inputHash) {
+          throw new GraphCoreError(
+            "reference-integrity",
+            "idempotency key was reused with a different input hash",
+            "critical",
+            { idempotencyKey: request.idempotencyKey, inputHash: request.inputHash },
+          );
+        }
         return {
-          error: {
-            kind: "error",
-            code: "reference-integrity",
-            severity: "critical",
-            message: "idempotency key was reused with a different input hash",
-            retryable: false,
-            recoverable: false,
-            context: { idempotencyKey: request.idempotencyKey, inputHash: request.inputHash },
-            evidenceIds: [],
-          },
+          ...(previous.result ? { result: previous.result } : {}),
+          ...(previous.error ? { error: previous.error } : {}),
         };
       }
-      return {
-        ...(previous.result ? { result: previous.result } : {}),
-        ...(previous.error ? { error: previous.error } : {}),
+      const outcome = await operation();
+      const record: StoredInvocation = {
+        idempotencyKey: request.idempotencyKey,
+        correlationId: request.correlationId,
+        inputHash: request.inputHash,
+        status: outcome.result ? "completed" : "failed",
+        ...(outcome.result ? { result: outcome.result } : {}),
+        ...(outcome.error ? { error: outcome.error } : {}),
       };
+      await this.append(record);
+      this.records?.set(request.idempotencyKey, record);
+      return outcome;
+    } finally {
+      await this.close();
     }
-    const outcome = await operation();
-    const record: StoredInvocation = {
-      idempotencyKey: request.idempotencyKey,
-      correlationId: request.correlationId,
-      inputHash: request.inputHash,
-      status: outcome.result ? "completed" : "failed",
-      ...(outcome.result ? { result: outcome.result } : {}),
-      ...(outcome.error ? { error: outcome.error } : {}),
-    };
-    await this.append(record);
-    this.records?.set(request.idempotencyKey, record);
-    return outcome;
   }
 
   async close(): Promise<void> {
@@ -169,24 +195,127 @@ export class FileToolInvocationRegistry {
     if (this.records) return;
     this.records = new Map();
     try {
-      const content = await readFile(this.path, "utf8");
-      for (const line of content.split("\n").filter(Boolean)) {
-        const record = JSON.parse(line) as StoredInvocation;
-        this.records.set(record.idempotencyKey, record);
+      const bytes = await readFile(this.path);
+      const lastNewline = bytes.lastIndexOf(0x0a);
+      const complete = bytes.subarray(0, lastNewline + 1);
+      await this.openWriter();
+      if (complete.length !== bytes.length) {
+        await this.handle?.truncate(complete.length);
+        await this.handle?.sync();
+      }
+      for (const [index, line] of complete.toString("utf8").split("\n").filter(Boolean).entries()) {
+        let parsed: unknown;
+        try {
+          parsed = JSON.parse(line) as unknown;
+        } catch (error) {
+          throw new GraphCoreError(
+            "event-replay-failure",
+            `invalid tool registry JSON at line ${index + 1}`,
+            "critical",
+            { cause: error instanceof Error ? error.message : String(error) },
+          );
+        }
+        if (!isStoredInvocation(parsed)) {
+          throw new GraphCoreError(
+            "event-replay-failure",
+            `invalid tool registry record at line ${index + 1}`,
+            "critical",
+          );
+        }
+        this.records.set(parsed.idempotencyKey, parsed);
       }
     } catch (error) {
       if ((error as NodeJS.ErrnoException).code !== "ENOENT") throw error;
     }
   }
 
+  private async openWriter(): Promise<void> {
+    if (this.handle) return;
+    await mkdir(dirname(this.path), { recursive: true });
+    this.lock = await open(`${this.path}.lock`, "wx");
+    this.handle = await open(this.path, "a+");
+  }
+
   private async append(record: StoredInvocation): Promise<void> {
-    if (!this.handle) {
-      await mkdir(dirname(this.path), { recursive: true });
-      this.lock = await open(`${this.path}.lock`, "wx");
-      this.handle = await open(this.path, "a");
+    await this.openWriter();
+    await this.handle?.write(`${canonicalize(record)}\n`, undefined, "utf8");
+    await this.handle?.sync();
+  }
+}
+
+export class ToolBoundary {
+  constructor(
+    private readonly process: ProcessPort,
+    private readonly registry: FileToolInvocationRegistry,
+  ) {}
+
+  async execute(
+    request: ToolRequest,
+    spec: ProcessSpec,
+    metadata: {
+      toolVersion: string;
+      containerVersion: string;
+      provenance: ToolResult["provenance"];
+    },
+  ): Promise<ToolResult> {
+    const outcome = await this.registry.execute(request, async () => {
+      const startedAt = new Date().toISOString();
+      const processResult = await this.process.execute(spec);
+      const endedAt = new Date().toISOString();
+      const outputHash = `sha256:${createHash("sha256")
+        .update(`${processResult.stdout}${processResult.stderr}`)
+        .digest("hex")}`;
+      if (processResult.kind === "completed") {
+        return {
+          result: {
+            kind: "result",
+            ...request,
+            status: "completed",
+            startedAt,
+            endedAt,
+            toolVersion: metadata.toolVersion,
+            containerVersion: metadata.containerVersion,
+            provenance: metadata.provenance,
+            artifactIds: [],
+            evidenceIds: [],
+            rawOutputHash: outputHash,
+            normalizedOutputHash: outputHash,
+            outputBytes: processResult.outputBytes,
+            exitCode: processResult.exitCode,
+            signal: processResult.signal,
+            stdout: processResult.stdout,
+            stderr: processResult.stderr,
+            retryable: false,
+            recoverable: true,
+          },
+        };
+      }
+      return {
+        error: {
+          kind: "error",
+          code: processResult.kind === "timedOut" ? "tool-timeout" : "tool-failure",
+          severity: "error",
+          message: `tool process ${processResult.kind}`,
+          retryable: processResult.kind === "timedOut",
+          recoverable: false,
+          context: {
+            processKind: processResult.kind,
+            exitCode: processResult.exitCode,
+            signal: processResult.signal,
+            stdout: processResult.stdout,
+            stderr: processResult.stderr,
+            outputBytes: processResult.outputBytes,
+          },
+          evidenceIds: [],
+        },
+      };
+    });
+    if (outcome.error) {
+      const code = outcome.error.code === "tool-timeout" ? "tool-timeout" : "tool-failure";
+      throw new GraphCoreError(code, outcome.error.message, "error", outcome.error.context);
     }
-    await this.handle.write(`${canonicalize(record)}\n`, undefined, "utf8");
-    await this.handle.sync();
+    if (!outcome.result) throw new Error("tool boundary returned no result or error");
+    return outcome.result;
   }
 }
 

@@ -2,7 +2,7 @@ import { createHash } from "node:crypto";
 import { cp, mkdir, readFile, readdir, rm, writeFile } from "node:fs/promises";
 import { join, relative, resolve } from "node:path";
 import { GraphCoreError } from "../packages/graph-core/src/index.js";
-import { runProcessSync } from "../packages/adapters/storage-fs/src/index.js";
+import { NodeProcessPort } from "../packages/adapters/storage-fs/src/index.js";
 import { compareNetlists, projectToKicad } from "../packages/adapters/kicad/src/index.js";
 import {
   gateByOrder,
@@ -37,10 +37,23 @@ const results: GateResult[] = [];
 const hash = (content: string | Buffer): string =>
   `sha256:${createHash("sha256").update(content).digest("hex")}`;
 
-const run = (command: string, args: string[], cwd = root): string =>
-  runProcessSync(command, args, { cwd });
+const processPort = new NodeProcessPort();
+const run = async (command: string, args: string[], cwd = root): Promise<string> => {
+  const result = await processPort.execute({
+    command,
+    args,
+    environment: { PWD: cwd },
+    timeoutMs: 600_000,
+    maxOutputBytes: 64 * 1024 * 1024,
+    killGraceMs: 5_000,
+  });
+  if (result.kind !== "completed") {
+    throw new Error(`${command} failed: ${result.stderr || result.signal || result.kind}`);
+  }
+  return result.stdout;
+};
 
-const docker = (args: string[]): string =>
+const docker = async (args: string[]): Promise<string> =>
   run("docker", [
     "run",
     "--rm",
@@ -158,7 +171,7 @@ try {
   await runGate(6, () => {
     return projectToKicad(fixture, projectRoot).then(async () => {
       await cp(join(projectRoot, "design.kicad_pcb"), join(boardOnlyRoot, "design.kicad_pcb"));
-      docker([
+      await docker([
         "kicad-cli",
         "sch",
         "export",
@@ -167,7 +180,7 @@ try {
         "/work/project/design.net",
         "/work/project/design.kicad_sch",
       ]);
-      docker([
+      await docker([
         "kicad-cli",
         "pcb",
         "export",
@@ -201,7 +214,7 @@ try {
 
   await runGate(8, async () => {
     try {
-      docker([
+      await docker([
         "kicad-cli",
         "sch",
         "erc",
@@ -234,8 +247,8 @@ try {
     return { ...counts, report: "reports-erc.rpt", waiver: "none" };
   });
 
-  await runGate(9, () => {
-    docker([
+  await runGate(9, async () => {
+    await docker([
       "kicad-cli",
       "pcb",
       "drc",
@@ -274,7 +287,7 @@ try {
   await runGate(11, async () => {
     await mkdir(join(artifactRoot, "gerbers"), { recursive: true });
     await mkdir(join(artifactRoot, "drill"), { recursive: true });
-    docker([
+    await docker([
       "kicad-cli",
       "pcb",
       "export",
@@ -283,7 +296,7 @@ try {
       "/work/gerbers/",
       "/work/project/design.kicad_pcb",
     ]);
-    docker([
+    await docker([
       "kicad-cli",
       "pcb",
       "export",
@@ -328,7 +341,7 @@ try {
     await mkdir(join(repeatRoot, "gerbers"), { recursive: true });
     await mkdir(join(repeatRoot, "drill"), { recursive: true });
     await projectToKicad(fixture, join(repeatRoot, "project"));
-    docker([
+    await docker([
       "kicad-cli",
       "pcb",
       "export",
@@ -337,7 +350,7 @@ try {
       "/work/repeat/gerbers/",
       "/work/repeat/project/design.kicad_pcb",
     ]);
-    docker([
+    await docker([
       "kicad-cli",
       "pcb",
       "export",

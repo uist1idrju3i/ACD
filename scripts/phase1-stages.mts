@@ -1,4 +1,5 @@
-import { copyFile, mkdir, readFile, readdir, writeFile } from "node:fs/promises";
+import { createHash } from "node:crypto";
+import { copyFile, mkdir, readFile, readdir, stat, writeFile } from "node:fs/promises";
 import { join, resolve } from "node:path";
 import {
   compareNetlists,
@@ -46,6 +47,7 @@ import {
   unresolvedRationaleFindings,
   unresolvedTestPlanFindings,
   compareIds,
+  sha256,
   reproductionConditionsForFabProfile,
   type FixturePatchOperation,
   type RecordedProposal,
@@ -61,11 +63,14 @@ import {
   loadGateMatrix,
   validatePhase1FixtureReferences,
 } from "../packages/schema/src/index.js";
-import { runProcessSync } from "../packages/adapters/storage-fs/src/index.js";
+import {
+  FileToolInvocationRegistry,
+  NodeProcessPort,
+  ToolBoundary,
+} from "../packages/adapters/storage-fs/src/index.js";
 
 import type { ACDPhase1Fixture } from "../packages/schema/src/generated/phase1-fixture.js";
 import preOrder from "./pre-order.ts";
-import { sha256 } from "./golden-shared.mts";
 
 export type JsonValue =
   | string
@@ -116,8 +121,69 @@ const image =
   process.env.KICAD_IMAGE ??
   "kicad/kicad@sha256:182c8005cb775a2c448a4c18681d489f1ff472a761885eba3e08b07e3c0564de";
 const hash = sha256;
-const run = (command: string, args: string[]): string =>
-  runProcessSync(command, args, { cwd: root });
+const boundaries = new Map<string, ToolBoundary>();
+const boundaryFor = (context: StageContext): ToolBoundary => {
+  const runId = context.artifactRoot.split("/").at(-1) ?? "phase1";
+  const path = join(root, ".acd", "runs", runId, "tool-invocations.jsonl");
+  const existing = boundaries.get(path);
+  if (existing) return existing;
+  const boundary = new ToolBoundary(new NodeProcessPort(), new FileToolInvocationRegistry(path));
+  boundaries.set(path, boundary);
+  return boundary;
+};
+let invocationSequence = 0;
+const run = async (
+  context: StageContext,
+  toolName: string,
+  command: string,
+  args: string[],
+  timeoutMs: number,
+): Promise<{ stdout: string; stderr: string }> => {
+  const inputFileHashes: Record<string, string> = {};
+  for (const arg of args) {
+    if (!arg.startsWith("/work/")) continue;
+    const path = join(context.artifactRoot, arg.slice("/work/".length));
+    try {
+      if ((await stat(path)).isFile()) {
+        inputFileHashes[arg] = `sha256:${createHash("sha256")
+          .update(await readFile(path))
+          .digest("hex")}`;
+      }
+    } catch {
+      // The external process reports missing inputs through its typed failure.
+    }
+  }
+  const input = { command, args, inputFileHashes };
+  const inputHash = sha256(input);
+  const request = {
+    toolName,
+    contractVersion: "0.1.0",
+    inputHash,
+    graphRevision: 0,
+    correlationId: `run:${context.artifactRoot}/invocation:${++invocationSequence}`,
+    idempotencyKey: `tool:${toolName}/input:${inputHash}`,
+    operationClass: "reversible" as const,
+    timeoutMs,
+    maxOutputBytes: 64 * 1024 * 1024,
+    input,
+  };
+  const result = await boundaryFor(context).execute(
+    request,
+    {
+      command,
+      args,
+      timeoutMs,
+      maxOutputBytes: 64 * 1024 * 1024,
+      killGraceMs: 5_000,
+    },
+    {
+      toolVersion: toolName,
+      containerVersion: image,
+      provenance: [{ kind: "tool-output", locator: toolName, capturedBy: "phase1" }],
+    },
+  );
+  return { stdout: result.stdout, stderr: result.stderr };
+};
 const dockerArgs = (context: StageContext, args: string[]): string[] => [
   "run",
   "--rm",
@@ -132,30 +198,37 @@ const dockerArgs = (context: StageContext, args: string[]): string[] => [
   image,
   ...args,
 ];
-const docker = (context: StageContext, args: string[]): string =>
-  run("docker", dockerArgs(context, args));
+const docker = async (context: StageContext, args: string[]): Promise<string> =>
+  (await run(context, "docker", "docker", dockerArgs(context, args), 600_000)).stdout;
 const dockerOutput = (
   context: StageContext,
   args: string[],
-): { stdout: string; stderr: string } => {
-  return { stdout: runProcessSync("docker", dockerArgs(context, args), { cwd: root }), stderr: "" };
-};
-const freerouting = (context: StageContext, args: string[]): string =>
-  run("docker", [
-    "run",
-    "--rm",
-    "--user",
-    "root",
-    "-e",
-    "HOME=/tmp",
-    "-v",
-    `${context.artifactRoot}:/work`,
-    "ghcr.io/freerouting/freerouting@sha256:0d010c6bf13b562551e8cb41fb298090006033fa2850e5bfc678c98ecf47111e",
-    "java",
-    "-jar",
-    "/app/freerouting-executable.jar",
-    ...args,
-  ]);
+): Promise<{ stdout: string; stderr: string }> =>
+  run(context, "docker", "docker", dockerArgs(context, args), 600_000);
+const freerouting = async (context: StageContext, args: string[]): Promise<string> =>
+  (
+    await run(
+      context,
+      "freerouting",
+      "docker",
+      [
+        "run",
+        "--rm",
+        "--user",
+        "root",
+        "-e",
+        "HOME=/tmp",
+        "-v",
+        `${context.artifactRoot}:/work`,
+        "ghcr.io/freerouting/freerouting@sha256:0d010c6bf13b562551e8cb41fb298090006033fa2850e5bfc678c98ecf47111e",
+        "java",
+        "-jar",
+        "/app/freerouting-executable.jar",
+        ...args,
+      ],
+      1_800_000,
+    )
+  ).stdout;
 const enter = (context: StageContext, gate: number): void => {
   if (!context.gateMatrix.gates.some((candidate) => candidate.order === gate))
     throw new Error(`reference-integrity: unknown gate ${gate}`);
@@ -354,12 +427,14 @@ const stage_spice = async (context: StageContext): Promise<void> => {
     try {
       // ngspice prints its banner, version and most diagnostics on stderr even when the run
       // succeeds, so the log keeps both streams.
-      const output = dockerOutput(context, ["ngspice", "-b", `/work/spice/${deckName}`]);
+      const output = await dockerOutput(context, ["ngspice", "-b", `/work/spice/${deckName}`]);
       stdout = `${output.stdout}${output.stderr}`;
     } catch (error) {
-      const failure = error as { stdout?: string; stderr?: string; status?: number };
-      stdout = `${failure.stdout ?? ""}${failure.stderr ?? ""}`;
-      exitCode = failure.status ?? 1;
+      const failure = error as {
+        context?: { stdout?: string; stderr?: string; exitCode?: number | null };
+      };
+      stdout = `${failure.context?.stdout ?? ""}${failure.context?.stderr ?? ""}`;
+      exitCode = failure.context?.exitCode ?? 1;
     }
     await writeFile(join(spiceRoot, `${deckName}.log`), stdout);
     spiceRuns.push({ analysisId: analysis.id, stdout, exitCode });
@@ -604,7 +679,7 @@ const stage_knowledge_lifecycle = async (context: StageContext): Promise<void> =
 const stage_kicad_projection = async (context: StageContext): Promise<void> => {
   enter(context, 6);
   await projectToKicad(context.fixture, context.projectRoot);
-  docker(context, [
+  await docker(context, [
     "kicad-cli",
     "sch",
     "export",
@@ -613,7 +688,7 @@ const stage_kicad_projection = async (context: StageContext): Promise<void> => {
     "/work/project/design.net",
     "/work/project/design.kicad_sch",
   ]);
-  docker(context, [
+  await docker(context, [
     "kicad-cli",
     "pcb",
     "export",
@@ -642,7 +717,7 @@ const stage_kicad_readback = async (context: StageContext): Promise<void> => {
 const stage_erc = async (context: StageContext): Promise<void> => {
   enter(context, 8);
   try {
-    docker(context, [
+    await docker(context, [
       "kicad-cli",
       "sch",
       "erc",
@@ -699,9 +774,9 @@ const stage_routing = async (context: StageContext): Promise<void> => {
     "pcbnew.ExportSpecctraDSN(b,'/work/project/golden.dsn')",
   ].join("; ");
   await mkdir(join(context.projectRoot, "manufacturing"), { recursive: true });
-  docker(context, ["python3", "-c", routePython]);
+  await docker(context, ["python3", "-c", routePython]);
   for (const suffix of ["a", "b"]) {
-    freerouting(context, [
+    await freerouting(context, [
       "-de",
       "/work/project/golden.dsn",
       "-do",
@@ -764,7 +839,7 @@ const stage_routing = async (context: StageContext): Promise<void> => {
 const stage_drc = async (context: StageContext): Promise<void> => {
   enter(context, 10);
   try {
-    docker(context, [
+    await docker(context, [
       "kicad-cli",
       "pcb",
       "drc",
@@ -792,7 +867,7 @@ const stage_drc = async (context: StageContext): Promise<void> => {
 
 const stage_manufacturing = async (context: StageContext): Promise<void> => {
   enter(context, 11);
-  docker(context, [
+  await docker(context, [
     "kicad-cli",
     "pcb",
     "export",
@@ -801,7 +876,7 @@ const stage_manufacturing = async (context: StageContext): Promise<void> => {
     "/work/project/manufacturing/",
     "/work/project/routed.kicad_pcb",
   ]);
-  docker(context, [
+  await docker(context, [
     "kicad-cli",
     "pcb",
     "export",
@@ -983,7 +1058,7 @@ const stage_library_patch = async (context: StageContext): Promise<void> => {
   let drc: "passed" | "failed" | "blocked" = "blocked";
   let failureEvidence: string | undefined;
   try {
-    docker(context, [
+    await docker(context, [
       "kicad-cli",
       "sch",
       "export",
@@ -992,7 +1067,7 @@ const stage_library_patch = async (context: StageContext): Promise<void> => {
       "/work/library-patch-project/design.net",
       "/work/library-patch-project/design.kicad_sch",
     ]);
-    docker(context, [
+    await docker(context, [
       "kicad-cli",
       "pcb",
       "export",
@@ -1007,7 +1082,7 @@ const stage_library_patch = async (context: StageContext): Promise<void> => {
     failureEvidence = error instanceof Error ? error.message : String(error);
   }
   try {
-    docker(context, [
+    await docker(context, [
       "kicad-cli",
       "pcb",
       "drc",

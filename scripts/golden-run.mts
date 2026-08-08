@@ -18,7 +18,7 @@ import {
 } from "../packages/adapters/kicad/src/index.js";
 import { loadSchemaValidator, type PatchEnvelope } from "../packages/schema/src/index.js";
 import { normalizedArtifact, sha256 } from "./golden-shared.mts";
-import { runProcessSync } from "../packages/adapters/storage-fs/src/index.js";
+import { NodeProcessPort } from "../packages/adapters/storage-fs/src/index.js";
 
 const root = resolve(import.meta.dirname, "..");
 const goldenRoot = join(root, "fixtures/golden");
@@ -52,10 +52,11 @@ type Observed = {
 
 const hash = sha256;
 
-const dockerRun = (workDirectory: string, args: string[]): string =>
-  runProcessSync(
-    "docker",
-    [
+const processPort = new NodeProcessPort();
+const dockerRun = async (workDirectory: string, args: string[]): Promise<string> => {
+  const result = await processPort.execute({
+    command: "docker",
+    args: [
       "run",
       "--rm",
       "--user",
@@ -69,8 +70,16 @@ const dockerRun = (workDirectory: string, args: string[]): string =>
       image,
       ...args,
     ],
-    { cwd: root },
-  );
+    environment: { PWD: root },
+    timeoutMs: 600_000,
+    maxOutputBytes: 64 * 1024 * 1024,
+    killGraceMs: 5_000,
+  });
+  if (result.kind !== "completed") {
+    throw new Error(`docker failed: ${result.stderr || result.signal || result.kind}`);
+  }
+  return result.stdout;
+};
 
 const filesUnder = async (directory: string): Promise<string[]> => {
   const entries = await readdir(directory, { recursive: true, withFileTypes: true });
@@ -132,9 +141,9 @@ const mutateOverlappingPlacement = (graph: DesignGraph): DesignGraph => {
 type ErcCounts = { messages: number; errors: number; warnings: number };
 type DrcCounts = { violations: number; unconnected: number; footprintErrors: number };
 
-const runErc = (workDirectory: string, project: string): void => {
+const runErc = async (workDirectory: string, project: string): Promise<void> => {
   try {
-    dockerRun(workDirectory, [
+    await dockerRun(workDirectory, [
       "kicad-cli",
       "sch",
       "erc",
@@ -156,7 +165,7 @@ const readErc = async (workDirectory: string, project: string): Promise<ErcCount
 };
 
 const readDrc = async (workDirectory: string, project: string): Promise<DrcCounts> => {
-  dockerRun(workDirectory, [
+  await dockerRun(workDirectory, [
     "kicad-cli",
     "pcb",
     "drc",
@@ -183,7 +192,7 @@ const runNormalTask = async (fixture: GoldenFixture, workDirectory: string): Pro
   const model = readBoardModel(graph);
   const projectDirectory = join(workDirectory, "project");
   await projectToKicad(graph, projectDirectory);
-  dockerRun(workDirectory, [
+  await dockerRun(workDirectory, [
     "kicad-cli",
     "sch",
     "export",
@@ -192,7 +201,7 @@ const runNormalTask = async (fixture: GoldenFixture, workDirectory: string): Pro
     "/work/project/design.net",
     "/work/project/design.kicad_sch",
   ]);
-  dockerRun(workDirectory, [
+  await dockerRun(workDirectory, [
     "kicad-cli",
     "pcb",
     "export",
@@ -217,7 +226,7 @@ const runNormalTask = async (fixture: GoldenFixture, workDirectory: string): Pro
       { expectedSchematic, schematicReadback, expectedPcb, pcbReadback },
     );
   }
-  runErc(workDirectory, "project");
+  await runErc(workDirectory, "project");
   const erc = await readErc(workDirectory, "project");
   if (erc.messages !== 0) {
     throw new GraphCoreError("verification-failed", "ERC contains unwaived findings", "error", erc);
@@ -230,7 +239,7 @@ const runNormalTask = async (fixture: GoldenFixture, workDirectory: string): Pro
     if (target === "repeat") await projectToKicad(graph, join(workDirectory, "repeat"));
     await mkdir(join(workDirectory, target, "gerbers"), { recursive: true });
     await mkdir(join(workDirectory, target, "drill"), { recursive: true });
-    dockerRun(workDirectory, [
+    await dockerRun(workDirectory, [
       "kicad-cli",
       "pcb",
       "export",
@@ -239,7 +248,7 @@ const runNormalTask = async (fixture: GoldenFixture, workDirectory: string): Pro
       `/work/${target}/gerbers/`,
       `/work/${target}/design.kicad_pcb`,
     ]);
-    dockerRun(workDirectory, [
+    await dockerRun(workDirectory, [
       "kicad-cli",
       "pcb",
       "export",
@@ -289,7 +298,7 @@ const runNormalTask = async (fixture: GoldenFixture, workDirectory: string): Pro
 const runErcFailTask = async (fixture: GoldenFixture, workDirectory: string): Promise<Observed> => {
   const graph = mutateDuplicatePowerDriver(await loadGraph(fixture));
   await projectToKicad(graph, join(workDirectory, "project"));
-  runErc(workDirectory, "project");
+  await runErc(workDirectory, "project");
   const erc = await readErc(workDirectory, "project");
   if (erc.errors === 0) {
     throw new GraphCoreError(
@@ -341,7 +350,7 @@ const runReopenFailTask = async (
   await writeFile(boardPath, board.slice(0, Math.floor(board.length / 2)), "utf8");
   let stderr = "";
   try {
-    dockerRun(workDirectory, [
+    await dockerRun(workDirectory, [
       "kicad-cli",
       "pcb",
       "drc",

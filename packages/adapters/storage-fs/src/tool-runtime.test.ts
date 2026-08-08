@@ -2,7 +2,7 @@ import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
-import { FileToolInvocationRegistry, NodeProcessPort } from "./tool-runtime.js";
+import { FileToolInvocationRegistry, NodeProcessPort, ToolBoundary } from "./tool-runtime.js";
 
 describe("NodeProcessPort", () => {
   it("records timeout and cancellation as result kinds", async () => {
@@ -12,19 +12,33 @@ describe("NodeProcessPort", () => {
       args: ["-e", "setTimeout(() => {}, 1000)"],
       timeoutMs: 10,
       maxOutputBytes: 1024,
+      killGraceMs: 50,
     });
     expect(timedOut.kind).toBe("timedOut");
 
     const controller = new AbortController();
     const pending = port.execute({
-      command: process.execPath,
+      command: "/bin/sh",
       args: ["-e", "setTimeout(() => {}, 1000)"],
       timeoutMs: 1000,
       maxOutputBytes: 1024,
+      killGraceMs: 50,
       signal: controller.signal,
     });
     controller.abort();
     expect((await pending).kind).toBe("cancelled");
+  });
+
+  it("escalates a timeout to SIGKILL after the grace period", async () => {
+    const result = await new NodeProcessPort().execute({
+      command: process.execPath,
+      args: ["-e", "process.on('SIGTERM', () => {}); setInterval(() => {}, 1000)"],
+      timeoutMs: 10,
+      maxOutputBytes: 1024,
+      killGraceMs: 0,
+    });
+    expect(result.kind).toBe("timedOut");
+    expect(result.signal).toBe("SIGKILL");
   });
 });
 
@@ -64,12 +78,87 @@ describe("FileToolInvocationRegistry", () => {
     });
     expect(second).toEqual(first);
     expect(executions).toBe(1);
-    const collision = await registry.execute(
-      { ...request, inputHash: `sha256:${"b".repeat(64)}` },
-      async () => ({ error }),
-    );
-    expect(collision.error?.code).toBe("reference-integrity");
+    await expect(
+      registry.execute({ ...request, inputHash: `sha256:${"b".repeat(64)}` }, async () => ({
+        error,
+      })),
+    ).rejects.toMatchObject({ code: "reference-integrity" });
     await registry.close();
     await rm(root, { recursive: true, force: true });
   });
+
+  it("does not rerun a real process on envelope replay", async () => {
+    const root = await mkdtemp(join(tmpdir(), "acd-tool-boundary-"));
+    const registry = new FileToolInvocationRegistry(join(root, "tool-invocations.jsonl"));
+    const boundary = new ToolBoundary(new NodeProcessPort(), registry);
+    const request = {
+      toolName: "node.test",
+      contractVersion: "0.1.0",
+      inputHash: `sha256:${"c".repeat(64)}`,
+      graphRevision: 0,
+      correlationId: "correlation-real",
+      idempotencyKey: "tool:node.test:once",
+      operationClass: "reversible" as const,
+      timeoutMs: 1000,
+      input: { marker: "once" },
+    };
+    const spec = {
+      command: process.execPath,
+      args: ["-e", "process.stdout.write('one')"],
+      timeoutMs: 1000,
+      maxOutputBytes: 1024,
+      killGraceMs: 50,
+    };
+    const metadata = {
+      toolVersion: process.version,
+      containerVersion: "test",
+      provenance: [{ kind: "tool-output" as const, locator: "node.test" }],
+    };
+    const first = await boundary.execute(request, spec, metadata);
+    const second = await boundary.execute(request, spec, metadata);
+    expect(second).toEqual(first);
+    expect(second.stdout).toBe("one");
+    await registry.close();
+    await rm(root, { recursive: true, force: true });
+  });
+
+  it("stops on a mid-stream corrupt record", async () => {
+    const root = await mkdtemp(join(tmpdir(), "acd-tool-corrupt-"));
+    const path = join(root, "tool-invocations.jsonl");
+    await (
+      await import("node:fs/promises")
+    ).writeFile(
+      path,
+      '{"idempotencyKey":"x","correlationId":"c","inputHash":"h","status":"completed","result":{}}\nnot-json\n',
+    );
+    const registry = new FileToolInvocationRegistry(path);
+    await expect(
+      registry.execute(
+        {
+          toolName: "test",
+          contractVersion: "0.1.0",
+          inputHash: `sha256:${"a".repeat(64)}`,
+          graphRevision: 0,
+          correlationId: "c",
+          idempotencyKey: "new",
+          operationClass: "read",
+          timeoutMs: 100,
+          input: {},
+        },
+        async () => ({ error: toolFailureForTest() }),
+      ),
+    ).rejects.toMatchObject({ code: "event-replay-failure" });
+    await rm(root, { recursive: true, force: true });
+  });
+});
+
+const toolFailureForTest = () => ({
+  kind: "error" as const,
+  code: "tool-failure" as const,
+  severity: "error" as const,
+  message: "test",
+  retryable: false,
+  recoverable: false,
+  context: {},
+  evidenceIds: [],
 });

@@ -6,6 +6,7 @@ export type ProcessSpec = {
   environment?: Readonly<Record<string, string>>;
   timeoutMs: number;
   maxOutputBytes: number;
+  killGraceMs: number;
   signal?: AbortSignal;
 };
 
