@@ -40,6 +40,7 @@
         "Evidence",
         "KnowledgeItem",
         "TaskLedgerEntry",
+        "Checkpoint",
         "VerificationResult",
         "Approval",
         "Waiver"
@@ -263,6 +264,91 @@
       },
       "additionalProperties": true
     },
+    "checkpoint": {
+      "type": "object",
+      "required": [
+        "id",
+        "type",
+        "revision",
+        "gate",
+        "inputRevision",
+        "inputHash",
+        "graphRevision",
+        "toolVersion",
+        "modelVersion",
+        "libraryVersion",
+        "containerVersion",
+        "provenance",
+        "measurementSystemQualification",
+        "fabProfileId",
+        "manufacturingProfileId",
+        "knowledgeItemStatuses",
+        "artifactHashes",
+        "verificationResultIds",
+        "eventPosition",
+        "executionEnvironment"
+      ],
+      "properties": {
+        "id": { "$ref": "#/$defs/id" },
+        "type": { "const": "Checkpoint" },
+        "revision": { "type": "integer", "minimum": 0 },
+        "gate": { "type": "string", "minLength": 1 },
+        "inputRevision": { "type": "integer", "minimum": 0 },
+        "inputHash": { "type": "string", "minLength": 1 },
+        "graphRevision": { "type": "integer", "minimum": 0 },
+        "toolVersion": { "type": "string", "minLength": 1 },
+        "modelVersion": { "type": "string", "minLength": 1 },
+        "libraryVersion": { "type": "string", "minLength": 1 },
+        "containerVersion": { "type": "string", "minLength": 1 },
+        "provenance": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/provenance" }
+        },
+        "measurementSystemQualification": {
+          "type": "object",
+          "required": ["status"],
+          "properties": {
+            "status": {
+              "type": "string",
+              "enum": ["unknown", "qualified", "unqualified"]
+            },
+            "evidenceIds": {
+              "type": "array",
+              "items": { "$ref": "#/$defs/id" }
+            }
+          },
+          "additionalProperties": false
+        },
+        "fabProfileId": { "type": "string", "minLength": 1 },
+        "manufacturingProfileId": { "type": "string", "minLength": 1 },
+        "knowledgeItemStatuses": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["knowledgeItemId", "status"],
+            "properties": {
+              "knowledgeItemId": { "$ref": "#/$defs/id" },
+              "status": { "type": "string", "minLength": 1 }
+            },
+            "additionalProperties": false
+          }
+        },
+        "artifactHashes": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1 }
+        },
+        "verificationResultIds": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/id" }
+        },
+        "eventPosition": { "type": "integer", "minimum": 0 },
+        "executionEnvironment": {
+          "type": "object",
+          "additionalProperties": true
+        }
+      },
+      "additionalProperties": true
+    },
     "budget": {
       "description": "A budget for a task or order. For scope total-order-cost, amount is the complete order cap including board fabrication, components, assembly, shipping, taxes, and any enclosure or mechanical-part orders.",
       "type": "object",
@@ -399,6 +485,10 @@
         {
           "if": { "properties": { "type": { "const": "TaskLedgerEntry" } } },
           "then": { "$ref": "#/$defs/taskLedgerEntry" }
+        },
+        {
+          "if": { "properties": { "type": { "const": "Checkpoint" } } },
+          "then": { "$ref": "#/$defs/checkpoint" }
         },
         {
           "if": { "properties": { "type": { "const": "VerificationResult" } } },

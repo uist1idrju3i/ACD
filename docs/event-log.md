@@ -41,7 +41,8 @@ Phase 0では少なくとも次を扱います。
 - `verification.started`
 - `verification.completed`
 - `verification.stale`
-- `checkpoint.created`
+- `checkpoint.created`：gate境界のcheckpointを記録したイベント。payloadはcheckpoint IDと、
+  入力前提、検証結果、成果物、event位置、実行環境を含む。
 - `run.stopped`
 - `run.resumed`
 - `fab.feedback.received`：記録済みfab reportの入力と、対象revision・provenanceを含む
@@ -82,9 +83,12 @@ Phase 0では少なくとも次を扱います。
 
 ## Checkpoint
 
-checkpointはイベント位置、対象revision、入力hash、成果物hash、検証結果ID、
-実行環境を参照します。再開時は最後の検証済みcheckpointから開始し、未確定の
-副作用を再実行する前にidempotency keyを確認します。
+checkpointはgate境界単位で作成し、イベント位置、入力revision／hash、設計グラフrevision、
+tool／model／library／container version、provenance、measurement-system qualification、
+fab／manufacturing profile、参照KnowledgeItem status、成果物hash、検証結果ID、実行環境を
+記録します。再開時は最後の検証済みcheckpointから開始し、未確定の副作用を再実行する
+前にidempotency keyを確認します。入力や実行前提が変化したcheckpointはstaleとして
+再利用せず、unknownまたは未検証のcheckpointからは再開しません。
 
 ## Phase 0の範囲と将来拡張
 

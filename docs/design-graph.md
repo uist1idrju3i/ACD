@@ -36,6 +36,7 @@
 | `Evidence`             | データシート、fabルール、シミュレーション、測定       | evidence kind, observations, provenance        |
 | `KnowledgeItem`        | 再利用可能な標準、修正、経験則                        | source events, scope, confidentiality, content |
 | `TaskLedgerEntry`      | 実行状態、依存、予算、停止、完了条件                  | graph revision, checkpoint, retry budget       |
+| `Checkpoint`           | gate境界の入力、実行環境、検証済み成果物と再開位置    | gate, input hash, verification results         |
 | `VerificationResult`   | 検証ゲートの入力、結果、所見                          | gate, status, tool version, evidence           |
 | `Approval`             | 人間または認可主体による範囲付き承認                  | approval ID, scope, expiry                     |
 | `Waiver`               | 検証警告・免除の理由と期限                            | gate, risk, approval ID, expiry                |
