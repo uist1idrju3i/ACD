@@ -23,7 +23,10 @@ export const normalizedArtifact = (content: Buffer): Buffer =>
       .replace(/("CreationDate":\s*)"[^"]*"/g, '$1"TIMESTAMP"')
       .replace(/(G04 Created by KiCad .* date )[^\r\n]*/g, "$1TIMESTAMP")
       .replace(/(; DRILL file KiCad .* date )[^\r\n]*/g, "$1TIMESTAMP")
-      .replace(/(; #@! TF\.CreationDate,)[^\r\n]*/g, "$1TIMESTAMP"),
+      .replace(/(; #@! TF\.CreationDate,)[^\r\n]*/g, "$1TIMESTAMP")
+      .replace(/(ERC report \()[^,\r\n]+(, Encoding UTF8\))/g, "$1TIMESTAMP$2")
+      .replace(/(\(date\s+")[^"]+("\))/g, "$1TIMESTAMP$2")
+      .replace(/("sha256":\s*)"[^"]+",(\s*"normalizedSha256":\s*")([^"]+)(")/g, '$1"$3",$2$3$4'),
   );
 
 export const runPipelineStages = async (

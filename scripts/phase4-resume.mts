@@ -406,13 +406,27 @@ const runWorker = async (runRoot: string): Promise<void> => {
   }
 };
 
-const eventComparable = (event: EventEnvelope): unknown => {
+// Interrupt control events are excluded; revisions are renumbered by position
+// in the remaining event sequence so those excluded events cannot shift them.
+const eventComparable = (event: EventEnvelope, comparableIndex: number): unknown => {
   if (event.type === "checkpoint.created") {
     const payload = structuredClone(event.payload) as { checkpoint?: Checkpoint };
     if (payload.checkpoint) delete payload.checkpoint.eventPosition;
-    return { eventId: event.eventId, type: event.type, payload };
+    return {
+      eventId: event.eventId,
+      type: event.type,
+      baseRevision: comparableIndex,
+      resultRevision: comparableIndex + 1,
+      payload,
+    };
   }
-  return { eventId: event.eventId, type: event.type, payload: event.payload };
+  return {
+    eventId: event.eventId,
+    type: event.type,
+    baseRevision: comparableIndex,
+    resultRevision: comparableIndex + 1,
+    payload: event.payload,
+  };
 };
 
 const runChild = (

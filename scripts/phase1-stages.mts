@@ -8,9 +8,12 @@ import {
   materializeLibraryPatchInBoardSource,
   placeFixture,
   parseAllFootprintSources,
+  parseSpecctraSes,
   projectToKicad,
+  renderGoldenBoard,
   verifyLibraryPatchGeometry,
 } from "../packages/adapters/kicad/src/index.js";
+import { normalizedArtifact } from "./golden-shared.mts";
 import {
   buildSpiceAnalyses,
   evaluateSpiceRuns,
@@ -729,19 +732,44 @@ const stage_routing = async (context: StageContext): Promise<void> => {
   context.sesHashB = sesHashB;
   if (sesHashA !== sesHashB)
     throw new Error(`verification-failed: nondeterministic SES hashes ${sesHashA} != ${sesHashB}`);
-  const importPython = [
-    "import pcbnew",
-    "b=pcbnew.LoadBoard('/work/project/design.kicad_pcb')",
-    "pcbnew.ImportSpecctraSES(b,'/work/project/golden-a.ses')",
-    "pcbnew.SaveBoard('/work/project/routed.kicad_pcb',b)",
-  ].join("; ");
-  docker(context, ["python3", "-c", importPython]);
+  const routeModel = parseSpecctraSes(sesA.toString(), (netName) => {
+    if (!context.fixture.nets.some((net) => net.name === netName)) {
+      throw new Error(`reference-integrity: SES net cannot be resolved: ${netName}`);
+    }
+    return netName;
+  });
+  await writeFile(
+    join(context.projectRoot, "ses-route-provenance.json"),
+    `${JSON.stringify(routeModel.provenance, null, 2)}\n`,
+    "utf8",
+  );
+  await writeFile(
+    join(context.projectRoot, "routed.kicad_pcb"),
+    renderGoldenBoard(context.fixture, routeModel),
+    "utf8",
+  );
+  await copyFile(
+    join(context.projectRoot, "design.kicad_pro"),
+    join(context.projectRoot, "routed.kicad_pro"),
+  );
+  await copyFile(
+    join(context.projectRoot, "design.kicad_prl"),
+    join(context.projectRoot, "routed.kicad_prl"),
+  );
   pass(context, 9, {
     dsnHash: hash((await readFile(join(context.projectRoot, "golden.dsn"))).toString()),
     sesHash: context.sesHashA,
     deterministicSes: true,
     antennaKeepout: { source: "U1 official courtyard", points: antennaPoints },
     freerouting: "2.2.4",
+    sesRoute: {
+      resolutionUnit: routeModel.provenance.resolutionUnit,
+      resolution: routeModel.provenance.resolution,
+      trackCount: routeModel.tracks.length,
+      viaCount: routeModel.vias.length,
+      canonicalOrder:
+        "(netId, layer, start.xMm, start.yMm, end.xMm, end.yMm, widthMm) for tracks; (netId, at.xMm, at.yMm, diameterMm, drillMm, layers) for vias",
+    },
   });
 };
 
@@ -809,6 +837,12 @@ const stage_manufacturing = async (context: StageContext): Promise<void> => {
         dsnRules: { trackWidthMm: 0.25, clearanceMm: 0.127 },
         bom: context.fixture.bom,
         layerVerification: { reopened: true, layers: ["F.Cu", "B.Cu"] },
+        artifactHashSemantics: {
+          sha256: "SHA-256 of the raw generated artifact bytes",
+          normalizedSha256:
+            "SHA-256 after timestamp-only normalization for deterministic comparison",
+          bytes: "Length of the raw generated artifact bytes",
+        },
         artifactHashes: Object.fromEntries(
           await Promise.all(
             (await readdir(join(context.projectRoot, "manufacturing"), { withFileTypes: true }))
@@ -817,7 +851,14 @@ const stage_manufacturing = async (context: StageContext): Promise<void> => {
               .sort()
               .map(async (name) => {
                 const content = await readFile(join(context.projectRoot, "manufacturing", name));
-                return [name, { sha256: hash(content.toString()), bytes: content.byteLength }];
+                return [
+                  name,
+                  {
+                    sha256: hash(content),
+                    normalizedSha256: hash(normalizedArtifact(content)),
+                    bytes: content.byteLength,
+                  },
+                ];
               }),
           ),
         ),
