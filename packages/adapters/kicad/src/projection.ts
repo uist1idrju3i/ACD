@@ -1,8 +1,8 @@
 import { mkdir, writeFile } from "node:fs/promises";
 import { join } from "node:path";
-import type { DesignGraph } from "@acd/graph-core";
+import type { BoardTrack, BoardVia, DesignGraph } from "@acd/graph-core";
 import type { Phase1Fixture } from "@acd/schema";
-import { projectGraphToKicad } from "./graph-projection.js";
+import { projectGraphToKicad, renderBoardRoutes } from "./graph-projection.js";
 import { parseFootprintPads, verifyLibrarySnapshot } from "./library.js";
 import { snapshotFiles, snapshotManifest } from "./library-snapshot.js";
 import {
@@ -238,7 +238,10 @@ ${tracks}
 )`;
 };
 
-export const renderGoldenBoard = (fixture: Phase1Fixture): string => {
+export const renderGoldenBoard = (
+  fixture: Phase1Fixture,
+  routes: { tracks: BoardTrack[]; vias: BoardVia[] } = { tracks: [], vias: [] },
+): string => {
   if (fixture.fixtureKind !== "golden") {
     throw new KicadProjectionError(`expected golden fixture, received ${fixture.fixtureKind}`);
   }
@@ -259,6 +262,12 @@ export const renderGoldenBoard = (fixture: Phase1Fixture): string => {
       ),
     )
     .join("\n");
+  const netCode = (netId: string): number => {
+    const net = fixture.nets.find((candidate) => candidate.name === netId);
+    if (!net) throw new KicadProjectionError(`route references unknown fixture net ${netId}`);
+    return fixture.nets.indexOf(net) + 1;
+  };
+  const renderedRoutes = renderBoardRoutes(routes.tracks, routes.vias, netCode);
   return `(kicad_pcb
   (version 20240108)
   (generator pcbnew)
@@ -286,6 +295,7 @@ ${netLines.join("\n")}
     (layer "Edge.Cuts")
   )
 ${footprints}
+${renderedRoutes}
 )`;
 };
 
@@ -790,7 +800,7 @@ export const projectToKicad = async (
     }
     await writeFile(
       join(directory, "fp-lib-table"),
-      renderFootprintLibraryTable(patch ? join(directory, "library-overlays") : undefined),
+      renderFootprintLibraryTable(patch ? "${KIPRJMOD}/library-overlays" : undefined),
       "utf8",
     );
     return {
@@ -828,7 +838,7 @@ export const projectToKicad = async (
   if (isPhase1Fixture(graph)) {
     await writeFile(
       join(directory, "fp-lib-table"),
-      renderFootprintLibraryTable(patch ? join(directory, "library-overlays") : undefined),
+      renderFootprintLibraryTable(patch ? "${KIPRJMOD}/library-overlays" : undefined),
       "utf8",
     );
     await writeFile(join(directory, "sym-lib-table"), renderSymbolLibraryTable(), "utf8");

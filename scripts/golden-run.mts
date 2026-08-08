@@ -1,4 +1,3 @@
-import { createHash } from "node:crypto";
 import { execFileSync } from "node:child_process";
 import { mkdir, readFile, readdir, rm, writeFile } from "node:fs/promises";
 import { join, relative, resolve } from "node:path";
@@ -19,6 +18,7 @@ import {
   projectToKicad,
 } from "../packages/adapters/kicad/src/index.js";
 import { loadSchemaValidator, type PatchEnvelope } from "../packages/schema/src/index.js";
+import { normalizedArtifact, sha256 } from "./golden-shared.mts";
 
 const root = resolve(import.meta.dirname, "..");
 const goldenRoot = join(root, "fixtures/golden");
@@ -50,8 +50,7 @@ type Observed = {
   evidence: Record<string, unknown>;
 };
 
-const hash = (content: string | Buffer): string =>
-  `sha256:${createHash("sha256").update(content).digest("hex")}`;
+const hash = sha256;
 
 const dockerRun = (workDirectory: string, args: string[]): string =>
   execFileSync(
@@ -71,17 +70,6 @@ const dockerRun = (workDirectory: string, args: string[]): string =>
       ...args,
     ],
     { cwd: root, encoding: "utf8", stdio: ["ignore", "pipe", "pipe"] },
-  );
-
-const normalizedArtifact = (content: Buffer): Buffer =>
-  Buffer.from(
-    content
-      .toString("utf8")
-      .replace(/(%TF\.CreationDate,|Created on |CreationDate,)[^\r\n]*/g, "$1TIMESTAMP")
-      .replace(/("CreationDate":\s*)"[^"]*"/g, '$1"TIMESTAMP"')
-      .replace(/(G04 Created by KiCad .* date )[^\r\n]*/g, "$1TIMESTAMP")
-      .replace(/(; DRILL file KiCad .* date )[^\r\n]*/g, "$1TIMESTAMP")
-      .replace(/(; #@! TF\.CreationDate,)[^\r\n]*/g, "$1TIMESTAMP"),
   );
 
 const filesUnder = async (directory: string): Promise<string[]> => {

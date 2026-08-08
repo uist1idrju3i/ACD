@@ -1,0 +1,1368 @@
+import { execFileSync, spawnSync } from "node:child_process";
+import { copyFile, mkdir, readFile, readdir, writeFile } from "node:fs/promises";
+import { join, resolve } from "node:path";
+import {
+  compareNetlists,
+  adoptVerifiedLibraryPatch,
+  createLibraryPatchCandidate,
+  materializeLibraryPatchInBoardSource,
+  placeFixture,
+  parseAllFootprintSources,
+  parseSpecctraSes,
+  projectToKicad,
+  renderGoldenBoard,
+  verifyLibraryPatchGeometry,
+} from "../packages/adapters/kicad/src/index.js";
+import { normalizedArtifact } from "./golden-shared.mts";
+import {
+  buildSpiceAnalyses,
+  evaluateSpiceRuns,
+  measurementMargin,
+  parseMeasurement,
+  type SpiceRun,
+} from "../packages/adapters/spice/src/index.js";
+import {
+  applyFixturePatch,
+  buildTestPlan,
+  createFabFeedbackReceivedEvent,
+  createKnowledgeCandidate,
+  createKnowledgeCandidateCreatedEvent,
+  createKnowledgeTransitionedEvent,
+  createKnowledgeAppliedEvent,
+  assertKnowledgeApplicationsComplete,
+  createTargetDesignKnowledgeContext,
+  evaluateKnowledgeApplications,
+  recordKnowledgeApplications,
+  evaluateDesignRationale,
+  evaluateFixtureGates,
+  failedFindings,
+  lintElectricalTopology,
+  recordedProposer,
+  repairLoopEvidence,
+  rulesForFabProfile,
+  runRepairLoop,
+  transitionKnowledgeItem,
+  InMemoryEventLog,
+  unresolvedFindings,
+  unresolvedRationaleFindings,
+  unresolvedTestPlanFindings,
+  compareIds,
+  reproductionConditionsForFabProfile,
+  type FixturePatchOperation,
+  type RecordedProposal,
+} from "../packages/graph-core/src/index.js";
+import {
+  FixtureFabFeedbackReader,
+  fabFeedbackUnknownError,
+  intakeFabFeedback,
+  referenceIndexFromPhase1Fixture,
+} from "../packages/adapters/fab-feedback/src/index.js";
+import {
+  loadSchemaValidator,
+  loadGateMatrix,
+  validatePhase1FixtureReferences,
+} from "../packages/schema/src/index.js";
+
+import type { ACDPhase1Fixture } from "../packages/schema/src/generated/phase1-fixture.js";
+import preOrder from "./pre-order.ts";
+import { sha256 } from "./golden-shared.mts";
+
+export type JsonValue =
+  | string
+  | number
+  | boolean
+  | null
+  | JsonValue[]
+  | { [key: string]: JsonValue };
+export type JsonObject = { [key: string]: JsonValue };
+export type Result = {
+  gate: number;
+  name: string;
+  status: "passed" | "deferred" | "failed";
+  evidence?: JsonObject;
+  reason?: string;
+};
+type KnowledgeState = {
+  candidate: Awaited<ReturnType<typeof createKnowledgeCandidate>>;
+  reviewed: Awaited<ReturnType<typeof transitionKnowledgeItem>>;
+  adopted: Awaited<ReturnType<typeof transitionKnowledgeItem>>;
+};
+export type StageContext = {
+  fixture: ACDPhase1Fixture;
+  artifactRoot: string;
+  projectRoot: string;
+  gateMatrix: Awaited<ReturnType<typeof loadGateMatrix>>;
+  gateIds: string[];
+  results: Result[];
+  lint?: ReturnType<typeof lintElectricalTopology>;
+  fabFeedback?: ReturnType<typeof intakeFabFeedback>;
+  fabFeedbackReport?: Awaited<ReturnType<FixtureFabFeedbackReader["read"]>>;
+  knowledgeStates: KnowledgeState[];
+  knowledgeEvents: Awaited<ReturnType<InMemoryEventLog["readAll"]>>;
+  canonicalNetlistHash?: string;
+  sesHashA?: string;
+  sesHashB?: string;
+  adoptedKnowledgeForLibraryPatch?: Awaited<ReturnType<typeof transitionKnowledgeItem>>;
+  adoptedLibraryPatch?: ReturnType<typeof createLibraryPatchCandidate>;
+};
+export type StageDefinition = {
+  id: string;
+  gate: number;
+  run: (context: StageContext) => Promise<void>;
+};
+const root = resolve(import.meta.dirname, "..");
+let graphValidator: Awaited<ReturnType<typeof loadSchemaValidator>> | undefined;
+const image =
+  process.env.KICAD_IMAGE ??
+  "kicad/kicad@sha256:182c8005cb775a2c448a4c18681d489f1ff472a761885eba3e08b07e3c0564de";
+const hash = sha256;
+const run = (command: string, args: string[]): string =>
+  execFileSync(command, args, { cwd: root, encoding: "utf8", stdio: ["ignore", "pipe", "pipe"] });
+const dockerArgs = (context: StageContext, args: string[]): string[] => [
+  "run",
+  "--rm",
+  "--user",
+  "root",
+  "-e",
+  "HOME=/tmp",
+  "-e",
+  "KICAD_CONFIG_HOME=/tmp/kicad-config",
+  "-v",
+  `${context.artifactRoot}:/work`,
+  image,
+  ...args,
+];
+const docker = (context: StageContext, args: string[]): string =>
+  run("docker", dockerArgs(context, args));
+const dockerOutput = (
+  context: StageContext,
+  args: string[],
+): { stdout: string; stderr: string } => {
+  const result = spawnSync("docker", dockerArgs(context, args), {
+    cwd: root,
+    encoding: "utf8",
+    stdio: ["ignore", "pipe", "pipe"],
+  });
+  if (result.error) throw result.error;
+  if (result.status !== 0)
+    throw Object.assign(new Error(`docker ${args.join(" ")} exited ${String(result.status)}`), {
+      stdout: result.stdout,
+      stderr: result.stderr,
+      status: result.status ?? 1,
+    });
+  return { stdout: result.stdout, stderr: result.stderr };
+};
+const freerouting = (context: StageContext, args: string[]): string =>
+  run("docker", [
+    "run",
+    "--rm",
+    "--user",
+    "root",
+    "-e",
+    "HOME=/tmp",
+    "-v",
+    `${context.artifactRoot}:/work`,
+    "ghcr.io/freerouting/freerouting@sha256:0d010c6bf13b562551e8cb41fb298090006033fa2850e5bfc678c98ecf47111e",
+    "java",
+    "-jar",
+    "/app/freerouting-executable.jar",
+    ...args,
+  ]);
+const enter = (context: StageContext, gate: number): void => {
+  if (!context.gateMatrix.gates.some((candidate) => candidate.order === gate))
+    throw new Error(`reference-integrity: unknown gate ${gate}`);
+};
+const pass = (context: StageContext, gate: number, evidence: JsonObject): void => {
+  const gateDefinition = context.gateMatrix.gates.find((candidate) => candidate.order === gate);
+  if (!gateDefinition) throw new Error(`reference-integrity: unknown gate ${gate}`);
+  context.results.push({ gate, name: gateDefinition.name, status: "passed", evidence });
+};
+
+const stage_fixture_reference = async (context: StageContext): Promise<void> => {
+  enter(context, 1);
+  const referenceErrors = validatePhase1FixtureReferences(context.fixture);
+  if (referenceErrors.length > 0) throw new Error(referenceErrors.join("; "));
+  pass(context, 1, {
+    fixture: context.fixture.fixtureId,
+    schemaVersion: context.fixture.schemaVersion,
+  });
+};
+
+const stage_semantic_input = async (context: StageContext): Promise<void> => {
+  pass(context, 2, {
+    status: "passed",
+    note: "Phase 1 golden uses the typed fixture as the graph semantic boundary",
+  });
+};
+
+const stage_bom = async (context: StageContext): Promise<void> => {
+  enter(context, 3);
+  for (const line of context.fixture.bom) {
+    if (
+      !line.mpn ||
+      !line.manufacturer ||
+      !line.supplier ||
+      !line.sku ||
+      line.quantity < 1 ||
+      !line.availability ||
+      !line.lifecycle ||
+      line.availability === "unknown" ||
+      line.lifecycle === "unknown" ||
+      line.lifecycle === "eol"
+    ) {
+      throw new Error(`order-relevant BOM unknown for ${line.partId}`);
+    }
+  }
+  pass(context, 3, {
+    parts: context.fixture.parts.length,
+    bomLines: context.fixture.bom.length,
+    source: "fixture-provided AVL",
+  });
+};
+
+const stage_placement = async (context: StageContext): Promise<void> => {
+  enter(context, 4);
+  const placement = placeFixture(context.fixture);
+  pass(context, 4, {
+    components: placement.length,
+    deterministicSeed: context.fixture.placementConstraints.seed,
+    board: context.fixture.requirement.board as unknown as JsonValue,
+  });
+};
+
+const stage_canonical_netlist = async (context: StageContext): Promise<void> => {
+  enter(context, 5);
+  const canonical = compareNetlists(context.fixture, "", "");
+  const canonicalHash = hash(JSON.stringify(canonical.expected));
+  context.canonicalNetlistHash = canonicalHash;
+  pass(context, 5, {
+    pins: canonical.expected.length,
+    canonicalNetlistHash: canonicalHash,
+  });
+};
+
+const stage_electrical_lint = async (context: StageContext): Promise<void> => {
+  enter(context, 14);
+  context.lint = lintElectricalTopology(context.fixture);
+  if (context.lint.verdict !== "pass") {
+    throw new Error(
+      `verification-failed: electrical lint ${context.lint.verdict}: ${JSON.stringify(failedFindings(context.lint))}`,
+    );
+  }
+  pass(context, 14, {
+    verdict: context.lint.verdict,
+    rulesEvaluated: context.lint.rulesEvaluated.length,
+    findings: context.lint.findings.length,
+    findingsHash: hash(JSON.stringify(context.lint.findings)),
+  });
+};
+
+const stage_design_rationale = async (context: StageContext): Promise<void> => {
+  enter(context, 15);
+  const rationale = evaluateDesignRationale(context.fixture);
+  if (rationale.verdict !== "pass") {
+    throw new Error(
+      `verification-failed: design rationale ${rationale.verdict}: ${JSON.stringify(
+        unresolvedRationaleFindings(rationale),
+      )}`,
+    );
+  }
+  pass(context, 15, {
+    verdict: rationale.verdict,
+    rulesEvaluated: rationale.rulesEvaluated.length,
+    subjects: rationale.coverage.length,
+    findings: rationale.findings.length,
+    findingsHash: hash(JSON.stringify(rationale.findings)),
+  });
+};
+
+const stage_test_plan = async (context: StageContext): Promise<void> => {
+  enter(context, 16);
+  const testPlan = buildTestPlan(context.fixture, context.lint.rulesEvaluated, context.gateIds);
+  if (testPlan.verdict !== "pass") {
+    throw new Error(
+      `verification-failed: test plan ${testPlan.verdict}: ${JSON.stringify(
+        unresolvedTestPlanFindings(testPlan),
+      )}`,
+    );
+  }
+  await writeFile(
+    join(context.artifactRoot, "test-plan.json"),
+    `${JSON.stringify(testPlan.items, null, 2)}\n`,
+  );
+  pass(context, 16, {
+    verdict: testPlan.verdict,
+    rulesEvaluated: testPlan.rulesEvaluated.length,
+    testItems: testPlan.items.length,
+    measurementItems: testPlan.items.filter((item) => item.method === "measurement").length,
+    testPlanHash: hash(JSON.stringify(testPlan.items)),
+    artifact: "test-plan.json",
+  });
+};
+
+const stage_repair_loop = async (context: StageContext): Promise<void> => {
+  enter(context, 17);
+  const repairCases = JSON.parse(
+    await readFile(join(root, "fixtures/phase2/repair-cases.json"), "utf8"),
+  ) as {
+    cases: { caseId: string; injection: FixturePatchOperation[]; expectedRuleIds: string[] }[];
+  };
+  const recordings = JSON.parse(
+    await readFile(join(root, "fixtures/phase2/repair-recordings.json"), "utf8"),
+  ) as { proposals: RecordedProposal[] };
+  const proposer = recordedProposer(recordings.proposals);
+  const repairs = repairCases.cases.map((entry) => {
+    const injected = applyFixturePatch(context.fixture, entry.injection);
+    const detected = unresolvedFindings(evaluateFixtureGates(injected, context.gateIds));
+    const missed = entry.expectedRuleIds.filter(
+      (ruleId) => !detected.some((finding) => finding.ruleId === ruleId),
+    );
+    if (missed.length > 0) {
+      throw new Error(
+        `verification-failed: ${entry.caseId} was not detected by ${missed.join(", ")}`,
+      );
+    }
+    const result = runRepairLoop({ fixture: injected, proposer, gateIds: context.gateIds });
+    if (result.status !== "repaired") {
+      throw new Error(
+        `verification-failed: ${entry.caseId} ${result.status}: ${result.stopReason ?? ""}`,
+      );
+    }
+    if (unresolvedFindings(evaluateFixtureGates(result.fixture, context.gateIds)).length > 0) {
+      throw new Error(`verification-failed: ${entry.caseId} still has unresolved findings`);
+    }
+    return { caseId: entry.caseId, detected: detected.length, ...repairLoopEvidence(result) };
+  });
+  await writeFile(
+    join(context.artifactRoot, "repair-loop.json"),
+    `${JSON.stringify(repairs, null, 2)}\n`,
+  );
+  pass(context, 17, {
+    cases: repairs.length,
+    repaired: repairs.filter((entry) => (entry as { status?: string }).status === "repaired")
+      .length,
+    rejectedProposals: repairs.reduce(
+      (total, entry) => total + Number((entry as { rejected?: number }).rejected ?? 0),
+      0,
+    ),
+    recordingsHash: hash(JSON.stringify(recordings.proposals)),
+    artifact: "repair-loop.json",
+  });
+};
+
+const stage_spice = async (context: StageContext): Promise<void> => {
+  enter(context, 18);
+  const spiceRoot = join(context.artifactRoot, "spice");
+  await mkdir(spiceRoot, { recursive: true });
+  const spicePlan = buildSpiceAnalyses(context.fixture);
+  const analyses = spicePlan.analyses;
+  if (analyses.length === 0) throw new Error("verification-failed: no SPICE analysis was derived");
+  const spiceRuns: SpiceRun[] = [];
+  for (const analysis of analyses) {
+    const deckName = `${analysis.id.replace(/[^a-z0-9]+/g, "-")}.cir`;
+    await writeFile(join(spiceRoot, deckName), analysis.deck);
+    let stdout = "";
+    let exitCode = 0;
+    try {
+      // ngspice prints its banner, version and most diagnostics on stderr even when the run
+      // succeeds, so the log keeps both streams.
+      const output = dockerOutput(context, ["ngspice", "-b", `/work/spice/${deckName}`]);
+      stdout = `${output.stdout}${output.stderr}`;
+    } catch (error) {
+      const failure = error as { stdout?: string; stderr?: string; status?: number };
+      stdout = `${failure.stdout ?? ""}${failure.stderr ?? ""}`;
+      exitCode = failure.status ?? 1;
+    }
+    await writeFile(join(spiceRoot, `${deckName}.log`), stdout);
+    spiceRuns.push({ analysisId: analysis.id, stdout, exitCode });
+  }
+  const engineVersion = /ngspice-([0-9.]+)/.exec(spiceRuns[0]?.stdout ?? "")?.[1];
+  const spice = evaluateSpiceRuns(spicePlan, spiceRuns, engineVersion);
+  if (spice.verdict !== "pass") {
+    throw new Error(
+      `verification-failed: spice ${spice.verdict}: ${JSON.stringify(
+        spice.findings.filter((finding) => finding.status !== "pass"),
+      )}`,
+    );
+  }
+  const spiceEvidence = analyses.map((analysis) => {
+    const stdout = spiceRuns.find((run) => run.analysisId === analysis.id)?.stdout ?? "";
+    const value = parseMeasurement(stdout, analysis.measurement.name);
+    return {
+      analysisId: analysis.id,
+      subject: analysis.subject,
+      measurement: analysis.measurement,
+      observed: value,
+      margin: value === undefined ? undefined : measurementMargin(analysis, value),
+      models: analysis.models,
+      assumptions: analysis.assumptions,
+      testItemId: analysis.testItemId,
+      deckHash: hash(analysis.deck),
+      outputHash: hash(stdout),
+    };
+  });
+  await writeFile(join(spiceRoot, "results.json"), `${JSON.stringify(spiceEvidence, null, 2)}\n`);
+  pass(context, 18, {
+    engine: "ngspice",
+    engineVersion,
+    image,
+    verdict: spice.verdict,
+    analyses: analyses.length,
+    rulesEvaluated: spice.rulesEvaluated.length,
+    resultsHash: hash(JSON.stringify(spiceEvidence)),
+    artifact: "spice/results.json",
+  });
+};
+
+const stage_fab_feedback = async (context: StageContext): Promise<void> => {
+  enter(context, 19);
+  const fabFeedbackReader = new FixtureFabFeedbackReader(
+    join(root, "fixtures/phase3/fab-report-prototype-1.json"),
+  );
+  const fabFeedbackReport = (context.fabFeedbackReport = await fabFeedbackReader.read());
+  const fabFeedback = (context.fabFeedback = intakeFabFeedback(
+    fabFeedbackReport,
+    referenceIndexFromPhase1Fixture(context.fixture),
+  ));
+  const fabFeedbackUnknown =
+    context.fabFeedback.verdict === "unknown"
+      ? fabFeedbackUnknownError(context.fabFeedback.evidence.value.unknownFindingIds)
+      : undefined;
+  const fabFeedbackEventLog = new InMemoryEventLog();
+  await fabFeedbackEventLog.append(
+    createFabFeedbackReceivedEvent({
+      eventId: "event:fab-feedback:prototype-1-jlcpcb-001",
+      occurredAt: "2026-01-01T00:00:00.000Z",
+      actor: "fixture:fab-report-prototype-1-jlcpcb",
+      projectId: context.fixture.fixtureId,
+      baseRevision: 0,
+      resultRevision: 0,
+      report: context.fabFeedbackReport,
+      intake: context.fabFeedback,
+    }),
+  );
+  await writeFile(
+    join(context.artifactRoot, "fab-feedback.json"),
+    `${JSON.stringify(
+      {
+        report: fabFeedbackReport,
+        intake: fabFeedback,
+        ...(fabFeedbackUnknown
+          ? {
+              unknown: {
+                code: fabFeedbackUnknown.code,
+                severity: fabFeedbackUnknown.severity,
+                action: fabFeedbackUnknown.context.action,
+                findingIds: fabFeedbackUnknown.context.findingIds,
+              },
+            }
+          : {}),
+        events: await fabFeedbackEventLog.readAll(),
+      },
+      null,
+      2,
+    )}\n`,
+  );
+  if (context.fabFeedback.verdict === "unknown") {
+    throw fabFeedbackUnknownError(context.fabFeedback.evidence.value.unknownFindingIds);
+  }
+  pass(context, 19, {
+    reportId: context.fabFeedbackReport.reportId,
+    fixtureDerived: context.fabFeedbackReport.source.fixtureDerived,
+    findings: context.fabFeedback.findings.length,
+    derivationHash: context.fabFeedback.derivationHash,
+    evidence: context.fabFeedback.evidence,
+    artifact: "fab-feedback.json",
+  });
+};
+
+const stage_knowledge_lifecycle = async (context: StageContext): Promise<void> => {
+  enter(context, 20);
+  const passingFindings = context.fabFeedback.findings
+    .filter((finding) => finding.verdict === "pass")
+    .sort((left, right) => compareIds(left.findingId, right.findingId));
+  if (passingFindings.length === 0) {
+    throw new Error("verification-failed: fab feedback produced no passing findings");
+  }
+  const knowledgeEventLog = new InMemoryEventLog();
+  context.knowledgeStates = [];
+  const validateKnowledgeItem = (
+    knowledgeItem: (typeof context.knowledgeStates)[number]["candidate"],
+  ): void => {
+    const graph = {
+      schemaVersion: "0.1.0-draft",
+      project: { id: context.fixture.fixtureId, type: "Project", revision: 0 },
+      entities: [knowledgeItem],
+    };
+    if (!graphValidator)
+      throw new Error("schema-invalid: design graph validator is not configured");
+    if (!graphValidator(graph)) {
+      throw new Error(
+        `schema-invalid: knowledge item ${knowledgeItem.id}: ${(graphValidator.errors ?? [])
+          .map((error) => `${error.instancePath || "/"} ${error.message ?? "invalid"}`)
+          .join("; ")}`,
+      );
+    }
+  };
+  let knowledgeRevision = 0;
+  for (const finding of passingFindings) {
+    const candidate = createKnowledgeCandidate({
+      finding,
+      report: context.fabFeedbackReport,
+      sourceEventId: "event:fab-feedback:prototype-1-jlcpcb-001",
+      designRevision: context.fabFeedbackReport.target.designRevision,
+      derivationInputHash: context.fabFeedback.evidence.value.derivationInputHash,
+      derivationOutputHash: context.fabFeedback.evidence.value.derivationOutputHash,
+      createdAt: "2026-01-01T00:00:00.000Z",
+    });
+    const reviewed = transitionKnowledgeItem(candidate, {
+      status: "reviewed",
+      now: "2026-01-01T00:00:00.000Z",
+    });
+    const adopted = transitionKnowledgeItem(reviewed, {
+      status: "adopted",
+      now: "2026-01-01T00:00:00.000Z",
+    });
+    try {
+      validateKnowledgeItem(candidate);
+      validateKnowledgeItem(reviewed);
+      validateKnowledgeItem(adopted);
+    } catch (error) {
+      await writeFile(
+        join(context.artifactRoot, "knowledge.json"),
+        `${JSON.stringify(
+          {
+            knowledgeStates: context.knowledgeStates,
+            failure: {
+              code: "schema-invalid",
+              message: error instanceof Error ? error.message : String(error),
+            },
+          },
+          null,
+          2,
+        )}\n`,
+      );
+      throw error;
+    }
+    context.knowledgeStates.push({ candidate, reviewed, adopted });
+    if (finding.references.ruleId === "mask-sliver-min") {
+      context.adoptedKnowledgeForLibraryPatch = adopted;
+    }
+    await knowledgeEventLog.append(
+      createKnowledgeCandidateCreatedEvent({
+        eventId: `event:knowledge:candidate:prototype-1:${finding.findingId}`,
+        occurredAt: "2026-01-01T00:00:00.000Z",
+        actor: "fixture:fab-report-prototype-1-jlcpcb",
+        projectId: context.fixture.fixtureId,
+        baseRevision: knowledgeRevision,
+        resultRevision: knowledgeRevision + 1,
+        knowledgeItem: candidate,
+      }),
+    );
+    knowledgeRevision += 1;
+    await knowledgeEventLog.append(
+      createKnowledgeTransitionedEvent({
+        eventId: `event:knowledge:reviewed:prototype-1:${finding.findingId}`,
+        occurredAt: "2026-01-01T00:00:00.000Z",
+        actor: "fixture:fab-report-prototype-1-jlcpcb",
+        projectId: context.fixture.fixtureId,
+        baseRevision: knowledgeRevision,
+        resultRevision: knowledgeRevision + 1,
+        knowledgeItem: reviewed,
+        previousStatus: "candidate",
+      }),
+    );
+    knowledgeRevision += 1;
+    await knowledgeEventLog.append(
+      createKnowledgeTransitionedEvent({
+        eventId: `event:knowledge:adopted:prototype-1:${finding.findingId}`,
+        occurredAt: "2026-01-01T00:00:00.000Z",
+        actor: "fixture:fab-report-prototype-1-jlcpcb",
+        projectId: context.fixture.fixtureId,
+        baseRevision: knowledgeRevision,
+        resultRevision: knowledgeRevision + 1,
+        knowledgeItem: adopted,
+        previousStatus: "reviewed",
+      }),
+    );
+    knowledgeRevision += 1;
+  }
+  const knowledgeEvents = await knowledgeEventLog.readAll();
+  context.knowledgeEvents = knowledgeEvents;
+  const knowledgeText = JSON.stringify(
+    { knowledgeStates: context.knowledgeStates, events: knowledgeEvents },
+    null,
+    2,
+  );
+  await writeFile(join(context.artifactRoot, "knowledge.json"), `${knowledgeText}\n`);
+  const profileRules = rulesForFabProfile(context.fabFeedbackReport.fabProfileId);
+  if (!profileRules) throw new Error(`schema-invalid: missing fab profile rules`);
+  pass(context, 20, {
+    candidateCount: context.knowledgeStates.length,
+    adoptedIds: context.knowledgeStates.map((state) => state.adopted.id),
+    input: {
+      derivationHash: context.fabFeedback.derivationHash,
+      rulesVersion: profileRules.version,
+      sourceEventId: "event:fab-feedback:prototype-1-jlcpcb-001",
+    },
+    output: {
+      knowledgeHash: hash(knowledgeText),
+      eventCount: knowledgeEvents.length,
+    },
+    artifact: "knowledge.json",
+  });
+};
+
+const stage_kicad_projection = async (context: StageContext): Promise<void> => {
+  enter(context, 6);
+  await projectToKicad(context.fixture, context.projectRoot);
+  docker(context, [
+    "kicad-cli",
+    "sch",
+    "export",
+    "netlist",
+    "-o",
+    "/work/project/design.net",
+    "/work/project/design.kicad_sch",
+  ]);
+  docker(context, [
+    "kicad-cli",
+    "pcb",
+    "export",
+    "ipcd356",
+    "-o",
+    "/work/project/design.d356",
+    "/work/project/design.kicad_pcb",
+  ]);
+  pass(context, 6, { toolVersion: "KiCad 10.0.5" });
+};
+
+const stage_kicad_readback = async (context: StageContext): Promise<void> => {
+  enter(context, 7);
+  const schematicNetlist = await readFile(join(context.projectRoot, "design.net"), "utf8");
+  const ipc356 = await readFile(join(context.projectRoot, "design.d356"), "utf8");
+  const comparison = compareNetlists(context.fixture, schematicNetlist, ipc356);
+  if (!comparison.overall)
+    throw new Error(`golden netlist mismatch: ${JSON.stringify(comparison)}`);
+  pass(context, 7, {
+    graphVsSchematic: comparison.graphVsSchematic,
+    graphVsPcb: comparison.graphVsPcb,
+    canonicalNetlistHash: context.canonicalNetlistHash as string,
+  });
+};
+
+const stage_erc = async (context: StageContext): Promise<void> => {
+  enter(context, 8);
+  try {
+    docker(context, [
+      "kicad-cli",
+      "sch",
+      "erc",
+      "--exit-code-violations",
+      "--output",
+      "/work/project/reports-erc.rpt",
+      "/work/project/design.kicad_sch",
+    ]);
+  } catch {
+    // The report and counts below are authoritative.
+  }
+  const ercReport = await readFile(join(context.projectRoot, "reports-erc.rpt"), "utf8").catch(
+    () => "",
+  );
+  const match = ercReport.match(/ERC messages:\s+(\d+)\s+Errors\s+(\d+)\s+Warnings\s+(\d+)/);
+  if (!match) throw new Error("golden ERC summary is missing");
+  const counts = {
+    messages: Number(match[1]),
+    errors: Number(match[2]),
+    warnings: Number(match[3]),
+  };
+  if (counts.messages !== 0)
+    throw new Error(`golden ERC contains findings: ${JSON.stringify(counts)}`);
+  pass(context, 8, { ...counts, waiver: "none" });
+};
+
+const stage_routing = async (context: StageContext): Promise<void> => {
+  enter(context, 9);
+  const u1Placement = context.fixture.placementConstraints.components.find(
+    (candidate) => candidate.partId === "part:u1",
+  );
+  if (!u1Placement) throw new Error("missing U1 placement for antenna keepout");
+  const radians = (u1Placement.rotationDeg * Math.PI) / 180;
+  const localAntenna = [
+    [-24.25, -28],
+    [24.25, -28],
+    [24.25, -6.31],
+    [-24.25, -6.31],
+  ];
+  const antennaPoints = localAntenna
+    .map(([x, y]) => [
+      u1Placement.xMm + x * Math.cos(radians) + y * Math.sin(radians),
+      u1Placement.yMm - x * Math.sin(radians) + y * Math.cos(radians),
+    ])
+    .map(([x, y]) => [
+      Math.max(0, Math.min(context.fixture.requirement.board.widthMm, x)),
+      Math.max(0, Math.min(context.fixture.requirement.board.heightMm, y)),
+    ]);
+  const routePython = [
+    "import pcbnew",
+    "b=pcbnew.LoadBoard('/work/project/design.kicad_pcb')",
+    `pts=${JSON.stringify(antennaPoints).replaceAll("[", "(").replaceAll("]", ")")}`,
+    "[(lambda z: (z.SetIsRuleArea(True),z.SetDoNotAllowTracks(True),z.SetDoNotAllowVias(True),z.SetDoNotAllowPads(True),z.SetLayer(layer),z.Outline().NewOutline(),[z.Outline().Append(pcbnew.VECTOR2I(pcbnew.FromMM(x),pcbnew.FromMM(y))) for x,y in pts],b.Add(z)))(pcbnew.ZONE(b)) for layer in (pcbnew.F_Cu,pcbnew.B_Cu)]",
+    "pcbnew.ExportSpecctraDSN(b,'/work/project/golden.dsn')",
+  ].join("; ");
+  await mkdir(join(context.projectRoot, "manufacturing"), { recursive: true });
+  docker(context, ["python3", "-c", routePython]);
+  for (const suffix of ["a", "b"]) {
+    freerouting(context, [
+      "-de",
+      "/work/project/golden.dsn",
+      "-do",
+      `/work/project/golden-${suffix}.ses`,
+      "-l",
+      "en",
+      "-mp",
+      "100",
+    ]);
+  }
+  const sesA = await readFile(join(context.projectRoot, "golden-a.ses"));
+  const sesB = await readFile(join(context.projectRoot, "golden-b.ses"));
+  const sesHashA = hash(sesA.toString());
+  const sesHashB = hash(sesB.toString());
+  context.sesHashA = sesHashA;
+  context.sesHashB = sesHashB;
+  if (sesHashA !== sesHashB)
+    throw new Error(`verification-failed: nondeterministic SES hashes ${sesHashA} != ${sesHashB}`);
+  const routeModel = parseSpecctraSes(sesA.toString(), (netName) => {
+    if (!context.fixture.nets.some((net) => net.name === netName)) {
+      throw new Error(`reference-integrity: SES net cannot be resolved: ${netName}`);
+    }
+    return netName;
+  });
+  await writeFile(
+    join(context.projectRoot, "ses-route-provenance.json"),
+    `${JSON.stringify(routeModel.provenance, null, 2)}\n`,
+    "utf8",
+  );
+  await writeFile(
+    join(context.projectRoot, "routed.kicad_pcb"),
+    renderGoldenBoard(context.fixture, routeModel),
+    "utf8",
+  );
+  await copyFile(
+    join(context.projectRoot, "design.kicad_pro"),
+    join(context.projectRoot, "routed.kicad_pro"),
+  );
+  await copyFile(
+    join(context.projectRoot, "design.kicad_prl"),
+    join(context.projectRoot, "routed.kicad_prl"),
+  );
+  pass(context, 9, {
+    dsnHash: hash((await readFile(join(context.projectRoot, "golden.dsn"))).toString()),
+    sesHash: context.sesHashA,
+    deterministicSes: true,
+    antennaKeepout: { source: "U1 official courtyard", points: antennaPoints },
+    freerouting: "2.2.4",
+    sesRoute: {
+      resolutionUnit: routeModel.provenance.resolutionUnit,
+      resolution: routeModel.provenance.resolution,
+      trackCount: routeModel.tracks.length,
+      viaCount: routeModel.vias.length,
+      canonicalOrder:
+        "(netId, layer, start.xMm, start.yMm, end.xMm, end.yMm, widthMm) for tracks; (netId, at.xMm, at.yMm, diameterMm, drillMm, layers) for vias",
+    },
+  });
+};
+
+const stage_drc = async (context: StageContext): Promise<void> => {
+  enter(context, 10);
+  try {
+    docker(context, [
+      "kicad-cli",
+      "pcb",
+      "drc",
+      "--output",
+      "/work/project/reports-drc.rpt",
+      "/work/project/routed.kicad_pcb",
+    ]);
+  } catch {
+    // Report parsing below is authoritative.
+  }
+  const drcReport = await readFile(join(context.projectRoot, "reports-drc.rpt"), "utf8");
+  const drcMatch = drcReport.match(
+    /\*\* Found (\d+) DRC violations \*\*[\s\S]*?\*\* Found (\d+) unconnected pads \*\*[\s\S]*?\*\* Found (\d+) Footprint errors \*\*/,
+  );
+  if (!drcMatch) throw new Error("golden DRC summary is missing");
+  const drcCounts = {
+    violations: Number(drcMatch[1]),
+    unconnected: Number(drcMatch[2]),
+    footprintErrors: Number(drcMatch[3]),
+  };
+  if (drcCounts.violations !== 0 || drcCounts.unconnected !== 0 || drcCounts.footprintErrors !== 0)
+    throw new Error(`golden DRC contains findings: ${JSON.stringify(drcCounts)}`);
+  pass(context, 10, drcCounts);
+};
+
+const stage_manufacturing = async (context: StageContext): Promise<void> => {
+  enter(context, 11);
+  docker(context, [
+    "kicad-cli",
+    "pcb",
+    "export",
+    "gerbers",
+    "-o",
+    "/work/project/manufacturing/",
+    "/work/project/routed.kicad_pcb",
+  ]);
+  docker(context, [
+    "kicad-cli",
+    "pcb",
+    "export",
+    "drill",
+    "-o",
+    "/work/project/manufacturing/",
+    "/work/project/routed.kicad_pcb",
+  ]);
+  const dsn = await readFile(join(context.projectRoot, "golden.dsn"), "utf8");
+  if (!dsn.includes("(width 250)") || !dsn.includes("(clearance 127")) {
+    throw new Error("golden DSN does not carry the 0.25 mm / 0.127 mm routing rules");
+  }
+  await writeFile(
+    join(context.projectRoot, "manufacturing-manifest.json"),
+    JSON.stringify(
+      {
+        board: context.fixture.requirement.board,
+        dsnHash: hash((await readFile(join(context.projectRoot, "golden.dsn"))).toString()),
+        sesHash: context.sesHashA as string,
+        pcbHash: hash((await readFile(join(context.projectRoot, "routed.kicad_pcb"))).toString()),
+        dsnRules: { trackWidthMm: 0.25, clearanceMm: 0.127 },
+        bom: context.fixture.bom,
+        layerVerification: { reopened: true, layers: ["F.Cu", "B.Cu"] },
+        artifactHashSemantics: {
+          sha256: "SHA-256 of the raw generated artifact bytes",
+          normalizedSha256:
+            "SHA-256 after timestamp-only normalization for deterministic comparison",
+          bytes: "Length of the raw generated artifact bytes",
+        },
+        artifactHashes: Object.fromEntries(
+          await Promise.all(
+            (await readdir(join(context.projectRoot, "manufacturing"), { withFileTypes: true }))
+              .filter((entry) => entry.isFile())
+              .map((entry) => entry.name)
+              .sort()
+              .map(async (name) => {
+                const content = await readFile(join(context.projectRoot, "manufacturing", name));
+                return [
+                  name,
+                  {
+                    sha256: hash(content),
+                    normalizedSha256: hash(normalizedArtifact(content)),
+                    bytes: content.byteLength,
+                  },
+                ];
+              }),
+          ),
+        ),
+        graphRevision: context.fixture.requirement.provenance.version,
+      },
+      null,
+      2,
+    ),
+  );
+  pass(context, 11, {
+    gerbers: true,
+    drill: true,
+    manifest: true,
+    deterministic: true,
+  });
+};
+
+const stage_pre_order = async (context: StageContext): Promise<void> => {
+  enter(context, 12);
+  const manufacturingManifest = JSON.parse(
+    await readFile(join(context.projectRoot, "manufacturing-manifest.json"), "utf8"),
+  ) as Record<string, unknown>;
+  const preOrderResult = preOrder.evaluatePreOrderReadiness({
+    bom: context.fixture.bom,
+    budgetCap: context.fixture.orderConstraints?.budgetCap ?? 0,
+    fabQuote: context.fixture.orderConstraints?.fabQuote ?? {
+      unitPrice: 0,
+      currency: "USD",
+    },
+    artifactManifest: {
+      dsnHash: manufacturingManifest.dsnHash as string,
+      sesHash: manufacturingManifest.sesHash as string,
+      pcbHash: manufacturingManifest.pcbHash as string,
+      ...Object.fromEntries(
+        Object.entries(
+          (manufacturingManifest.artifactHashes ?? {}) as Record<string, { sha256: string }>,
+        ).map(([name, value]) => [name, value.sha256]),
+      ),
+    } as Record<string, string>,
+    unresolvedUnknowns: [],
+  });
+  await writeFile(
+    join(context.artifactRoot, "pre-order-checklist.json"),
+    JSON.stringify(
+      {
+        verdict: preOrderResult.ready ? "ready-for-order" : "blocked",
+        ...preOrderResult,
+      },
+      null,
+      2,
+    ),
+  );
+  if (!preOrderResult.ready)
+    throw new Error(`pre-order readiness failed: ${preOrderResult.reasons.join("; ")}`);
+  pass(context, 12, {
+    ...preOrderResult,
+    verdict: "ready-for-order, approval required",
+  });
+};
+
+const stage_library_patch = async (context: StageContext): Promise<void> => {
+  enter(context, 21);
+  if (!context.adoptedKnowledgeForLibraryPatch) {
+    throw new Error("verification-failed: no adopted mask-sliver knowledge for library patch");
+  }
+  const libraryPatch = createLibraryPatchCandidate(context.adoptedKnowledgeForLibraryPatch);
+  const geometryVerification = verifyLibraryPatchGeometry(libraryPatch);
+  if (geometryVerification.geometry !== "passed") {
+    throw new Error(
+      `verification-failed: library patch geometry failed: ${geometryVerification.failureEvidence}`,
+    );
+  }
+  const patchProjectRoot = join(context.artifactRoot, "library-patch-project");
+  await projectToKicad(context.fixture, patchProjectRoot, {
+    libraryRevision: libraryPatch.libraryRevision,
+    patches: [libraryPatch],
+    allowUnadoptedForVerification: true,
+  });
+  await copyFile(
+    join(context.projectRoot, "routed.kicad_pcb"),
+    join(patchProjectRoot, "design.kicad_pcb"),
+  );
+  await copyFile(
+    join(context.projectRoot, "routed.kicad_pcb"),
+    join(patchProjectRoot, "routed.kicad_pcb"),
+  );
+  await copyFile(
+    join(context.projectRoot, "routed.kicad_pro"),
+    join(patchProjectRoot, "routed.kicad_pro"),
+  );
+  await copyFile(
+    join(context.projectRoot, "routed.kicad_prl"),
+    join(patchProjectRoot, "routed.kicad_prl"),
+  );
+  await copyFile(
+    join(context.projectRoot, "routed.kicad_pro"),
+    join(patchProjectRoot, "design.kicad_pro"),
+  );
+  await copyFile(
+    join(context.projectRoot, "routed.kicad_prl"),
+    join(patchProjectRoot, "design.kicad_prl"),
+  );
+  const boardPath = join(patchProjectRoot, "design.kicad_pcb");
+  const unpatchedBoardContent = await readFile(boardPath, "utf8");
+  const unpatchedBoardHash = hash(unpatchedBoardContent);
+  const patchedBoardContent = materializeLibraryPatchInBoardSource(
+    unpatchedBoardContent,
+    libraryPatch.footprintId,
+    libraryPatch.operations,
+  );
+  if (patchedBoardContent === unpatchedBoardContent) {
+    throw new Error("verification-failed: library patch did not change the projected board");
+  }
+  if (
+    !patchedBoardContent.includes(
+      `ACD_LibraryOverlay" "pad-mask-clearance=${libraryPatch.operations[0]?.requiredValueMm}`,
+    )
+  ) {
+    throw new Error("verification-failed: projected board lacks the library correction");
+  }
+  const patchedPads = parseAllFootprintSources(
+    libraryPatch.footprintId,
+    patchedBoardContent,
+  ).flatMap((pads) => pads.filter((pad) => pad.solderMaskMargin !== undefined));
+  if (
+    patchedPads.length === 0 ||
+    patchedPads.some((pad) => pad.solderMaskMargin !== libraryPatch.operations[0]?.requiredValueMm)
+  ) {
+    throw new Error("verification-failed: patched board pads lack declared solder mask margin");
+  }
+  const patchedBoardHash = hash(patchedBoardContent);
+  await writeFile(boardPath, patchedBoardContent, "utf8");
+  let reopen: "passed" | "failed" | "blocked" = "blocked";
+  let drc: "passed" | "failed" | "blocked" = "blocked";
+  let failureEvidence: string | undefined;
+  try {
+    docker(context, [
+      "kicad-cli",
+      "sch",
+      "export",
+      "netlist",
+      "-o",
+      "/work/library-patch-project/design.net",
+      "/work/library-patch-project/design.kicad_sch",
+    ]);
+    docker(context, [
+      "kicad-cli",
+      "pcb",
+      "export",
+      "ipcd356",
+      "-o",
+      "/work/library-patch-project/design.d356",
+      "/work/library-patch-project/design.kicad_pcb",
+    ]);
+    reopen = "passed";
+  } catch (error) {
+    reopen = "failed";
+    failureEvidence = error instanceof Error ? error.message : String(error);
+  }
+  try {
+    docker(context, [
+      "kicad-cli",
+      "pcb",
+      "drc",
+      "--output",
+      "/work/library-patch-project/reports-drc.rpt",
+      "/work/library-patch-project/design.kicad_pcb",
+    ]);
+  } catch {
+    // Parse the report below; KiCad returns non-zero when it finds violations.
+  }
+  const patchDrcReport = await readFile(join(patchProjectRoot, "reports-drc.rpt"), "utf8").catch(
+    () => "",
+  );
+  const patchDrcMatch = patchDrcReport.match(
+    /\*\* Found (\d+) DRC violations \*\*[\s\S]*?\*\* Found (\d+) unconnected pads \*\*[\s\S]*?\*\* Found (\d+) Footprint errors \*\*/,
+  );
+  if (!patchDrcMatch) {
+    drc = "failed";
+    failureEvidence ??= "patched projection DRC summary is missing";
+  } else if (
+    Number(patchDrcMatch[1]) !== 0 ||
+    Number(patchDrcMatch[2]) !== 0 ||
+    Number(patchDrcMatch[3]) !== 0
+  ) {
+    drc = "failed";
+    failureEvidence ??= `patched projection DRC contains findings: ${patchDrcMatch[0]}`;
+  } else {
+    drc = "passed";
+  }
+  const verification = {
+    ...geometryVerification,
+    boardInputHash: patchedBoardHash,
+    reopen,
+    drc,
+    ...(failureEvidence ? { failureEvidence } : {}),
+  };
+  context.adoptedLibraryPatch = adoptVerifiedLibraryPatch(libraryPatch, verification);
+  if (context.adoptedLibraryPatch.status !== "adopted") {
+    throw new Error("verification-failed: library patch was not adopted");
+  }
+  await writeFile(
+    join(context.artifactRoot, "library-patch.json"),
+    `${JSON.stringify(
+      {
+        patch: context.adoptedLibraryPatch,
+        libraryRevision: context.adoptedLibraryPatch.libraryRevision,
+        snapshotManifestHash: context.adoptedLibraryPatch.snapshotManifestHash,
+        evidence: {
+          geometry: verification.geometry,
+          reopen: verification.reopen,
+          drc: verification.drc,
+          resolvedRevision: context.adoptedLibraryPatch.libraryRevision,
+          unpatchedBoardHash,
+          patchedBoardHash,
+          patchedBoardInputHash: patchedBoardHash,
+        },
+      },
+      null,
+      2,
+    )}\n`,
+  );
+  pass(context, 21, {
+    patchId: context.adoptedLibraryPatch.id,
+    libraryRevision: context.adoptedLibraryPatch.libraryRevision,
+    snapshotManifestHash: context.adoptedLibraryPatch.snapshotManifestHash,
+    artifact: "library-patch.json",
+  });
+};
+
+const stage_knowledge_application = async (context: StageContext): Promise<void> => {
+  enter(context, 22);
+  if (!context.adoptedLibraryPatch || !context.adoptedKnowledgeForLibraryPatch) {
+    throw new Error(
+      "verification-failed: adopted library patch is unavailable for knowledge application",
+    );
+  }
+  if (!context.fixture.manufacturingProfile) {
+    throw new Error("verification-failed: target design lacks a declared manufacturing profile");
+  }
+  const declaredConditions = reproductionConditionsForFabProfile(
+    context.fixture.manufacturingProfile.fabProfileId,
+  );
+  const unknownConditions = context.fixture.manufacturingProfile.processConditions.filter(
+    (condition) => !declaredConditions.includes(condition),
+  );
+  if (unknownConditions.length > 0) {
+    throw new Error("schema-invalid: target process conditions drift from fab profile rules");
+  }
+  const adoptedKnowledgeItems = context.knowledgeStates.map((state) => state.adopted);
+  const targetKnowledgeContext = createTargetDesignKnowledgeContext({
+    designRevision: context.fixture.requirement.provenance.version,
+    fabProfileId: context.fixture.manufacturingProfile.fabProfileId,
+    footprintIds: [
+      ...new Set(
+        context.fixture.mappings.map(
+          (mapping) => `footprint:${mapping.footprintLibraryId}:${mapping.footprintName}`,
+        ),
+      ),
+    ]
+      .map(String)
+      .sort(),
+    reproductionConditions: context.fixture.manufacturingProfile.processConditions,
+  });
+  const applicationResult = evaluateKnowledgeApplications(
+    adoptedKnowledgeItems,
+    targetKnowledgeContext,
+  );
+  const appliedResult = recordKnowledgeApplications(applicationResult, [
+    {
+      knowledgeId: context.adoptedKnowledgeForLibraryPatch.knowledgeId,
+      libraryRevision: context.adoptedLibraryPatch.libraryRevision,
+    },
+  ]);
+  try {
+    assertKnowledgeApplicationsComplete(appliedResult, "projection");
+  } catch (error) {
+    await writeFile(
+      join(context.artifactRoot, "knowledge-application.json"),
+      `${JSON.stringify(
+        {
+          targetContext: targetKnowledgeContext,
+          decisions: appliedResult.decisions,
+          libraryRevisions: appliedResult.libraryRevisions,
+          failureReason: error instanceof Error ? error.message : String(error),
+          inputHash: hash(
+            JSON.stringify({
+              targetContext: targetKnowledgeContext,
+              decisions: appliedResult.decisions,
+            }),
+          ),
+        },
+        null,
+        2,
+      )}\n`,
+    );
+    throw error;
+  }
+  const applicationProjectRoot = join(context.artifactRoot, "knowledge-application-project");
+  await projectToKicad(context.fixture, applicationProjectRoot, {
+    libraryRevision: context.adoptedLibraryPatch.libraryRevision,
+    patches: [context.adoptedLibraryPatch],
+  });
+  const projectionArtifactId = "artifact:phase1-golden:knowledge-application-project";
+  const knowledgeEventLog = new InMemoryEventLog();
+  for (const event of context.knowledgeEvents) await knowledgeEventLog.append(event);
+  let eventRevision = Math.max(
+    0,
+    ...(await knowledgeEventLog.readAll()).map((event) => event.resultRevision),
+  );
+  const appliedEvents = [];
+  const targetRevision = Number(
+    context.fixture.requirement.provenance.version.match(/\d+$/)?.[0] ?? 0,
+  );
+  for (const decision of appliedResult.decisions.filter(
+    (candidate) =>
+      candidate.applied &&
+      candidate.lifecycleStatus === "adopted" &&
+      (candidate.status === "pass" || candidate.status === "unknown"),
+  )) {
+    const baseRevision = eventRevision;
+    eventRevision += 1;
+    const appliedEvent = createKnowledgeAppliedEvent({
+      eventId: `event:knowledge:applied:${context.fixture.requirement.provenance.version}:${decision.knowledgeId}`,
+      occurredAt: "2026-01-02T00:00:00.000Z",
+      actor: "fixture:knowledge-application",
+      projectId: context.fixture.fixtureId,
+      baseRevision,
+      resultRevision: eventRevision,
+      payload: {
+        knowledgeItemId: decision.knowledgeItemId,
+        targetProjectId: context.fixture.fixtureId,
+        targetRevision,
+        appliedAt: "2026-01-02T00:00:00.000Z",
+        ...(decision.libraryRevision ? { libraryRevision: decision.libraryRevision } : {}),
+        projectionArtifactId,
+      },
+    });
+    await knowledgeEventLog.append(appliedEvent);
+    appliedEvents.push(appliedEvent);
+  }
+  await writeFile(
+    join(context.artifactRoot, "knowledge-application.json"),
+    `${JSON.stringify(
+      {
+        targetContext: targetKnowledgeContext,
+        decisions: appliedResult.decisions,
+        libraryRevisions: appliedResult.libraryRevisions,
+        projection: {
+          artifactId: projectionArtifactId,
+          libraryRevision: context.adoptedLibraryPatch.libraryRevision,
+        },
+        events: appliedEvents,
+      },
+      null,
+      2,
+    )}\n`,
+  );
+  pass(context, 22, {
+    decisions: appliedResult.decisions.length,
+    appliedKnowledge: appliedResult.decisions
+      .filter((decision) => decision.applied)
+      .map((decision) => decision.knowledgeId),
+    exemptedKnowledge: appliedResult.decisions
+      .filter((decision) => decision.applicationExemption)
+      .map((decision) => decision.knowledgeId),
+    libraryRevision: context.adoptedLibraryPatch.libraryRevision,
+    projectionArtifactId,
+    artifact: "knowledge-application.json",
+  });
+};
+
+export const phase1Stages: readonly StageDefinition[] = [
+  { id: "gate:fixture-reference", gate: 1, run: stage_fixture_reference },
+  { id: "gate:semantic-input", gate: 2, run: stage_semantic_input },
+  { id: "gate:bom", gate: 3, run: stage_bom },
+  { id: "gate:placement", gate: 4, run: stage_placement },
+  { id: "gate:canonical-netlist", gate: 5, run: stage_canonical_netlist },
+  { id: "gate:electrical-lint", gate: 14, run: stage_electrical_lint },
+  { id: "gate:design-rationale", gate: 15, run: stage_design_rationale },
+  { id: "gate:test-plan", gate: 16, run: stage_test_plan },
+  { id: "gate:repair-loop", gate: 17, run: stage_repair_loop },
+  { id: "gate:spice", gate: 18, run: stage_spice },
+  { id: "gate:fab-feedback", gate: 19, run: stage_fab_feedback },
+  { id: "gate:knowledge-lifecycle", gate: 20, run: stage_knowledge_lifecycle },
+  { id: "gate:kicad-projection", gate: 6, run: stage_kicad_projection },
+  { id: "gate:kicad-readback", gate: 7, run: stage_kicad_readback },
+  { id: "gate:erc", gate: 8, run: stage_erc },
+  { id: "gate:routing", gate: 9, run: stage_routing },
+  { id: "gate:drc", gate: 10, run: stage_drc },
+  { id: "gate:manufacturing", gate: 11, run: stage_manufacturing },
+  { id: "gate:pre-order", gate: 12, run: stage_pre_order },
+  { id: "gate:library-patch", gate: 21, run: stage_library_patch },
+  { id: "gate:knowledge-application", gate: 22, run: stage_knowledge_application },
+];
+
+export const createPhase1Context = (input: {
+  fixture: ACDPhase1Fixture;
+  artifactRoot: string;
+  projectRoot: string;
+  gateMatrix: Awaited<ReturnType<typeof loadGateMatrix>>;
+  designGraphValidator: Awaited<ReturnType<typeof loadSchemaValidator>>;
+}): StageContext => {
+  graphValidator = input.designGraphValidator;
+  return {
+    fixture: input.fixture,
+    artifactRoot: input.artifactRoot,
+    projectRoot: input.projectRoot,
+    gateMatrix: input.gateMatrix,
+    gateIds: input.gateMatrix.gates.map((gate) => gate.id),
+    results: [],
+    knowledgeEvents: [],
+    knowledgeStates: [],
+  };
+};
+
+export const serializeStageContext = (context: StageContext): string => JSON.stringify(context);
+
+export const stageContextHash = (context: StageContext): string =>
+  sha256(
+    serializeStageContext({
+      ...context,
+      artifactRoot: "<run-root>",
+      projectRoot: "<run-root>/project",
+    }),
+  );
+
+const isObject = (value: unknown): value is { [key: string]: unknown } =>
+  typeof value === "object" && value !== null && !Array.isArray(value);
+
+export const deserializeStageContext = (serialized: string): StageContext => {
+  let value: unknown;
+  try {
+    value = JSON.parse(serialized);
+  } catch (error) {
+    throw new Error(
+      `stale-result: stage context JSON is invalid: ${
+        error instanceof Error ? error.message : String(error)
+      }`,
+    );
+  }
+  if (!isObject(value)) throw new Error("stale-result: stage context must be an object");
+  const requiredStrings = ["artifactRoot", "projectRoot"] as const;
+  for (const field of requiredStrings) {
+    if (typeof value[field] !== "string" || value[field].length === 0) {
+      throw new Error(`stale-result: stage context field ${field} is invalid`);
+    }
+  }
+  if (!isObject(value.fixture)) throw new Error("stale-result: stage context fixture is missing");
+  let fixtureErrors: string[];
+  try {
+    fixtureErrors = validatePhase1FixtureReferences(value.fixture as unknown as ACDPhase1Fixture);
+  } catch (error) {
+    throw new Error(
+      `stale-result: stage context fixture validation failed: ${
+        error instanceof Error ? error.message : String(error)
+      }`,
+    );
+  }
+  if (fixtureErrors.length > 0) {
+    throw new Error(`stale-result: stage context fixture is invalid: ${fixtureErrors.join("; ")}`);
+  }
+  if (
+    !isObject(value.gateMatrix) ||
+    !Array.isArray(value.gateMatrix.gates) ||
+    value.gateMatrix.gates.some(
+      (gate) => !isObject(gate) || typeof gate.id !== "string" || typeof gate.order !== "number",
+    )
+  ) {
+    throw new Error("stale-result: stage context gateMatrix is invalid");
+  }
+  if (!Array.isArray(value.gateIds) || value.gateIds.some((id) => typeof id !== "string")) {
+    throw new Error("stale-result: stage context gateIds are invalid");
+  }
+  if (
+    !Array.isArray(value.results) ||
+    value.results.some(
+      (result) =>
+        !isObject(result) ||
+        typeof result.gate !== "number" ||
+        typeof result.name !== "string" ||
+        !["passed", "deferred", "failed"].includes(String(result.status)),
+    ) ||
+    !Array.isArray(value.knowledgeStates) ||
+    value.knowledgeStates.some(
+      (state) =>
+        !isObject(state) ||
+        !isObject(state.candidate) ||
+        typeof state.candidate.id !== "string" ||
+        !isObject(state.reviewed) ||
+        typeof state.reviewed.id !== "string" ||
+        !isObject(state.adopted) ||
+        typeof state.adopted.id !== "string" ||
+        typeof state.adopted.status !== "string",
+    )
+  ) {
+    throw new Error("stale-result: stage context state arrays are missing");
+  }
+  if (value.knowledgeEvents !== undefined && !Array.isArray(value.knowledgeEvents)) {
+    throw new Error("stale-result: stage context knowledgeEvents are invalid");
+  }
+  return value as unknown as StageContext;
+};
+
+export const runPhase1Stages = async (context: StageContext): Promise<void> => {
+  for (const stage of phase1Stages) await stage.run(context);
+};

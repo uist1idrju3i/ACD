@@ -18,6 +18,7 @@
     "gates:generate": "tsx scripts/generate-gate-matrix-doc.mts && prettier --write docs/phase1-gates.md docs/gates.md",
     "gates:check": "pnpm gates:generate && git diff --exit-code -- docs/phase1-gates.md docs/gates.md",
     "golden": "tsx scripts/golden-run.mts",
+    "phase4:resume": "tsx scripts/phase4-resume.mts",
     "golden:unit": "vitest run fixtures packages",
     "kicad:spike": "bash scripts/kicad-spike.sh",
     "kicad:library:verify": "tsx scripts/verify-kicad-library.mts",
