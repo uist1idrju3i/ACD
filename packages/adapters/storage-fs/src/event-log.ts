@@ -1,8 +1,8 @@
-import { mkdir, open, readFile, unlink } from "node:fs/promises";
+import { mkdir, open, readFile, truncate, unlink } from "node:fs/promises";
 import type { FileHandle } from "node:fs/promises";
 import { dirname } from "node:path";
 import { canonicalize } from "@acd/graph-core";
-import { verifyEvent, type EventEnvelope, type EventLog } from "@acd/graph-core";
+import { GraphCoreError, verifyEvent, type EventEnvelope, type EventLog } from "@acd/graph-core";
 
 export class FileEventLog implements EventLog {
   private handle: FileHandle | undefined;
@@ -19,11 +19,39 @@ export class FileEventLog implements EventLog {
 
   async readAll(): Promise<EventEnvelope[]> {
     try {
-      const content = await readFile(this.path, "utf8");
-      return content
-        .split("\n")
-        .filter(Boolean)
-        .map((line) => JSON.parse(line) as EventEnvelope);
+      const content = await readFile(this.path);
+      const lastNewline = content.lastIndexOf(0x0a);
+      const complete = content.subarray(0, lastNewline + 1);
+      if (lastNewline + 1 !== content.length) {
+        if (this.handle) await this.handle.truncate(lastNewline + 1);
+        else await truncate(this.path, lastNewline + 1);
+      }
+      const lines = complete.toString("utf8").split("\n").filter(Boolean);
+      return lines.map((line, index) => {
+        let event: EventEnvelope;
+        try {
+          event = JSON.parse(line) as EventEnvelope;
+        } catch (error) {
+          throw new GraphCoreError(
+            "event-replay-failure",
+            `invalid event JSON at line ${index + 1}`,
+            "critical",
+            { cause: error instanceof Error ? error.message : String(error) },
+          );
+        }
+        try {
+          verifyEvent(event);
+        } catch (error) {
+          if (error instanceof GraphCoreError) throw error;
+          throw new GraphCoreError(
+            "event-replay-failure",
+            `invalid event envelope at line ${index + 1}`,
+            "critical",
+            { cause: error instanceof Error ? error.message : String(error) },
+          );
+        }
+        return event;
+      });
     } catch (error) {
       if ((error as NodeJS.ErrnoException).code === "ENOENT") return [];
       throw error;

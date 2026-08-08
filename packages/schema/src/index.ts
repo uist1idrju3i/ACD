@@ -3,6 +3,7 @@ export * from "./validator.js";
 export type {
   ACDDesignGraphPhase0Draft,
   Budget,
+  Checkpoint,
   Entity,
   Id,
   TaskLedgerEntry,

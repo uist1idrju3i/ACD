@@ -68,6 +68,7 @@ export type EntityType =
   | "Evidence"
   | "KnowledgeItem"
   | "TaskLedgerEntry"
+  | "Checkpoint"
   | "VerificationResult"
   | "Approval"
   | "Waiver";
@@ -298,6 +299,41 @@ export interface TaskLedgerEntry {
   stopReason?: string;
   artifactIds?: Id[];
   resultId?: Id;
+  [k: string]: unknown;
+}
+/**
+ * This interface was referenced by `ACDDesignGraphPhase0Draft`'s JSON-Schema
+ * via the `definition` "checkpoint".
+ */
+export interface Checkpoint {
+  id: Id;
+  type: "Checkpoint";
+  revision: number;
+  gate: string;
+  inputRevision: number;
+  inputHash: string;
+  graphRevision: number;
+  toolVersion: string;
+  modelVersion: string;
+  libraryVersion: string;
+  containerVersion: string;
+  provenance: Provenance[];
+  measurementSystemQualification: {
+    status: "unknown" | "qualified" | "unqualified";
+    evidenceIds?: Id[];
+  };
+  fabProfileId: string;
+  manufacturingProfileId: string;
+  knowledgeItemStatuses: {
+    knowledgeItemId: Id;
+    status: string;
+  }[];
+  artifactHashes: string[];
+  verificationResultIds: Id[];
+  eventPosition: number;
+  executionEnvironment: {
+    [k: string]: unknown;
+  };
   [k: string]: unknown;
 }
 /**

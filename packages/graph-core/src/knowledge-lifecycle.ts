@@ -356,6 +356,7 @@ const declaredReferenceFields: Record<Entity["type"], string[]> = {
   KnowledgeItem: ["sourceEventIds", "changedDecisionIds", "previousRevisionId", "links"],
   Rationale: ["evidenceLinks", "generatedTestItemIds", "links"],
   VerificationResult: ["findingIds", "evidenceIds", "links"],
+  Checkpoint: [],
   Approval: ["subject", "links"],
   Waiver: ["approvalId", "links"],
   Evidence: ["links"],
