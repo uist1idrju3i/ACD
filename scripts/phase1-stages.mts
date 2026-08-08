@@ -1236,8 +1236,91 @@ export const createPhase1Context = (input: {
 
 export const serializeStageContext = (context: StageContext): string => JSON.stringify(context);
 
-export const deserializeStageContext = (serialized: string): StageContext =>
-  JSON.parse(serialized) as StageContext;
+export const stageContextHash = (context: StageContext): string =>
+  sha256(
+    serializeStageContext({
+      ...context,
+      artifactRoot: "<run-root>",
+      projectRoot: "<run-root>/project",
+    }),
+  );
+
+const isObject = (value: unknown): value is { [key: string]: unknown } =>
+  typeof value === "object" && value !== null && !Array.isArray(value);
+
+export const deserializeStageContext = (serialized: string): StageContext => {
+  let value: unknown;
+  try {
+    value = JSON.parse(serialized);
+  } catch (error) {
+    throw new Error(
+      `stale-result: stage context JSON is invalid: ${
+        error instanceof Error ? error.message : String(error)
+      }`,
+    );
+  }
+  if (!isObject(value)) throw new Error("stale-result: stage context must be an object");
+  const requiredStrings = ["artifactRoot", "projectRoot"] as const;
+  for (const field of requiredStrings) {
+    if (typeof value[field] !== "string" || value[field].length === 0) {
+      throw new Error(`stale-result: stage context field ${field} is invalid`);
+    }
+  }
+  if (!isObject(value.fixture)) throw new Error("stale-result: stage context fixture is missing");
+  let fixtureErrors: string[];
+  try {
+    fixtureErrors = validatePhase1FixtureReferences(value.fixture as unknown as ACDPhase1Fixture);
+  } catch (error) {
+    throw new Error(
+      `stale-result: stage context fixture validation failed: ${
+        error instanceof Error ? error.message : String(error)
+      }`,
+    );
+  }
+  if (fixtureErrors.length > 0) {
+    throw new Error(`stale-result: stage context fixture is invalid: ${fixtureErrors.join("; ")}`);
+  }
+  if (
+    !isObject(value.gateMatrix) ||
+    !Array.isArray(value.gateMatrix.gates) ||
+    value.gateMatrix.gates.some(
+      (gate) => !isObject(gate) || typeof gate.id !== "string" || typeof gate.order !== "number",
+    )
+  ) {
+    throw new Error("stale-result: stage context gateMatrix is invalid");
+  }
+  if (!Array.isArray(value.gateIds) || value.gateIds.some((id) => typeof id !== "string")) {
+    throw new Error("stale-result: stage context gateIds are invalid");
+  }
+  if (
+    !Array.isArray(value.results) ||
+    value.results.some(
+      (result) =>
+        !isObject(result) ||
+        typeof result.gate !== "number" ||
+        typeof result.name !== "string" ||
+        !["passed", "deferred", "failed"].includes(String(result.status)),
+    ) ||
+    !Array.isArray(value.knowledgeStates) ||
+    value.knowledgeStates.some(
+      (state) =>
+        !isObject(state) ||
+        !isObject(state.candidate) ||
+        typeof state.candidate.id !== "string" ||
+        !isObject(state.reviewed) ||
+        typeof state.reviewed.id !== "string" ||
+        !isObject(state.adopted) ||
+        typeof state.adopted.id !== "string" ||
+        typeof state.adopted.status !== "string",
+    )
+  ) {
+    throw new Error("stale-result: stage context state arrays are missing");
+  }
+  if (value.knowledgeEvents !== undefined && !Array.isArray(value.knowledgeEvents)) {
+    throw new Error("stale-result: stage context knowledgeEvents are invalid");
+  }
+  return value as unknown as StageContext;
+};
 
 export const runPhase1Stages = async (context: StageContext): Promise<void> => {
   for (const stage of phase1Stages) await stage.run(context);
