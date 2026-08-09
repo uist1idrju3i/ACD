@@ -1,0 +1,161 @@
+import { describe, expect, it } from "vitest";
+import {
+  checkBudget,
+  createBudgetUsageSnapshot,
+  elapsedSecondsBetween,
+  assertExternalProcessUpperBound,
+  type MonotonicClockPort,
+} from "./budget.js";
+import { detectNoProgress, type ProgressObservation } from "./progress.js";
+import { buildStopRecord, validateStopRecord } from "./stop-record.js";
+
+describe("budget and watchdog core contracts", () => {
+  it("uses an injected monotonic clock deterministically", () => {
+    let current = 10;
+    const clock: MonotonicClockPort = { now: () => current };
+    const start = clock.now();
+    current = 12;
+    expect(elapsedSecondsBetween(start, clock.now())).toBe(2);
+    expect(
+      checkBudget(
+        { scope: "execution", timeSeconds: 2 },
+        createBudgetUsageSnapshot({
+          scope: "task",
+          elapsedSeconds: 0,
+        }),
+        { elapsedSeconds: 2 },
+      ).status,
+    ).toBe("would-exceed");
+  });
+
+  it("keeps run and task caps independent", () => {
+    const usage = createBudgetUsageSnapshot({ scope: "task", externalProcessExecutions: 0 });
+    expect(
+      checkBudget({ scope: "execution", toolCalls: 3 }, usage, {
+        externalProcessExecutions: 1,
+      }).status,
+    ).toBe("allowed");
+    expect(
+      checkBudget({ scope: "execution", toolCalls: 1 }, usage, {
+        externalProcessExecutions: 1,
+      }).status,
+    ).toBe("would-exceed");
+  });
+
+  it("retains token and money as explicit unknown values", () => {
+    const usage = createBudgetUsageSnapshot({ scope: "run" });
+    expect(usage.tokens).toEqual({ status: "unknown" });
+    expect(usage.money).toEqual({ status: "unknown" });
+    expect(checkBudget({ scope: "execution", tokens: 100 }, usage, {}).status).toBe(
+      "unknown-impact",
+    );
+    expect(
+      checkBudget({ scope: "total-order-cost", amount: 10, currency: "USD" }, usage, {}).status,
+    ).toBe("unknown-impact");
+  });
+
+  it("stops when measured external process usage exceeds its stage upper bound", () => {
+    expect(() => assertExternalProcessUpperBound("gate:spice", 4, 3)).toThrow(
+      "measured external process count exceeded upper bound",
+    );
+    expect(() => assertExternalProcessUpperBound("gate:fixture-reference", 0, 0)).not.toThrow();
+    expect(() => assertExternalProcessUpperBound("gate:unlisted", 4, undefined)).not.toThrow();
+  });
+
+  const observation = (overrides: Partial<ProgressObservation> = {}): ProgressObservation => ({
+    inputHash: "input:a",
+    proposalHash: "proposal:a",
+    artifactHash: "artifact:a",
+    gateResultHash: "gate:a",
+    unresolvedFindingCount: 2,
+    gateStatus: "failed",
+    stateHash: "state:a",
+    ...overrides,
+  });
+
+  it.each([
+    ["same input and proposal", [{}, {}], "repeated-proposal"],
+    [
+      "unchanged artifact",
+      [{ proposalHash: "proposal:a" }, { proposalHash: "proposal:b" }],
+      "unchanged-artifact",
+    ],
+    [
+      "unchanged gate result",
+      [
+        {
+          artifactHash: "artifact:a",
+          proposalHash: "proposal:a",
+          inputHash: "input:a",
+          stateHash: "state:a",
+        },
+        {
+          artifactHash: "artifact:a",
+          proposalHash: "proposal:b",
+          inputHash: "input:b",
+          stateHash: "state:b",
+        },
+      ],
+      "unchanged-gate",
+    ],
+    [
+      "state oscillation",
+      [{ stateHash: "state:a" }, { stateHash: "state:b" }, { stateHash: "state:a" }],
+      "oscillation",
+    ],
+  ])("detects %s", (_name, changes, expected) => {
+    const observations = (changes as Array<Partial<ProgressObservation>>).map(observation);
+    expect(
+      detectNoProgress(observations, {
+        repeatedProposal: 2,
+        unchangedArtifact: 2,
+        unchangedGate: 2,
+        oscillation: 2,
+      }),
+    ).toContain(expected);
+  });
+
+  it.each([
+    ["finding reduction", { unresolvedFindingCount: 1 }, "unchanged-artifact"],
+    ["gate improvement", { gateStatus: "passed" as const }, "unchanged-gate"],
+    ["artifact change", { artifactHash: "artifact:b" }, "repeated-proposal"],
+  ])("does not stop while %s continues", (_name, improvement, forbidden) => {
+    const observations = [observation(), observation(improvement), observation(improvement)];
+    expect(
+      detectNoProgress(observations, {
+        repeatedProposal: 2,
+        unchangedArtifact: 2,
+        unchangedGate: 2,
+        oscillation: 2,
+      }),
+    ).not.toContain(forbidden);
+  });
+
+  it("does not stop on oscillation while findings improve", () => {
+    const observations = [
+      observation({ stateHash: "state:a" }),
+      observation({ stateHash: "state:b", unresolvedFindingCount: 1 }),
+      observation({ stateHash: "state:a", unresolvedFindingCount: 0 }),
+    ];
+    expect(detectNoProgress(observations)).not.toContain("oscillation");
+  });
+
+  it("rejects a stop record without required decision context", () => {
+    const valid = {
+      reasonCode: "budget-exceeded" as const,
+      knownFacts: ["task cap reached"],
+      uncertainties: ["next operation cost is not executed"],
+      options: [{ id: "resume", description: "resume after cap increase" }],
+      recommendation: "increase the approved cap",
+      resumeCondition: "an approved cap is present",
+      resumePosition: { eventPosition: 4 },
+      budgetSnapshot: {
+        run: createBudgetUsageSnapshot({ scope: "run" }),
+        task: createBudgetUsageSnapshot({ scope: "task" }),
+      },
+      evidenceIds: ["evidence:budget"],
+    };
+    expect(buildStopRecord(valid)).toEqual(valid);
+    expect(() => validateStopRecord({ ...valid, evidenceIds: [] })).toThrow("missing");
+  });
+});

@@ -26,9 +26,11 @@ native TypeScript実装を判定の正とし、WASMは同一入力で同一結�
 1. nativeとWASMの結果が一致するparity testを必須とします。
 2. 結果、不確実性、module version、build digest、toolchain versionをEvidenceへ記録します。
 3. nativeとWASMの不一致、provenance欠落、入力不一致は停止します。
-4. WASMが利用できない環境ではnative経路へ決定論的にfallbackします。
+4. WASM moduleが存在しない、または実行環境がWASMを提供しない場合だけnative経路へ
+   決定論的にfallbackします。provenanceには利用不能理由を記録します。
 5. `kicad-cli`、ngspice、routerなど全エンジンのWASM化は行いません。
-6. 実装言語は本ADRでは決定せず、Rustを推奨候補としてWP7着手時に別ADRで決定します。
+6. 実装言語と数値表現は[ADR-0030](0030-wasm-rust-fixed-point-supplement.md)でRust、
+   nm整数固定小数点として決定済みです。
 
 ## 代替案
 
@@ -44,11 +46,11 @@ native TypeScript実装を判定の正とし、WASMは同一入力で同一結�
 ## 結果とリスク
 
 - 幾何系チェックのブラウザ応答性を高めつつ、native経路を基準に判定の一貫性を検証できます。
-- parity failure、WASM runtime failure、build digest欠落、未対応環境ではWASM経路を
-  無効化または停止し、未検証結果をgateへ流しません。
+- module不在またはWASM非対応環境ではnative fallbackとし、reasonをEvidenceへ記録します。
+  parity mismatch、C ABI／linear memory不備、packed output破損、instantiate／runtime error、
+  provenance欠落は`verification-failed`で停止し、native結果へfallbackしません。
 - nativeとWASMの性能差、浮動小数点差、toolchain差はfixture集合で測定します。
-- 言語選択は本ADRでは決定せず、WP7の着手時にlicense、build再現性、browser runtime、
-  parity結果を根拠として別ADRで確定します。
+- 言語、整数表現、build digest、runtime境界の決定はADR-0030を参照します。
 
 ## 参照
 

@@ -13,24 +13,42 @@ Phase 1以降の外部tool、worker、LLM adapterを同じ決定論的境界へ�
 {
   "toolName": "kicad.project.export",
   "contractVersion": "0.1.0",
-  "inputHash": "sha256:...",
+  "inputHash": "sha256:<64 lowercase hex digits>",
   "graphRevision": 3,
+  "correlationId": "run:example/invocation:1",
   "idempotencyKey": "project:example/tool:kicad.project.export/rev:3/input:...",
   "operationClass": "reversible",
+  "timeoutMs": 300000,
+  "maxOutputBytes": 10485760,
   "input": {}
 }
 ```
 
 必須項目は`toolName`、`contractVersion`、`inputHash`、`graphRevision`、
-`idempotencyKey`、`operationClass`、typed `input`です。input hashはcanonical
-JSONに対して計算し、同じkeyで別inputを送らない。
+`correlationId`、`idempotencyKey`、`operationClass`、`timeoutMs`、typed `input`です。
+`irreversible`では`approvalId`も必須です。input hashはcanonical JSONに対して
+計算し、同じkeyで別inputを送らない。
 
 ## Result／Error
 
-成功結果はtyped `result`、`toolName`、contract version、input hash、graph
-revision、idempotency key、開始／終了時刻、tool version、artifact／evidence ID
-を持ちます。失敗結果は[`error-taxonomy.md`](error-taxonomy.md)のerror envelope
-を持ち、stdout/stderr、終了コード、retryability、recovery actionを保存します。
+Schemaの`toolResult`は`kind: "result"`、`status`（`completed`、`timedOut`、
+`cancelled`、`failed`）、requestの識別項目、開始／終了時刻、tool／container
+version、provenance、artifact／evidence ID、stdout／stderr、終了コード、signal、
+retryability、recoverabilityを持ちます。`rawOutputHash`は生バイトのSHA-256、
+`normalizedOutputHash`は正規化後のSHA-256です。ただし現在のprocess boundaryでは
+timestamp normalizationを定義していないため、両hashは同じ出力から
+計算されます。この同値はrawとnormalizedの混同ではなく、process出力に正規化を
+適用しないという仕様です。`bytes`相当の
+`outputBytes`も生出力の長さとして保存します。
+
+`toolError`はerror codeを必須とし、taxonomyにない分類を作りません。未分類の
+失敗は`tool-failure`として停止し、`context`とEvidence IDに分類不能だった事実を
+残します。cancelはerrorではなくresult statusです。timeout、非0終了、起動失敗、
+出力上限超過、強制終了はそれぞれ構造化されたprocess結果と既存taxonomy codeで
+記録します。
+
+同一attemptの再送は同じ`idempotencyKey`でreplayし、新しいattemptはkey末尾の
+`/attempt:<n>`を増分して再実行します。resumeは同じattemptを引き継ぎます。
 
 ## 操作分類
 
@@ -42,10 +60,23 @@ revision、idempotency key、開始／終了時刻、tool version、artifact／e
 
 ## 冪等性、timeout、cancel
 
-同じidempotency keyは一度だけ確定する。再送時は以前のresultまたはerrorを返し、
-二重patch・二重発注を起こさない。各toolはtimeout、cancel、retry budget、
-最大出力サイズを明示する。cancel後の外部processは終了を確認してから停止済み
-と記録する。
+worker/runtime共通registryを`.acd/runs/<runId>/tool-invocations.jsonl`に置く。
+`execute()`の開始前にsingle-writer lockを取得し、registryのload、operation実行、
+record appendまで同じlockを保持してから解放する。appendごとにsyncし、末尾部分行だけを
+回復する。保持は無期限である。同じidempotency keyは一度だけ確定し、再送時は保存済みresultまたは
+errorを返して外部processを再実行しない。同じkeyでinput hashが違えば
+`reference-integrity`で停止し、上書きしない。`correlationId`はinvocationを関連
+付ける値であり、`idempotencyKey`および各eventの`eventId`とは別である。
+
+registry replayは記録済みのresultまたはerrorを返すだけで、過去のfile side effectを再生成
+しない。生成artifactを前提とするcallerは、replay後もmount path上のartifactの存在と内容を
+別途検証する。SIGKILL後に残った`tool-invocations.jsonl.lock`は、Phase 4 resume runnerが
+events／checkpointsのlockと同じ復旧箇所で、所有者停止を確認したうえで削除する。それ以外の
+経路では自動削除やliveness／takeoverを行わない。
+
+retry loopとretry budgetの所有者はtask ledgerだけである。tool envelopeは
+`retryable`、timeout、cancel、終了情報を返すが、独自のnested retry budgetを持たない。
+cancel後の外部processは終了を確認してから`cancelled`として記録する。
 
 ## 決定論的ゲート
 
@@ -69,3 +100,20 @@ function callingは、同じrequest/result/error schemaを運ぶ後続transport 
 - [`error-taxonomy.md`](error-taxonomy.md)
 - [`repo-structure.md`](repo-structure.md)
 - [`verification-gates.md`](verification-gates.md)
+
+### WP4 runtime observation
+
+runtime observationでは、logical request、registry replay、external process startを
+別イベントとして通知し、run/task/attempt相関を保持する。予算上のtool callは外部
+process startだけを数え、registry replayを二重計上しない。契約の詳細は
+[`adr/0034-budget-watchdog-core-contract.md`](adr/0034-budget-watchdog-core-contract.md)
+を参照する。
+Phase 4 runnerのbudget usageでは、task ledgerの`retryBudget`がattempt上限を所有し、
+tool call上限は外部process startだけを数える。各操作の実行前にrun/task capを確認し、
+停止時のstop recordは既存のresume証跡とは別ファイルへ保存する。usage更新eventは
+baseline/resumedで必然的に異なるruntime measurementのため、resumeの意味比較と
+comparable event countから除外し、`task.transitioned(kind=usage-updated)`として
+除外一覧へ明示する。raw event countは全event logの件数として別に保持する。
+repair loopは無進捗時に継続するoptionを持たず、jidoka停止までの観測列だけを保存する。
+runnerの無進捗検知はtask attempt単位で観測し、検知後の次attemptおよびdownstream stageを
+実行しない。

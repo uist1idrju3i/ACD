@@ -21,6 +21,11 @@ jobs:
       - run: pnpm format:check
       - run: pnpm typecheck
       - run: pnpm lint
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: 1.97.1
+          targets: wasm32-unknown-unknown
+      - run: pnpm wasm:build
       - run: pnpm test
       - run: pnpm schema:validate
       - run: pnpm typegen-sync
@@ -98,3 +103,82 @@ jobs:
           name: phase1-smoke-evidence
           path: artifacts/phase1-smoke
           if-no-files-found: warn
+
+  phase4-resume:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 11.18.0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Verify pinned KiCad image
+        run: |
+          docker pull kicad/kicad:10.0
+          test "$(docker image inspect kicad/kicad:10.0 --format '{{index .RepoDigests 0}}')" = \
+            "kicad/kicad@sha256:182c8005cb775a2c448a4c18681d489f1ff472a761885eba3e08b07e3c0564de"
+      - run: pnpm phase4:resume
+      - name: Upload Phase 4 resume evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: phase4-resume-evidence
+          path: artifacts/phase4
+          if-no-files-found: warn
+
+  browser:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 11.18.0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm web:build
+      - run: pnpm --filter @acd/web exec playwright install --with-deps chromium
+      - run: pnpm web:test:e2e:chromium
+      - name: Upload WP6 browser evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: wp6-browser-evidence
+          path: artifacts/phase4/wp6-browser-*
+          if-no-files-found: warn
+
+  wasm-geometry:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 11.18.0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: 1.97.1
+          targets: wasm32-unknown-unknown
+          components: rustfmt, clippy
+      - name: Verify Rust formatting
+        run: cargo fmt --manifest-path packages/adapters/wasm-geometry/rust/Cargo.toml --check
+      - name: Run Rust tests
+        run: pnpm wasm:test
+      - name: Build geometry WASM
+        run: pnpm wasm:build
+      - name: Run native/WASM runtime parity tests
+        run: pnpm --filter @acd/adapter-wasm-geometry test
+      - name: Record build digest
+        run: sha256sum packages/adapters/wasm-geometry/rust/target/wasm32-unknown-unknown/release/acd_geometry_wasm.wasm
+      - name: Verify no WASM binary is tracked
+        run: test -z "$(git ls-files '*.wasm')"

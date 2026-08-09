@@ -1,12 +1,22 @@
 export const schemaPackageVersion = "0.1.0";
 export * from "./validator.js";
-export type { ACDDesignGraphPhase0Draft, Entity, Id } from "./generated/design-graph.js";
+export type {
+  ACDDesignGraphPhase0Draft,
+  Budget,
+  Checkpoint,
+  Entity,
+  Id,
+  TaskLedgerEntry,
+} from "./generated/design-graph.js";
 export type { ACDPatchEnvelope as PatchEnvelope } from "./generated/patch.js";
 export type { ACDEventEnvelope as EventEnvelope } from "./generated/event.js";
 export type { ACDPhase1Fixture as Phase1Fixture } from "./generated/phase1-fixture.js";
 export type { ACDPhase1PhysicalEvidence as PhysicalEvidence } from "./generated/physical-evidence.js";
 export type { ACDFabFeedbackReport as FabFeedbackReport } from "./generated/fab-feedback.js";
 export type { ACDLibraryOverlayPatch as LibraryOverlayPatch } from "./generated/library-patch.js";
+export type { ToolRequest, ToolResult, ToolError } from "./generated/tool-envelope.js";
+export type { ACDBudgetUsageSnapshot as BudgetUsageSnapshot } from "./generated/budget-usage.js";
+export type { ACDMachineReadableStopRecord as StopRecord } from "./generated/stop-record.js";
 export type { RawFinding, Reference } from "./generated/fab-feedback.js";
 export { validatePhase1FixtureReferences } from "./phase1-semantic.js";
 export { loadSchemaValidator } from "./validator.js";

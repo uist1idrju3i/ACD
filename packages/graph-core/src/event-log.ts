@@ -14,7 +14,9 @@ export type EventType =
   | "fab.feedback.received"
   | "knowledge.candidate.created"
   | "knowledge.transitioned"
-  | "knowledge.applied";
+  | "knowledge.applied"
+  | "task.created"
+  | "task.transitioned";
 
 export type EventEnvelope = {
   eventId: string;
@@ -31,7 +33,13 @@ export type EventEnvelope = {
 export interface EventLog {
   append(event: EventEnvelope): Promise<void>;
   readAll(): Promise<EventEnvelope[]>;
+  readFrom(position: number): Promise<EventLogRead>;
 }
+
+export type EventLogRead = {
+  position: number;
+  events: EventEnvelope[];
+};
 
 export const createEvent = (input: Omit<EventEnvelope, "payloadHash">): EventEnvelope => ({
   ...input,
@@ -48,6 +56,9 @@ export const verifyEvent = (event: EventEnvelope): void => {
   }
 };
 
+export const eventAdvancesRevision = (event: EventEnvelope): boolean =>
+  event.type !== "patch.rejected" && event.type !== "run.stopped";
+
 export const verifyReplay = (events: EventEnvelope[]): void => {
   let revision = 0;
   const ids = new Set<string>();
@@ -63,7 +74,8 @@ export const verifyReplay = (events: EventEnvelope[]): void => {
         "critical",
       );
     }
-    if (event.resultRevision < revision || event.resultRevision > revision + 1) {
+    const expectedResultRevision = revision + (eventAdvancesRevision(event) ? 1 : 0);
+    if (event.resultRevision !== expectedResultRevision) {
       throw new GraphCoreError(
         "event-replay-failure",
         `invalid result revision: ${event.eventId}`,
@@ -84,5 +96,12 @@ export class InMemoryEventLog implements EventLog {
 
   async readAll(): Promise<EventEnvelope[]> {
     return structuredClone(this.events);
+  }
+
+  async readFrom(position: number): Promise<EventLogRead> {
+    if (!Number.isInteger(position) || position < 0 || position > this.events.length) {
+      throw new GraphCoreError("event-replay-failure", `invalid event position: ${position}`);
+    }
+    return { position, events: structuredClone(this.events.slice(position)) };
   }
 }

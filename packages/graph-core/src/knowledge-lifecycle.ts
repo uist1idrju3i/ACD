@@ -356,6 +356,7 @@ const declaredReferenceFields: Record<Entity["type"], string[]> = {
   KnowledgeItem: ["sourceEventIds", "changedDecisionIds", "previousRevisionId", "links"],
   Rationale: ["evidenceLinks", "generatedTestItemIds", "links"],
   VerificationResult: ["findingIds", "evidenceIds", "links"],
+  Checkpoint: ["verificationResultIds", "knowledgeItemStatuses", "links"],
   Approval: ["subject", "links"],
   Waiver: ["approvalId", "links"],
   Evidence: ["links"],
@@ -379,7 +380,9 @@ const explicitReferences = (entity: Entity): { ids: string[]; basis: string } =>
           ? [entry]
           : entry && typeof entry === "object" && "evidenceId" in entry
             ? [String(entry.evidenceId)]
-            : [],
+            : entry && typeof entry === "object" && "knowledgeItemId" in entry
+              ? [String(entry.knowledgeItemId)]
+              : [],
       );
     }
     return [];
@@ -433,7 +436,9 @@ export const propagateKnowledgeDeprecation = (
     if (
       affected.has(entity.id) &&
       entity.id !== knowledgeItemId &&
-      (entity.type === "Rationale" || entity.type === "VerificationResult")
+      (entity.type === "Rationale" ||
+        entity.type === "VerificationResult" ||
+        entity.type === "Checkpoint")
     ) {
       if (
         entity.status === "failed" ||

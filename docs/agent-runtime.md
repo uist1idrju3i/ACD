@@ -20,7 +20,10 @@ READMEの「9. 長時間タスクを走り切る実行基盤」と設計原則�
 
 ## イベントログ
 
-計画、観測、ツール呼び出し、結果、パッチ、承認、停止、再開、ゲート結果をappend-onlyで記録します。イベントはリビジョンとタスクIDを参照し、リプレイ、監査、回帰評価、知識抽出に使います。
+snapshot、patch、verification、checkpoint、run停止／再開、fab feedback、knowledge lifecycle、
+task ledger、gate結果をappend-onlyで記録します。現在のevent type集合は
+`schemas/event.schema.json`と`packages/graph-core/src/event-log.ts`を正とし、イベントは
+revisionとtask IDを参照してreplay、監査、回帰評価、知識抽出に使います。
 
 ## サブエージェントレーン
 
@@ -33,6 +36,20 @@ READMEの「9. 長時間タスクを走り切る実行基盤」と設計原則�
 - 同じ修正の反復、進捗の振動、成果物の変化なし、ゲート結果の改善なしを無進捗として検知する。
 - 時間、トークン、ツール呼び出し、金額、反復回数に上限を置き、ウォッチドッグが超過前に停止する。
 
+Step Aでは、capとusageを分離した`BudgetUsageSnapshot`をイベントreplayから再構成する。
+attemptはledgerの`pending -> running`遷移、tool callは外部process起動として数え、
+registry replayはlogical requestの別カウンタとする。tokensとmoneyは計測せず、
+usageに明示的な`unknown`を保持する。停止の機械可読な正本はStop Recordであり、
+既知事実、不確実性、選択肢、推奨、再開条件、再開位置、予算snapshot、Evidence IDを
+保存する。詳細は[`adr/0034-budget-watchdog-core-contract.md`](adr/0034-budget-watchdog-core-contract.md)を参照する。
+Phase 4 runnerはrun/task capを操作前に独立判定し、到達見込みならdownstreamを実行せず、
+`artifacts/phase4/budget-watchdog.json`へ決定論的な停止証跡を保存する。既存のresume証跡と
+gate結果は変更しない。注入ケースは実workerとrecorded repair proposerを実行し、
+証跡の`elapsedSeconds`は実時間ではなく注入monotonic clockの値である。repair loopの
+jidoka停止条件は常に有効で、停止までに`observe`した実測列だけを証跡へ保存する。
+無進捗の注入回帰はrepair loop内部を継続させず、同一taskのledger attemptをretry budget内で
+再実行し、attempt間の観測列で検知する。
+
 ## 割り込み
 
 曖昧な要件、未確認の高リスク仮定、ルール免除、予算・納期超過、順序変更が予算を超える場合、または不可逆操作では停止します。ただし、発注前最終ゲートに合格した予算上限内の発注は、不可逆操作であっても承認IDなしで自動実行できる明示的な例外です。予算超過、免除、その他に設定された承認ゲートでは承認IDが必要です。停止時は既知・不確実・選択肢・推奨・再開位置を表示します。エスカレーションは「レーン内のリトライ予算 → 親エージェントへの停止報告 → 利用者への通知」の順とし、各段階に時間と回数の上限を置きます。承認、免除、回答を待って滞留した状態は台帳に可視化し、上限を超えたら無進捗として再通知します。
@@ -40,6 +57,13 @@ READMEの「9. 長時間タスクを走り切る実行基盤」と設計原則�
 ## 型付き冪等ツール
 
 すべてのツールはスキーマ付き入力・出力、相関ID、冪等性キー、タイムアウト、エラー分類、証拠IDを持ちます。操作を`read`、`reversible`、`irreversible`に分類し、予算上限内かつ発注前最終ゲート合格の発注を除き、発注、公開、削除など不可逆操作は承認IDなしに実行しません。予算超過の発注、免除、その他に設定された承認ゲートは承認IDを要求します。再試行で二重発注や二重パッチが起きないことを契約にします。
+
+## ブラウザ観測
+
+workerはrun、台帳、checkpoint、event logの所有者であり、`apps/web`はHTTP/SSEで状態を
+観測するread-only端末である。ブラウザ切断はrun停止ではなく、再接続時はevent position
+からraw eventを再送し、`/state`で最新read modelを取得する。SSE切断はworker停止や
+stop record付き停止とは別の状態として表示する。
 
 ## 評価
 

@@ -38,6 +38,11 @@ export type FabProfileRules = {
   profileId: string;
   version: string;
   confidenceFloor: number;
+  geometryThresholdsNm?: {
+    minimumCopperClearanceNm?: number;
+    minimumMaskSliverNm?: number;
+    minimumCourtyardClearanceNm?: number;
+  };
   rules: FabProfileRule[];
 };
 
@@ -49,6 +54,10 @@ export const fabProfileRules: FabProfileRules[] = [
     profileId: "fab:jlcpcb-class-2layer",
     version: "0.2.0",
     confidenceFloor: 0.8,
+    geometryThresholdsNm: {
+      minimumCopperClearanceNm: 127_000,
+      minimumMaskSliverNm: 300_000,
+    },
     rules: [
       {
         ruleId: "mask-sliver-min",

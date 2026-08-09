@@ -16,5 +16,6 @@ export const canonicalize = (value: unknown): string => {
   return `{${entries.join(",")}}`;
 };
 
+/** Hashes canonicalized structured values for graph and envelope identity. */
 export const sha256 = (value: unknown): string =>
   `sha256:${createHash("sha256").update(canonicalize(value)).digest("hex")}`;

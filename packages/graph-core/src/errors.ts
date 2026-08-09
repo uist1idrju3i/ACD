@@ -2,12 +2,16 @@ export const ERROR_CODES = [
   "schema-invalid",
   "reference-integrity",
   "patch-conflict",
+  "lock-conflict",
   "revision-invalid",
   "event-replay-failure",
   "stale-result",
   "verification-failed",
   "reopen-failure",
   "tool-timeout",
+  "tool-failure",
+  "budget-exceeded",
+  "unknown-impact",
   "fab-feedback-unknown",
 ] as const;
 

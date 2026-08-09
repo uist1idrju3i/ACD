@@ -49,7 +49,8 @@ checkpointから再開して無中断runと同一の完了結果を得る方法�
 
 ## 結果とリスク
 
-- worker process kill後の再開、無中断runとの成果物hash・gate結果比較をWP3で実施します。
+- worker process kill後の再開、無中断runとの成果物hash・gate結果比較は
+  `scripts/phase4-resume.mts`の複数中断ケースとCIの`phase4-resume` jobで実施済みです。
 - 未検証、失敗、stale、欠落、revision不一致、event replay不一致のcheckpointからは再開せず、
   Evidenceを残して停止します。
 - 再開時はidempotency keyを確認し、未確定の副作用を二重実行しません。

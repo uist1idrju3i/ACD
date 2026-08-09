@@ -36,6 +36,7 @@
 | `Evidence`             | データシート、fabルール、シミュレーション、測定       | evidence kind, observations, provenance        |
 | `KnowledgeItem`        | 再利用可能な標準、修正、経験則                        | source events, scope, confidentiality, content |
 | `TaskLedgerEntry`      | 実行状態、依存、予算、停止、完了条件                  | graph revision, checkpoint, retry budget       |
+| `Checkpoint`           | gate境界の入力、実行環境、検証済み成果物と再開位置    | gate, input hash, verification results         |
 | `VerificationResult`   | 検証ゲートの入力、結果、所見                          | gate, status, tool version, evidence           |
 | `Approval`             | 人間または認可主体による範囲付き承認                  | approval ID, scope, expiry                     |
 | `Waiver`               | 検証警告・免除の理由と期限                            | gate, risk, approval ID, expiry                |
@@ -73,7 +74,7 @@ source findingのrule・分類・再現結果は適用条件へ自動注入せ�
 
 `uncertainty`には、少なくとも状態（`unknown`、`assumed`、`inferred`、`verified`、`rejected`）、説明、解消方法（`resolution`）、影響範囲（`impactScope`）、期限（`dueAt`）を記録します。期限の到達で自動的に解消扱いにせず、期限切れの未解消事項は停止条件として扱います。解消は測定、ツール出力、出所付き資料などの`Evidence`で示します。黙った補完は禁止です。
 
-機械制約は既存の`Constraint`で表します。たとえば、`source.kind = "mechanical"`、`source.locator = "enclosure://case-a/rev-3"`、`attributes = { "constraint": "maxComponentHeight", "value": 8, "unit": "mm" }`のように、筐体・取付穴・外形・keepout・コネクタ位置・最大高さを記録します。`Layout.attributes`にはboard outline、mounting holes、keepoutsを、`BoardStackup.attributes`には基板厚・部品高さ包絡・機械クリアランスを保持できます。専用`MechanicalInterface` Entityは、IDXや複数部品の所有権同期が必要になるまで将来候補とします。`source.*`は`Constraint`側の外部出所属性であり、Schemaの`Provenance.kind` enumとは別物です。
+機械制約は既存の`Constraint`で表します。たとえば、`source.kind = "mechanical"`、`source.locator = "enclosure://case-a/rev-3"`、`attributes = { "constraint": "maxComponentHeight", "value": 8, "unit": "mm" }`のように、筐体・取付穴・外形・keepout・コネクタ位置・最大高さを記録します。`Layout.attributes`にはboard outline、mounting holes、keepoutsを、`BoardStackup.attributes`には基板厚・部品高さ包絡・機械クリアランスを保持できます。配線済みのboard geometryは`Layout.attributes.tracks`と`Layout.attributes.vias`に保持します。`tracks`は`netId`、`layer`、`startMm`、`endMm`、`widthMm`を、`vias`は`netId`、`atMm`、`diameterMm`、`drillMm`、`layers`を持ちます。SESなど外部routing結果を取り込む場合、出力順には依存せず、`tracks`は`(netId, layer, startMm.xMm, startMm.yMm, endMm.xMm, endMm.yMm, widthMm)`、`vias`は`(netId, atMm.xMm, atMm.yMm, diameterMm, drillMm, layers)`の辞書順でcanonicalizeします。未知のnet、layer、padstack、単位不整合は検証停止とします。専用`MechanicalInterface` Entityは、IDXや複数部品の所有権同期が必要になるまで将来候補とします。`source.*`は`Constraint`側の外部出所属性であり、Schemaの`Provenance.kind` enumとは別物です。
 
 ## 将来のエンティティ候補
 

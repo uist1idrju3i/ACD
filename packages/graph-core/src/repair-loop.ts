@@ -5,6 +5,7 @@ import { GraphCoreError } from "./errors.js";
 import { sortFindings, unresolvedFindings, type RuleFinding } from "./findings.js";
 import { sha256 } from "./hash.js";
 import { buildTestPlan } from "./test-items.js";
+import type { ProgressObservation } from "./progress.js";
 
 /** JSON Pointer operations, the same shape the patch envelope uses. */
 export type FixturePatchOperation = {
@@ -199,6 +200,7 @@ export const runRepairLoop = (input: {
   proposer: RepairProposer;
   gateIds: readonly string[];
   maxIterations?: number;
+  observe?: (observation: ProgressObservation) => void;
 }): RepairLoopResult => {
   const maxIterations = input.maxIterations ?? 4;
   const iterations: RepairIteration[] = [];
@@ -220,6 +222,24 @@ export const runRepairLoop = (input: {
     const promptFindings = unresolved;
     const proposals = input.proposer.propose({ fixture: current, findings: promptFindings });
     const before = unresolved.length;
+    const firstProposal = proposals[0];
+    if (firstProposal) {
+      input.observe?.({
+        inputHash: sha256(current),
+        proposalHash: sha256({
+          proposalId: firstProposal.proposalId,
+          origin: firstProposal.origin,
+          targets: firstProposal.targets,
+          rationale: firstProposal.rationale,
+          operations: firstProposal.operations,
+        }),
+        artifactHash: sha256(current),
+        gateResultHash: sha256(unresolved),
+        unresolvedFindingCount: before,
+        gateStatus: "failed",
+        stateHash: sha256({ fixture: current, unresolved }),
+      });
+    }
     let advanced = false;
     for (const proposal of proposals) {
       const inadmissible = inadmissibleReason(current, proposal.operations);

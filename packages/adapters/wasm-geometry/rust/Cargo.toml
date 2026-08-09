@@ -1,0 +1,9 @@
+[package]
+name = "acd-geometry-wasm"
+version = "0.1.0"
+edition = "2021"
+license = "MIT"
+description = "Integer geometry primitives for ACD's optional WASM adapter."
+
+[lib]
+crate-type = ["cdylib", "rlib"]

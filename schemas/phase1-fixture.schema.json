@@ -36,6 +36,16 @@
           "type": "array",
           "items": { "type": "string", "minLength": 1 },
           "uniqueItems": true
+        },
+        "geometryThresholdsNm": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "minimumCopperClearanceNm": { "type": "integer", "minimum": 0 },
+            "minimumMaskSliverNm": { "type": "integer", "minimum": 0 },
+            "minimumCourtyardClearanceNm": { "type": "integer", "minimum": 0 }
+          },
+          "minProperties": 1
         }
       }
     },

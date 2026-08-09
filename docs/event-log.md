@@ -4,8 +4,9 @@
 
 ## 目的と権威範囲
 
-Phase 0の実行、patch、検証、停止、再開を追記専用で記録します。これは
-完全な分散runtimeイベント仕様ではなく、snapshotとpatchを再生できる最小契約です。
+Phase 0〜4の実行、patch、検証、停止、再開を追記専用で記録します。保存形式は
+worker-owned JSONLです。これは完全な分散runtimeイベント仕様ではなく、snapshotとpatchを
+再生できる契約です。
 
 ## 最小イベントEnvelope
 
@@ -41,7 +42,8 @@ Phase 0では少なくとも次を扱います。
 - `verification.started`
 - `verification.completed`
 - `verification.stale`
-- `checkpoint.created`
+- `checkpoint.created`：gate境界のcheckpointを記録したイベント。payloadはcheckpoint IDと、
+  入力前提、検証結果、成果物、event位置、実行環境を含む。
 - `run.stopped`
 - `run.resumed`
 - `fab.feedback.received`：記録済みfab reportの入力と、対象revision・provenanceを含む
@@ -50,15 +52,26 @@ Phase 0では少なくとも次を扱います。
 - `knowledge.transitioned`：KnowledgeItemの状態またはscopeの遷移
 - `knowledge.applied`：採用済みKnowledgeItemを設計revisionへ適用した記録。payloadは対象KnowledgeItem、
   resolved library revision、projection artifactを含み、KnowledgeItem→library→projectionの追跡を可能にする。
+- `task.created`：タスク台帳エントリを作成した記録。payloadは対象taskIdと作成時のentryスナップショットを含む。
+- `task.transitioned`：タスク台帳エントリの状態遷移を記録したイベント。payloadは対象taskId、
+  遷移前後のstatus、遷移後のentryスナップショットを含む。予算使用量を永続化するときは
+  `kind: "usage-updated"`を指定し、`{ kind, taskId, usage }`（usageは
+  `BudgetUsageSnapshot`）をpayloadとする。このvariantは状態遷移を進めず、replay時に
+  task単位の最新使用量として再構成される。
 
-イベント種別ごとのpayload schemaとerror codeは実装時に追加し、未知の種別は
-削除せず`unknown event`として保存してreplayを停止します。
+event typeの一覧は`schemas/event.schema.json`と`packages/graph-core/src/event-log.ts`に
+定義されています。現状、event-logの読み込み処理はevent種別ごとのpayload schemaを
+runtime検証せず、未知のevent typeもevent-log単体では拒否しません。Schema validatorを
+明示的に通した場合はschema-invalidとして停止できますが、保存順の読み出し自体は続行します。
+event種別ごとのpayload schema検証と未知event typeの拒否は既知の残債であり、WP8では実装しません。
 
 ## Append-onlyと順序
 
 - 一度確定したイベントは変更・削除しない。
 - `eventId`はproject内で一意にする。
-- replay順は保存順ではなく、revision、occurredAt、eventIdを検査した順序とする。
+- replay順は`FileEventLog.readAll()`が返すJSONLの保存順とし、`verifyReplay`は渡された配列順を
+  検証する。revisionの連続性とpayload hashは検査するが、revision／occurredAt／eventIdによる
+  並べ替えは行わない。
 - 同一revisionに複数の結果を確定しない。
 - payload hash、snapshot hash、patch IDを相互参照できるようにする。
 
@@ -68,7 +81,10 @@ Phase 0では少なくとも次を扱います。
 
 誤って記録したイベントは削除・改変せず、元イベントを参照する訂正イベントを追記します。取り消しは補償イベントとして記録し、影響を受けたrevisionと検証結果をstaleにします。停止、却下、失敗の記録は成功記録と同じ重みで保全し、要約や再構成で失いません。
 
-訂正・補償イベントはPhase 0のイベント種別一覧には含みません。導入するときは、種別一覧、`schemas/event.schema.json`の`type` enum（`additionalProperties: false`）、payload schema、replay規則を同じ変更で更新します。それまでに未知の種別が現れた場合は、上記のとおり`unknown event`として保存し、replayを停止します。この保存とreplay停止は、Schema検証を通過したイベントに対する読み手側の規則です。Schema検証を通らないイベントはその手前で`schema-invalid`として停止します。
+訂正・補償イベントは現行のイベント種別一覧には含みません。導入するときは、種別一覧、
+`schemas/event.schema.json`の`type` enum（`additionalProperties: false`）、payload schema、
+replay規則を同じ変更で更新します。未知event typeの拒否とpayload schema検証は現行の
+event-log単体にはなく、上記の既知の残債です。
 
 ## Replay
 
@@ -79,15 +95,28 @@ Phase 0では少なくとも次を扱います。
 
 ## Checkpoint
 
-checkpointはイベント位置、対象revision、入力hash、成果物hash、検証結果ID、
-実行環境を参照します。再開時は最後の検証済みcheckpointから開始し、未確定の
-副作用を再実行する前にidempotency keyを確認します。
+checkpointはgate境界単位で作成し、イベント位置、入力revision／hash、設計グラフrevision、
+tool／model／library／container version、provenance、measurement-system qualification、
+fab／manufacturing profile、参照KnowledgeItem status、成果物hash、検証結果ID、実行環境を
+記録します。再開時は最後の検証済みcheckpointから開始し、未確定の副作用を再実行する
+前にidempotency keyを確認します。入力や実行前提が変化したcheckpointはstaleとして
+再利用せず、unknownまたは未検証のcheckpointからは再開しません。
 
 ## Phase 0の範囲と将来拡張
 
-Phase 0では一つのprojectを対象とするJSONLまたは同等のappend-onlyファイルを
-想定します。分散順序、マルチユーザー同期、暗号化、保持期間、署名、ストリーム
-配信、worker間イベントは後続のruntime仕様で拡張します。
+## 位置指定読み出しとSSE
+
+`EventLog.readFrom(position)`は0-based event countをcursorとして扱う。
+`from=N`は先頭からN件を受信済みという意味であり、`events[N...]`を返す。要求位置が
+負数または現在件数を超える場合は`event-replay-failure`とする。
+
+workerの`GET /events`は検証済みraw `EventEnvelope`だけをSSEで配信する。SSE `id`は
+event position、canonical `eventId`はpayload内に保持する。`Last-Event-ID: N`がqueryの
+`from`より優先され、Nは受信済み位置としてN+1から再開する。`from=N`はN件のskip
+countとして維持する。破損したlogはSSEを継続せずjidoka停止する。
+
+Phase 4では一つのrunをworkerが所有するJSONLを正規状態とします。分散順序、
+マルチユーザー同期、暗号化、署名、worker間イベントは後続のruntime仕様で拡張します。
 
 ## 関連文書
 

@@ -1,0 +1,734 @@
+{
+  "schemaVersion": "1.0.0",
+  "fixtureId": "fixture:wp7-geometry-parity",
+  "cases": [
+    {
+      "id": "pad-clearance-boundary",
+      "input": {
+        "pads": [
+          {
+            "id": "pad:a:1",
+            "polygon": {
+              "points": [
+                {
+                  "xNm": 0,
+                  "yNm": 0
+                },
+                {
+                  "xNm": 1000,
+                  "yNm": 0
+                },
+                {
+                  "xNm": 1000,
+                  "yNm": 1000
+                },
+                {
+                  "xNm": 0,
+                  "yNm": 1000
+                }
+              ]
+            },
+            "maskExpansionNm": 0,
+            "netId": "net:a",
+            "layer": "F.Cu"
+          },
+          {
+            "id": "pad:b:1",
+            "polygon": {
+              "points": [
+                {
+                  "xNm": 2000,
+                  "yNm": 0
+                },
+                {
+                  "xNm": 3000,
+                  "yNm": 0
+                },
+                {
+                  "xNm": 3000,
+                  "yNm": 1000
+                },
+                {
+                  "xNm": 2000,
+                  "yNm": 1000
+                }
+              ]
+            },
+            "maskExpansionNm": 0,
+            "netId": "net:b",
+            "layer": "F.Cu"
+          }
+        ],
+        "courtyards": [],
+        "thresholds": {
+          "minimumCopperClearanceNm": 1000,
+          "minimumMaskSliverNm": 0
+        }
+      }
+    },
+    {
+      "id": "pad-clearance-violation",
+      "input": {
+        "pads": [
+          {
+            "id": "pad:a:1",
+            "polygon": {
+              "points": [
+                {
+                  "xNm": 0,
+                  "yNm": 0
+                },
+                {
+                  "xNm": 1000,
+                  "yNm": 0
+                },
+                {
+                  "xNm": 1000,
+                  "yNm": 1000
+                },
+                {
+                  "xNm": 0,
+                  "yNm": 1000
+                }
+              ]
+            },
+            "maskExpansionNm": 0,
+            "netId": "net:a",
+            "layer": "F.Cu"
+          },
+          {
+            "id": "pad:b:1",
+            "polygon": {
+              "points": [
+                {
+                  "xNm": 1999,
+                  "yNm": 0
+                },
+                {
+                  "xNm": 2999,
+                  "yNm": 0
+                },
+                {
+                  "xNm": 2999,
+                  "yNm": 1000
+                },
+                {
+                  "xNm": 1999,
+                  "yNm": 1000
+                }
+              ]
+            },
+            "maskExpansionNm": 0,
+            "netId": "net:b",
+            "layer": "F.Cu"
+          }
+        ],
+        "courtyards": [],
+        "thresholds": {
+          "minimumCopperClearanceNm": 1000,
+          "minimumMaskSliverNm": 0
+        }
+      }
+    },
+    {
+      "id": "mask-sliver-violation",
+      "input": {
+        "pads": [
+          {
+            "id": "pad:a:1",
+            "polygon": {
+              "points": [
+                {
+                  "xNm": 0,
+                  "yNm": 0
+                },
+                {
+                  "xNm": 1000,
+                  "yNm": 0
+                },
+                {
+                  "xNm": 1000,
+                  "yNm": 1000
+                },
+                {
+                  "xNm": 0,
+                  "yNm": 1000
+                }
+              ]
+            },
+            "maskExpansionNm": 600,
+            "netId": "net:a",
+            "layer": "F.Cu"
+          },
+          {
+            "id": "pad:b:1",
+            "polygon": {
+              "points": [
+                {
+                  "xNm": 2000,
+                  "yNm": 0
+                },
+                {
+                  "xNm": 3000,
+                  "yNm": 0
+                },
+                {
+                  "xNm": 3000,
+                  "yNm": 1000
+                },
+                {
+                  "xNm": 2000,
+                  "yNm": 1000
+                }
+              ]
+            },
+            "maskExpansionNm": 600,
+            "netId": "net:b",
+            "layer": "F.Cu"
+          }
+        ],
+        "courtyards": [],
+        "thresholds": {
+          "minimumMaskSliverNm": 1
+        }
+      }
+    },
+    {
+      "id": "courtyard-overlap-violation",
+      "input": {
+        "pads": [],
+        "courtyards": [
+          {
+            "componentId": "c1",
+            "polygon": {
+              "points": [
+                {
+                  "xNm": 0,
+                  "yNm": 0
+                },
+                {
+                  "xNm": 1000,
+                  "yNm": 0
+                },
+                {
+                  "xNm": 1000,
+                  "yNm": 1000
+                },
+                {
+                  "xNm": 0,
+                  "yNm": 1000
+                }
+              ]
+            },
+            "layer": "F.Cu"
+          },
+          {
+            "componentId": "c2",
+            "polygon": {
+              "points": [
+                {
+                  "xNm": 900,
+                  "yNm": 0
+                },
+                {
+                  "xNm": 1900,
+                  "yNm": 0
+                },
+                {
+                  "xNm": 1900,
+                  "yNm": 1000
+                },
+                {
+                  "xNm": 900,
+                  "yNm": 1000
+                }
+              ]
+            },
+            "layer": "F.Cu"
+          }
+        ],
+        "thresholds": {
+          "minimumCourtyardClearanceNm": 1
+        }
+      }
+    },
+    {
+      "id": "mask-sliver-non-violation",
+      "input": {
+        "pads": [
+          {
+            "id": "pad:a:1",
+            "polygon": {
+              "points": [
+                {
+                  "xNm": 0,
+                  "yNm": 0
+                },
+                {
+                  "xNm": 1000,
+                  "yNm": 0
+                },
+                {
+                  "xNm": 1000,
+                  "yNm": 1000
+                },
+                {
+                  "xNm": 0,
+                  "yNm": 1000
+                }
+              ]
+            },
+            "maskExpansionNm": 0,
+            "netId": "net:a",
+            "layer": "F.Cu"
+          },
+          {
+            "id": "pad:b:1",
+            "polygon": {
+              "points": [
+                {
+                  "xNm": 3000,
+                  "yNm": 0
+                },
+                {
+                  "xNm": 4000,
+                  "yNm": 0
+                },
+                {
+                  "xNm": 4000,
+                  "yNm": 1000
+                },
+                {
+                  "xNm": 3000,
+                  "yNm": 1000
+                }
+              ]
+            },
+            "maskExpansionNm": 0,
+            "netId": "net:b",
+            "layer": "F.Cu"
+          }
+        ],
+        "courtyards": [],
+        "thresholds": {
+          "minimumMaskSliverNm": 1
+        }
+      }
+    },
+    {
+      "id": "courtyard-overlap-non-violation",
+      "input": {
+        "pads": [],
+        "courtyards": [
+          {
+            "componentId": "c1",
+            "polygon": {
+              "points": [
+                {
+                  "xNm": 0,
+                  "yNm": 0
+                },
+                {
+                  "xNm": 1000,
+                  "yNm": 0
+                },
+                {
+                  "xNm": 1000,
+                  "yNm": 1000
+                },
+                {
+                  "xNm": 0,
+                  "yNm": 1000
+                }
+              ]
+            },
+            "layer": "F.Cu"
+          },
+          {
+            "componentId": "c2",
+            "polygon": {
+              "points": [
+                {
+                  "xNm": 3000,
+                  "yNm": 0
+                },
+                {
+                  "xNm": 4000,
+                  "yNm": 0
+                },
+                {
+                  "xNm": 4000,
+                  "yNm": 1000
+                },
+                {
+                  "xNm": 3000,
+                  "yNm": 1000
+                }
+              ]
+            },
+            "layer": "F.Cu"
+          }
+        ],
+        "thresholds": {
+          "minimumCourtyardClearanceNm": 1
+        }
+      }
+    },
+    {
+      "id": "canonical-data-missing",
+      "input": {
+        "pads": [],
+        "courtyards": [],
+        "thresholds": {}
+      }
+    },
+    {
+      "id": "pad-clearance-same-net-excluded",
+      "input": {
+        "pads": [
+          {
+            "id": "pad:a:1",
+            "polygon": {
+              "points": [
+                {
+                  "xNm": 0,
+                  "yNm": 0
+                },
+                {
+                  "xNm": 1000,
+                  "yNm": 0
+                },
+                {
+                  "xNm": 1000,
+                  "yNm": 1000
+                },
+                {
+                  "xNm": 0,
+                  "yNm": 1000
+                }
+              ]
+            },
+            "netId": "net:shared",
+            "layer": "F.Cu",
+            "maskExpansionNm": 0
+          },
+          {
+            "id": "pad:b:1",
+            "polygon": {
+              "points": [
+                {
+                  "xNm": 100,
+                  "yNm": 0
+                },
+                {
+                  "xNm": 1100,
+                  "yNm": 0
+                },
+                {
+                  "xNm": 1100,
+                  "yNm": 1000
+                },
+                {
+                  "xNm": 100,
+                  "yNm": 1000
+                }
+              ]
+            },
+            "netId": "net:shared",
+            "layer": "F.Cu",
+            "maskExpansionNm": 0
+          }
+        ],
+        "courtyards": [],
+        "thresholds": {
+          "minimumCopperClearanceNm": 1000
+        }
+      }
+    },
+    {
+      "id": "pad-clearance-different-layer-excluded",
+      "input": {
+        "pads": [
+          {
+            "id": "pad:a:1",
+            "polygon": {
+              "points": [
+                {
+                  "xNm": 0,
+                  "yNm": 0
+                },
+                {
+                  "xNm": 1000,
+                  "yNm": 0
+                },
+                {
+                  "xNm": 1000,
+                  "yNm": 1000
+                },
+                {
+                  "xNm": 0,
+                  "yNm": 1000
+                }
+              ]
+            },
+            "netId": "net:a",
+            "layer": "F.Cu",
+            "maskExpansionNm": 0
+          },
+          {
+            "id": "pad:b:1",
+            "polygon": {
+              "points": [
+                {
+                  "xNm": 100,
+                  "yNm": 0
+                },
+                {
+                  "xNm": 1100,
+                  "yNm": 0
+                },
+                {
+                  "xNm": 1100,
+                  "yNm": 1000
+                },
+                {
+                  "xNm": 100,
+                  "yNm": 1000
+                }
+              ]
+            },
+            "netId": "net:b",
+            "layer": "B.Cu",
+            "maskExpansionNm": 0
+          }
+        ],
+        "courtyards": [],
+        "thresholds": {
+          "minimumCopperClearanceNm": 1000
+        }
+      }
+    },
+    {
+      "id": "mask-opening-fusion",
+      "input": {
+        "pads": [
+          {
+            "id": "pad:a:1",
+            "polygon": {
+              "points": [
+                {
+                  "xNm": 0,
+                  "yNm": 0
+                },
+                {
+                  "xNm": 1000,
+                  "yNm": 0
+                },
+                {
+                  "xNm": 1000,
+                  "yNm": 1000
+                },
+                {
+                  "xNm": 0,
+                  "yNm": 1000
+                }
+              ]
+            },
+            "netId": "net:a",
+            "layer": "F.Cu",
+            "maskExpansionNm": 600
+          },
+          {
+            "id": "pad:b:1",
+            "polygon": {
+              "points": [
+                {
+                  "xNm": 2000,
+                  "yNm": 0
+                },
+                {
+                  "xNm": 3000,
+                  "yNm": 0
+                },
+                {
+                  "xNm": 3000,
+                  "yNm": 1000
+                },
+                {
+                  "xNm": 2000,
+                  "yNm": 1000
+                }
+              ]
+            },
+            "netId": "net:b",
+            "layer": "F.Cu",
+            "maskExpansionNm": 600
+          }
+        ],
+        "courtyards": [],
+        "thresholds": {
+          "minimumMaskSliverNm": 1
+        }
+      }
+    },
+    {
+      "id": "mask-opening-thin-sliver",
+      "input": {
+        "pads": [
+          {
+            "id": "pad:a:1",
+            "polygon": {
+              "points": [
+                {
+                  "xNm": 0,
+                  "yNm": 0
+                },
+                {
+                  "xNm": 1000,
+                  "yNm": 0
+                },
+                {
+                  "xNm": 1000,
+                  "yNm": 1000
+                },
+                {
+                  "xNm": 0,
+                  "yNm": 1000
+                }
+              ]
+            },
+            "netId": "net:a",
+            "layer": "F.Cu",
+            "maskExpansionNm": 495
+          },
+          {
+            "id": "pad:b:1",
+            "polygon": {
+              "points": [
+                {
+                  "xNm": 2000,
+                  "yNm": 0
+                },
+                {
+                  "xNm": 3000,
+                  "yNm": 0
+                },
+                {
+                  "xNm": 3000,
+                  "yNm": 1000
+                },
+                {
+                  "xNm": 2000,
+                  "yNm": 1000
+                }
+              ]
+            },
+            "netId": "net:b",
+            "layer": "F.Cu",
+            "maskExpansionNm": 495
+          }
+        ],
+        "courtyards": [],
+        "thresholds": {
+          "minimumMaskSliverNm": 11
+        }
+      }
+    },
+    {
+      "id": "courtyard-different-layer-excluded",
+      "input": {
+        "pads": [],
+        "courtyards": [
+          {
+            "componentId": "c1",
+            "polygon": {
+              "points": [
+                {
+                  "xNm": 0,
+                  "yNm": 0
+                },
+                {
+                  "xNm": 1000,
+                  "yNm": 0
+                },
+                {
+                  "xNm": 1000,
+                  "yNm": 1000
+                },
+                {
+                  "xNm": 0,
+                  "yNm": 1000
+                }
+              ]
+            },
+            "layer": "F.Cu"
+          },
+          {
+            "componentId": "c2",
+            "polygon": {
+              "points": [
+                {
+                  "xNm": 900,
+                  "yNm": 0
+                },
+                {
+                  "xNm": 1900,
+                  "yNm": 0
+                },
+                {
+                  "xNm": 1900,
+                  "yNm": 1000
+                },
+                {
+                  "xNm": 900,
+                  "yNm": 1000
+                }
+              ]
+            },
+            "layer": "B.Cu"
+          }
+        ],
+        "thresholds": {
+          "minimumCourtyardClearanceNm": 1
+        }
+      }
+    },
+    {
+      "id": "pad-clearance-unsorted-subjects",
+      "input": {
+        "pads": [
+          {
+            "id": "pad:z:1",
+            "polygon": {
+              "points": [
+                { "xNm": 0, "yNm": 0 },
+                { "xNm": 1000, "yNm": 0 },
+                { "xNm": 1000, "yNm": 1000 },
+                { "xNm": 0, "yNm": 1000 }
+              ]
+            },
+            "netId": "net:z",
+            "layer": "F.Cu"
+          },
+          {
+            "id": "pad:a:1",
+            "polygon": {
+              "points": [
+                { "xNm": 100, "yNm": 0 },
+                { "xNm": 1100, "yNm": 0 },
+                { "xNm": 1100, "yNm": 1000 },
+                { "xNm": 100, "yNm": 1000 }
+              ]
+            },
+            "netId": "net:a",
+            "layer": "F.Cu"
+          }
+        ],
+        "courtyards": [],
+        "thresholds": {
+          "minimumCopperClearanceNm": 1001
+        }
+      }
+    }
+  ]
+}

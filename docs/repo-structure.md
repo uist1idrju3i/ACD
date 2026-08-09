@@ -19,12 +19,13 @@ packages/
     freerouting/          # DSN/SES境界
     spice/                # nominal SPICE deck生成とngspice出力の解釈
     fab-feedback/         # recorded/live fab reportのintake adapter
-  tool-contract/          # tool request/result/error envelope
-  test-support/           # fixture loader、hash、deterministic clocks
+    wasm-geometry/        # optional Rust/WASM geometry boundary、native fallback
 fixtures/
   golden-tasks/
   design-graphs/
-apps/                     # UI、worker、CLIは必要になった時点で追加
+apps/
+  worker/                 # local HTTP/SSE composition root、run read model
+  web/                    # Vite、Canvas2D、read-only browser client
 docs/
 schemas/
 ```
@@ -34,8 +35,9 @@ fab由来の修正は同adapterのoverlay patch modelで別revisionとして保�
 manifest、hash、NOTICEを変更せず、patchはgraph-coreのKnowledgeItem/event契約をsource
 として参照します。未検証patchは投影へ渡しません。
 
-実際のpackage名はpnpm workspaceの初期化時に確定する。空のappsを先に作らず、
-Phase 0のlibraryから始める。
+pnpm workspaceとpackage名は初期化済みである。現時点で実在するpackageだけを上図に
+記載し、未作成のtool-contract／test-support packageを前提にしない。fixture loader、
+hash、deterministic clockは既存の各package／scripts内に配置されている。
 
 ## 依存方向
 
@@ -43,8 +45,6 @@ Phase 0のlibraryから始める。
 
 ```text
 schema ← graph-core ← adapters/* ← apps/workers
-tool-contract ← graph-core/adapters
-test-support → test対象（本番packageから逆参照しない）
 ```
 
 - `schema`は他のACD packageへ依存しない。

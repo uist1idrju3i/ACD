@@ -19,12 +19,16 @@ MIT、Apache-2.0、BSD-2-Clause、BSD-3-Clause、ISC、0BSD、Python-2.0です�
 | `tsx`                       | 4.19.4   | MIT          | TypeScript script実行                                                   |
 | `typescript`                | 5.8.3    | Apache-2.0   | strict compile/typecheck                                                |
 | `vitest`                    | 3.2.4    | MIT          | unit/golden tests                                                       |
+| `vite`                      | 6.3.5    | MIT          | Vite build/dev server for the dependency-free browser client            |
+| `@playwright/test`          | 1.52.0   | Apache-2.0   | Chromium-only read-only browser regression                              |
 | `eslint` / `@eslint/js`     | 9.30.1   | MIT          | lint                                                                    |
 | `typescript-eslint`         | 8.35.1   | MIT          | TypeScript lint integration                                             |
 | `prettier`                  | 3.6.2    | MIT          | formatting                                                              |
 | `@types/node`               | 22.15.21 | MIT          | Node.js type declarations                                               |
 | `Freerouting`               | 2.2.4    | GPL-3.0      | External routing process only; pinned container, not vendored or linked |
 | `ngspice`                   | 44.2     | BSD-3-Clause | External simulation process only; shipped in the pinned KiCad container |
+
+| `Rust` / `acd-geometry-wasm` | 1.97.1 / 0.1.0 | MIT | Optional integer geometry primitive compiled to WASM |
 
 ngspice `44.2`はKiCad container（同一digest）同梱のバイナリを`ngspice -b`で
 外部processとしてのみ実行し、ACDへlink・vendor・再配布しません。vendor提供の

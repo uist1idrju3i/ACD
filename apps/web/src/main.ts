@@ -1,0 +1,313 @@
+import "./style.css";
+
+type Projection = {
+  unit: "mm";
+  revision: number;
+  outline: { originMm: { xMm: number; yMm: number }; widthMm: number; heightMm: number };
+  pads: Array<{
+    positionMm: { xMm: number; yMm: number };
+    widthMm: number;
+    heightMm: number;
+    layer: string;
+  }>;
+  tracks: Array<{
+    startMm: { xMm: number; yMm: number };
+    endMm: { xMm: number; yMm: number };
+    widthMm: number;
+    layer: string;
+  }>;
+  vias: Array<{ atMm: { xMm: number; yMm: number }; diameterMm: number }>;
+  courtyard: { status: "unavailable" };
+  mask: { status: "unavailable" };
+};
+
+type WorkerState = {
+  eventPosition: number;
+  revision: number;
+  taskLedger: { entries: Record<string, { id: string; status: string; attemptCount: number }> };
+  gateResults: Array<{
+    gate?: number;
+    name?: string;
+    status?: string;
+    verificationResultId?: string;
+  }>;
+  stopRecord: { reasonCode?: string; evidenceIds?: string[] } | null;
+  checkpoints: unknown[];
+  evidenceIds: string[];
+};
+
+const root = document.querySelector<HTMLDivElement>("#app");
+if (!root) throw new Error("app root is missing");
+
+const observerSseState = {
+  initialPosition: 0,
+  receivedPositions: [] as number[],
+  duplicateEventsSuppressed: false,
+};
+let latestRenderVersion = 0;
+let observerEvents: EventSource | undefined;
+let initialRetryCount = 0;
+
+const setConnectionState = (
+  state: "connected" | "stream-disconnected" | "stopped" | "error",
+  message: string,
+): void => {
+  const connection = document.querySelector<HTMLParagraphElement>("#connection-status");
+  if (connection) {
+    connection.textContent = message;
+    connection.className = state === "connected" ? "passed" : "unknown";
+    connection.dataset.workerState = state;
+  }
+  document.body.dataset.workerState = state;
+};
+
+const renderSseState = (): void => {
+  const element = document.querySelector<HTMLParagraphElement>("#sse-observer-state");
+  if (!element) return;
+  element.dataset.initialPosition = String(observerSseState.initialPosition);
+  element.dataset.receivedPositions = JSON.stringify(observerSseState.receivedPositions);
+  element.dataset.duplicateEventsSuppressed = String(observerSseState.duplicateEventsSuppressed);
+  element.textContent = `SSE received positions: ${observerSseState.receivedPositions.join(",")}; duplicate events suppressed: ${observerSseState.duplicateEventsSuppressed}`;
+};
+
+const statusClass = (status: string): string =>
+  ["passed", "failed", "blocked", "stale", "unknown", "unverified"].includes(status)
+    ? status
+    : "unverified";
+
+const fetchJson = async <T>(path: string): Promise<T> => {
+  const response = await fetch(path);
+  if (!response.ok) throw new Error(`worker request failed: ${response.status}`);
+  return (await response.json()) as T;
+};
+
+const drawProjection = (canvas: HTMLCanvasElement, projection: Projection): void => {
+  const context = canvas.getContext("2d");
+  if (!context) throw new Error("Canvas2D is unavailable");
+  const width = canvas.width;
+  const height = canvas.height;
+  context.clearRect(0, 0, width, height);
+  const scale = Math.min(
+    (width - 40) / projection.outline.widthMm,
+    (height - 40) / projection.outline.heightMm,
+  );
+  const x = (value: number): number => 20 + (value - projection.outline.originMm.xMm) * scale;
+  const y = (value: number): number => 20 + (value - projection.outline.originMm.yMm) * scale;
+  context.strokeStyle = "#64748b";
+  context.strokeRect(
+    20,
+    20,
+    projection.outline.widthMm * scale,
+    projection.outline.heightMm * scale,
+  );
+  context.lineWidth = 1;
+  for (const track of projection.tracks) {
+    context.strokeStyle = track.layer === "B.Cu" ? "#2563eb" : "#dc2626";
+    context.lineWidth = Math.max(1, track.widthMm * scale);
+    context.beginPath();
+    context.moveTo(x(track.startMm.xMm), y(track.startMm.yMm));
+    context.lineTo(x(track.endMm.xMm), y(track.endMm.yMm));
+    context.stroke();
+  }
+  for (const pad of projection.pads) {
+    context.fillStyle = "#f59e0b";
+    context.fillRect(
+      x(pad.positionMm.xMm) - (pad.widthMm * scale) / 2,
+      y(pad.positionMm.yMm) - (pad.heightMm * scale) / 2,
+      pad.widthMm * scale,
+      pad.heightMm * scale,
+    );
+  }
+  for (const via of projection.vias) {
+    context.strokeStyle = "#7c3aed";
+    context.beginPath();
+    context.arc(
+      x(via.atMm.xMm),
+      y(via.atMm.yMm),
+      Math.max(1, (via.diameterMm * scale) / 2),
+      0,
+      Math.PI * 2,
+    );
+    context.stroke();
+  }
+};
+
+const render = async (): Promise<void> => {
+  const renderVersion = ++latestRenderVersion;
+  root.innerHTML = `
+    <h1>ACD Run Observer</h1>
+    <p id="connection-status" class="unknown">worker state: loading</p>
+    <section aria-labelledby="ledger-heading">
+      <h2 id="ledger-heading">Task ledger</h2>
+      <ul id="task-ledger"></ul>
+    </section>
+    <section aria-labelledby="gate-heading">
+      <h2 id="gate-heading">Gate results</h2>
+      <ul id="gate-results"></ul>
+    </section>
+    <section aria-labelledby="stop-heading">
+      <h2 id="stop-heading">Stop record</h2>
+      <p id="stop-record">none</p>
+    </section>
+    <section aria-labelledby="checkpoint-heading">
+      <h2 id="checkpoint-heading">Checkpoints</h2>
+      <p id="checkpoints"></p>
+    </section>
+    <section aria-labelledby="evidence-heading">
+      <h2 id="evidence-heading">Evidence references</h2>
+      <p id="evidence"></p>
+    </section>
+    <section aria-labelledby="projection-heading">
+      <h2 id="projection-heading">2D projection</h2>
+      <p id="geometry-status"></p>
+      <canvas id="board" width="640" height="420" aria-label="ACD board projection"></canvas>
+    </section>
+    <p id="sse-observer-state" aria-label="SSE observer state"></p>
+  `;
+  renderSseState();
+  const state = await fetchJson<WorkerState>("/state");
+  const projection = await fetchJson<Projection>("/projection");
+  if (renderVersion !== latestRenderVersion) return;
+  const connection = document.querySelector<HTMLParagraphElement>("#connection-status");
+  if (!connection) throw new Error("connection status missing");
+  if (state.stopRecord) {
+    setConnectionState("stopped", `worker stopped; event position ${state.eventPosition}`);
+  } else {
+    setConnectionState("connected", `worker connected; event position ${state.eventPosition}`);
+  }
+  const ledger = document.querySelector<HTMLUListElement>("#task-ledger");
+  if (!ledger) throw new Error("task ledger missing");
+  ledger.replaceChildren(
+    ...Object.values(state.taskLedger.entries).map((entry) => {
+      const item = document.createElement("li");
+      item.textContent = `${entry.id} — ${entry.status} — attempt ${entry.attemptCount}`;
+      item.dataset.taskId = entry.id;
+      item.dataset.status = statusClass(entry.status);
+      return item;
+    }),
+  );
+  const gates = document.querySelector<HTMLUListElement>("#gate-results");
+  if (!gates) throw new Error("gate results missing");
+  gates.replaceChildren(
+    ...state.gateResults.map((gate) => {
+      const item = document.createElement("li");
+      const status = statusClass(gate.status ?? "unverified");
+      item.textContent = `gate ${gate.gate ?? "unknown"} — ${gate.name ?? "unknown gate"} — ${status} — verification ${gate.verificationResultId ?? "unknown"}`;
+      item.dataset.status = status;
+      item.dataset.verificationResultId = gate.verificationResultId ?? "";
+      return item;
+    }),
+  );
+  const stop = document.querySelector<HTMLParagraphElement>("#stop-record");
+  if (!stop) throw new Error("stop record missing");
+  stop.textContent = state.stopRecord
+    ? `${state.stopRecord.reasonCode ?? "unknown"} — evidence ${state.stopRecord.evidenceIds?.join(", ") ?? "missing"}`
+    : "none";
+  const checkpoints = document.querySelector<HTMLParagraphElement>("#checkpoints");
+  if (!checkpoints) throw new Error("checkpoint display missing");
+  checkpoints.textContent = `${state.checkpoints.length} checkpoint(s)`;
+  const evidence = document.querySelector<HTMLParagraphElement>("#evidence");
+  if (!evidence) throw new Error("evidence display missing");
+  evidence.textContent = state.evidenceIds.length > 0 ? state.evidenceIds.join(", ") : "none";
+  const geometry = document.querySelector<HTMLParagraphElement>("#geometry-status");
+  if (!geometry) throw new Error("geometry status missing");
+  geometry.textContent = `unit: ${projection.unit}; projection revision: ${projection.revision}; courtyard: ${projection.courtyard.status}; mask: ${projection.mask.status}`;
+  const canvas = document.querySelector<HTMLCanvasElement>("#board");
+  if (!canvas) throw new Error("board canvas missing");
+  drawProjection(canvas, projection);
+  renderSseState();
+};
+
+const reconnect = (): void => {
+  let lastReceivedPosition = -1;
+  const received = new Set<number>();
+  observerEvents?.close();
+  const events = new EventSource("/events?from=0");
+  observerEvents = events;
+  events.onopen = () => {
+    const stopped = document.body.dataset.workerState === "stopped";
+    if (!stopped) setConnectionState("connected", "worker connected; event stream open");
+  };
+  events.onerror = () => {
+    if (document.body.dataset.workerState === "stopped") return;
+    if (events.readyState === EventSource.CLOSED) {
+      setConnectionState("stream-disconnected", "event stream disconnected; worker may continue");
+    } else {
+      setConnectionState("stream-disconnected", "event stream reconnecting; worker may continue");
+    }
+  };
+  const onEvent = (event: MessageEvent<string>): void => {
+    const eventPosition = Number(event.lastEventId);
+    if (!Number.isInteger(eventPosition)) return;
+    if (
+      eventPosition <= lastReceivedPosition ||
+      received.has(eventPosition) ||
+      observerSseState.receivedPositions.includes(eventPosition)
+    ) {
+      observerSseState.duplicateEventsSuppressed = true;
+      renderSseState();
+      return;
+    }
+    received.add(eventPosition);
+    lastReceivedPosition = eventPosition;
+    observerSseState.receivedPositions.push(eventPosition);
+    void render().catch(showRenderError);
+  };
+  for (const type of [
+    "snapshot.created",
+    "patch.accepted",
+    "patch.rejected",
+    "verification.started",
+    "verification.completed",
+    "verification.stale",
+    "checkpoint.created",
+    "run.stopped",
+    "run.resumed",
+    "fab.feedback.received",
+    "knowledge.candidate.created",
+    "knowledge.transitioned",
+    "knowledge.applied",
+    "task.created",
+    "task.transitioned",
+  ]) {
+    events.addEventListener(type, onEvent);
+  }
+};
+
+const showRenderError = (error: unknown): void => {
+  root.innerHTML = `
+    <h1>ACD Run Observer</h1>
+    <p id="connection-status" class="unknown">observer render failed</p>
+    <p id="render-error"></p>
+  `;
+  const detail = document.querySelector<HTMLParagraphElement>("#render-error");
+  if (detail) detail.textContent = error instanceof Error ? error.message : String(error);
+  setConnectionState("error", "observer render failed; retrying");
+};
+
+const bootstrap = async (): Promise<void> => {
+  try {
+    await render();
+    initialRetryCount = 0;
+    reconnect();
+  } catch (error) {
+    showRenderError(error);
+    reconnect();
+    if (initialRetryCount < 2) {
+      initialRetryCount += 1;
+      window.setTimeout(() => void bootstrap(), 100 * 2 ** initialRetryCount);
+    }
+  }
+};
+
+void bootstrap();
+window.addEventListener("offline", () => {
+  const connection = document.querySelector<HTMLParagraphElement>("#connection-status");
+  if (connection) {
+    connection.textContent = "browser disconnected; worker may continue";
+    connection.className = "unknown";
+    connection.dataset.workerState = "disconnected";
+    document.body.dataset.workerState = "disconnected";
+  }
+});
+window.addEventListener("online", reconnect);

@@ -2,10 +2,12 @@ node_modules/
 dist/
 coverage/
 .pnpm-store/
+packages/adapters/wasm-geometry/rust/target/
 artifacts/
 .acd/
 *.log
 *.tsbuildinfo
+apps/web/test-results/
 .env
 .env.*
 !.env.example

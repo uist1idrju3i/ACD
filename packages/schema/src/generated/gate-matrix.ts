@@ -25,7 +25,7 @@ export interface ACDGateMatrix {
       /**
        * @minItems 1
        */
-      appliesTo: ["smoke" | "golden", ...("smoke" | "golden")[]];
+      appliesTo: ["smoke" | "golden" | "phase4", ...("smoke" | "golden" | "phase4")[]];
       inputs: string;
       passCondition: string;
       onFailure: string;
@@ -47,7 +47,7 @@ export interface ACDGateMatrix {
       /**
        * @minItems 1
        */
-      appliesTo: ["smoke" | "golden", ...("smoke" | "golden")[]];
+      appliesTo: ["smoke" | "golden" | "phase4", ...("smoke" | "golden" | "phase4")[]];
       inputs: string;
       passCondition: string;
       onFailure: string;

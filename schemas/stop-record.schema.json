@@ -1,0 +1,92 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://acd.example.invalid/schemas/stop-record.schema.json",
+  "title": "ACD Machine-Readable Stop Record",
+  "type": "object",
+  "required": [
+    "reasonCode",
+    "knownFacts",
+    "uncertainties",
+    "options",
+    "recommendation",
+    "resumeCondition",
+    "resumePosition",
+    "budgetSnapshot",
+    "evidenceIds"
+  ],
+  "properties": {
+    "reasonCode": {
+      "type": "string",
+      "enum": [
+        "schema-invalid",
+        "reference-integrity",
+        "patch-conflict",
+        "revision-invalid",
+        "event-replay-failure",
+        "stale-result",
+        "verification-failed",
+        "reopen-failure",
+        "tool-timeout",
+        "tool-failure",
+        "fab-feedback-unknown",
+        "convergence-failure",
+        "license-restriction",
+        "approval-required",
+        "budget-exceeded",
+        "unknown-impact",
+        "patent-concern"
+      ]
+    },
+    "knownFacts": {
+      "type": "array",
+      "items": { "type": "string", "minLength": 1 }
+    },
+    "uncertainties": {
+      "type": "array",
+      "items": { "type": "string", "minLength": 1 }
+    },
+    "options": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "description"],
+        "properties": {
+          "id": { "type": "string", "minLength": 1 },
+          "description": { "type": "string", "minLength": 1 }
+        },
+        "additionalProperties": false
+      }
+    },
+    "recommendation": { "type": "string", "minLength": 1 },
+    "resumeCondition": { "type": "string", "minLength": 1 },
+    "resumePosition": {
+      "type": "object",
+      "properties": {
+        "checkpointId": {
+          "$ref": "https://acd.example.invalid/schemas/design-graph.schema.json#/$defs/id"
+        },
+        "eventPosition": {
+          "$ref": "https://acd.example.invalid/schemas/design-graph.schema.json#/$defs/checkpoint/properties/eventPosition"
+        }
+      },
+      "anyOf": [{ "required": ["checkpointId"] }, { "required": ["eventPosition"] }],
+      "additionalProperties": false
+    },
+    "budgetSnapshot": {
+      "type": "object",
+      "required": ["run", "task"],
+      "properties": {
+        "run": { "$ref": "https://acd.example.invalid/schemas/budget-usage.schema.json" },
+        "task": { "$ref": "https://acd.example.invalid/schemas/budget-usage.schema.json" }
+      },
+      "additionalProperties": false
+    },
+    "evidenceIds": {
+      "type": "array",
+      "items": {
+        "$ref": "https://acd.example.invalid/schemas/design-graph.schema.json#/$defs/id"
+      }
+    }
+  },
+  "additionalProperties": false
+}

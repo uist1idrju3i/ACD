@@ -40,6 +40,7 @@
         "Evidence",
         "KnowledgeItem",
         "TaskLedgerEntry",
+        "Checkpoint",
         "VerificationResult",
         "Approval",
         "Waiver"
@@ -94,6 +95,27 @@
         "evidenceId": { "$ref": "#/$defs/id" },
         "claim": { "type": "string" },
         "locator": { "type": "string" }
+      },
+      "additionalProperties": false
+    },
+    "pointMm": {
+      "type": "object",
+      "required": ["xMm", "yMm"],
+      "properties": {
+        "xMm": { "type": "number" },
+        "yMm": { "type": "number" }
+      },
+      "additionalProperties": false
+    },
+    "polygonMm": {
+      "type": "object",
+      "required": ["points"],
+      "properties": {
+        "points": {
+          "type": "array",
+          "minItems": 3,
+          "items": { "$ref": "#/$defs/pointMm" }
+        }
       },
       "additionalProperties": false
     },
@@ -227,8 +249,10 @@
         "type",
         "revision",
         "purpose",
+        "inputRevision",
         "status",
         "acceptanceCriteria",
+        "attemptCount",
         "retryBudget",
         "budget",
         "checkpointIds"
@@ -238,19 +262,112 @@
         "type": { "const": "TaskLedgerEntry" },
         "revision": { "type": "integer", "minimum": 0 },
         "purpose": { "type": "string", "minLength": 1 },
+        "inputRevision": { "type": "integer", "minimum": 0 },
         "status": {
           "type": "string",
           "enum": ["pending", "running", "blocked", "completed", "failed", "cancelled"]
         },
         "acceptanceCriteria": { "type": "array", "minItems": 1, "items": { "type": "string" } },
+        "attemptCount": { "type": "integer", "minimum": 0 },
         "retryBudget": { "type": "integer", "minimum": 0 },
         "budget": { "$ref": "#/$defs/budget" },
         "checkpointIds": { "type": "array", "items": { "$ref": "#/$defs/id" } },
         "dependencyIds": { "type": "array", "items": { "$ref": "#/$defs/id" } },
         "lane": { "type": "string" },
         "approvalId": { "$ref": "#/$defs/id" },
+        "approvalState": {
+          "type": "string",
+          "enum": ["not-required", "pending", "approved", "rejected"]
+        },
         "stopReason": { "type": "string" },
-        "artifactIds": { "type": "array", "items": { "$ref": "#/$defs/id" } }
+        "artifactIds": { "type": "array", "items": { "$ref": "#/$defs/id" } },
+        "resultId": { "$ref": "#/$defs/id" }
+      },
+      "additionalProperties": true
+    },
+    "checkpoint": {
+      "type": "object",
+      "required": [
+        "id",
+        "type",
+        "revision",
+        "gate",
+        "inputRevision",
+        "inputHash",
+        "graphRevision",
+        "toolVersion",
+        "modelVersion",
+        "libraryVersion",
+        "containerVersion",
+        "provenance",
+        "measurementSystemQualification",
+        "fabProfileId",
+        "manufacturingProfileId",
+        "knowledgeItemStatuses",
+        "artifactHashes",
+        "verificationResultIds",
+        "eventPosition",
+        "executionEnvironment"
+      ],
+      "properties": {
+        "id": { "$ref": "#/$defs/id" },
+        "type": { "const": "Checkpoint" },
+        "revision": { "type": "integer", "minimum": 0 },
+        "status": { "type": "string", "enum": ["active", "stale"] },
+        "gate": { "type": "string", "minLength": 1 },
+        "inputRevision": { "type": "integer", "minimum": 0 },
+        "inputHash": { "type": "string", "minLength": 1 },
+        "graphRevision": { "type": "integer", "minimum": 0 },
+        "toolVersion": { "type": "string", "minLength": 1 },
+        "modelVersion": { "type": "string", "minLength": 1 },
+        "libraryVersion": { "type": "string", "minLength": 1 },
+        "containerVersion": { "type": "string", "minLength": 1 },
+        "provenance": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/provenance" }
+        },
+        "measurementSystemQualification": {
+          "type": "object",
+          "required": ["status"],
+          "properties": {
+            "status": {
+              "type": "string",
+              "enum": ["unknown", "qualified", "unqualified"]
+            },
+            "evidenceIds": {
+              "type": "array",
+              "items": { "$ref": "#/$defs/id" }
+            }
+          },
+          "additionalProperties": false
+        },
+        "fabProfileId": { "type": "string", "minLength": 1 },
+        "manufacturingProfileId": { "type": "string", "minLength": 1 },
+        "knowledgeItemStatuses": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["knowledgeItemId", "status"],
+            "properties": {
+              "knowledgeItemId": { "$ref": "#/$defs/id" },
+              "status": { "type": "string", "minLength": 1 }
+            },
+            "additionalProperties": false
+          }
+        },
+        "artifactHashes": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1 }
+        },
+        "verificationResultIds": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/id" }
+        },
+        "eventPosition": { "type": "integer", "minimum": 0 },
+        "executionEnvironment": {
+          "type": "object",
+          "additionalProperties": true
+        }
       },
       "additionalProperties": true
     },
@@ -380,6 +497,47 @@
       "additionalProperties": true,
       "allOf": [
         {
+          "if": { "properties": { "type": { "const": "Footprint" } } },
+          "then": {
+            "properties": {
+              "attributes": {
+                "properties": {
+                  "courtyard": { "$ref": "#/$defs/polygonMm" },
+                  "pads": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "shape": {
+                          "type": "object",
+                          "required": ["kind"],
+                          "properties": {
+                            "kind": { "enum": ["rect", "polygon"] },
+                            "points": {
+                              "type": "array",
+                              "minItems": 3,
+                              "items": { "$ref": "#/$defs/pointMm" }
+                            }
+                          },
+                          "additionalProperties": false,
+                          "allOf": [
+                            {
+                              "if": { "properties": { "kind": { "const": "polygon" } } },
+                              "then": { "required": ["points"] }
+                            }
+                          ]
+                        },
+                        "maskExpansionMm": { "type": "number", "minimum": 0 }
+                      },
+                      "additionalProperties": true
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        {
           "if": { "properties": { "type": { "const": "Evidence" } } },
           "then": { "$ref": "#/$defs/evidence" }
         },
@@ -390,6 +548,10 @@
         {
           "if": { "properties": { "type": { "const": "TaskLedgerEntry" } } },
           "then": { "$ref": "#/$defs/taskLedgerEntry" }
+        },
+        {
+          "if": { "properties": { "type": { "const": "Checkpoint" } } },
+          "then": { "$ref": "#/$defs/checkpoint" }
         },
         {
           "if": { "properties": { "type": { "const": "VerificationResult" } } },

@@ -1,0 +1,338 @@
+{
+  "route": "/",
+  "headings": [
+    "ACD Run Observer",
+    "Task ledger",
+    "Gate results",
+    "Stop record",
+    "Checkpoints",
+    "Evidence references",
+    "2D projection"
+  ],
+  "gateResults": [
+    "gate 1 — Fixture/schema — passed — verification verification:gate:fixture-reference"
+  ],
+  "evidenceReferences": "evidence:wp6-fixture, verification:gate:fixture-reference",
+  "accessibility": {
+    "connectionStatus": "worker stopped; event position 2",
+    "courtyard": "unavailable",
+    "mask": "unavailable"
+  },
+  "readOnlyControlCount": 0,
+  "geometry": {
+    "schemaVersion": "acd-projection-1",
+    "projectId": "project:normal-2layer",
+    "revision": 0,
+    "unit": "mm",
+    "artifactIds": [],
+    "outline": {
+      "originMm": {
+        "xMm": 0,
+        "yMm": 0
+      },
+      "widthMm": 20,
+      "heightMm": 15
+    },
+    "pads": [
+      {
+        "id": "pad:component:c1:1",
+        "number": "1",
+        "componentId": "component:c1",
+        "layer": "F.Cu",
+        "positionMm": {
+          "xMm": 7.25,
+          "yMm": 10
+        },
+        "widthMm": 1.2,
+        "heightMm": 1.2,
+        "shape": "rectangle"
+      },
+      {
+        "id": "pad:component:c1:2",
+        "number": "2",
+        "componentId": "component:c1",
+        "layer": "F.Cu",
+        "positionMm": {
+          "xMm": 8.75,
+          "yMm": 10
+        },
+        "widthMm": 1.2,
+        "heightMm": 1.2,
+        "shape": "rectangle"
+      },
+      {
+        "id": "pad:component:d1:1",
+        "number": "1",
+        "componentId": "component:d1",
+        "layer": "F.Cu",
+        "positionMm": {
+          "xMm": 11.25,
+          "yMm": 5
+        },
+        "widthMm": 1.2,
+        "heightMm": 1.2,
+        "shape": "rectangle"
+      },
+      {
+        "id": "pad:component:d1:2",
+        "number": "2",
+        "componentId": "component:d1",
+        "layer": "F.Cu",
+        "positionMm": {
+          "xMm": 12.75,
+          "yMm": 5
+        },
+        "widthMm": 1.2,
+        "heightMm": 1.2,
+        "shape": "rectangle"
+      },
+      {
+        "id": "pad:component:j1:1",
+        "number": "1",
+        "componentId": "component:j1",
+        "layer": "F.Cu",
+        "positionMm": {
+          "xMm": 2,
+          "yMm": 7.5
+        },
+        "widthMm": 1.2,
+        "heightMm": 1.2,
+        "shape": "rectangle"
+      },
+      {
+        "id": "pad:component:j1:2",
+        "number": "2",
+        "componentId": "component:j1",
+        "layer": "F.Cu",
+        "positionMm": {
+          "xMm": 4,
+          "yMm": 7.5
+        },
+        "widthMm": 1.2,
+        "heightMm": 1.2,
+        "shape": "rectangle"
+      },
+      {
+        "id": "pad:component:r1:1",
+        "number": "1",
+        "componentId": "component:r1",
+        "layer": "F.Cu",
+        "positionMm": {
+          "xMm": 7.25,
+          "yMm": 5
+        },
+        "widthMm": 1.2,
+        "heightMm": 1.2,
+        "shape": "rectangle"
+      },
+      {
+        "id": "pad:component:r1:2",
+        "number": "2",
+        "componentId": "component:r1",
+        "layer": "F.Cu",
+        "positionMm": {
+          "xMm": 8.75,
+          "yMm": 5
+        },
+        "widthMm": 1.2,
+        "heightMm": 1.2,
+        "shape": "rectangle"
+      }
+    ],
+    "tracks": [
+      {
+        "id": "track:{\"endMm\":{\"xMm\":11.25,\"yMm\":5},\"layer\":\"F.Cu\",\"netId\":\"net:gnd\",\"startMm\":{\"xMm\":18,\"yMm\":13},\"widthMm\":0.25}",
+        "netId": "net:gnd",
+        "layer": "F.Cu",
+        "widthMm": 0.25,
+        "startMm": {
+          "xMm": 18,
+          "yMm": 13
+        },
+        "endMm": {
+          "xMm": 11.25,
+          "yMm": 5
+        }
+      },
+      {
+        "id": "track:{\"endMm\":{\"xMm\":12.75,\"yMm\":5},\"layer\":\"B.Cu\",\"netId\":\"net:led-a\",\"startMm\":{\"xMm\":8.75,\"yMm\":5},\"widthMm\":0.25}",
+        "netId": "net:led-a",
+        "layer": "B.Cu",
+        "widthMm": 0.25,
+        "startMm": {
+          "xMm": 8.75,
+          "yMm": 5
+        },
+        "endMm": {
+          "xMm": 12.75,
+          "yMm": 5
+        }
+      },
+      {
+        "id": "track:{\"endMm\":{\"xMm\":18,\"yMm\":13},\"layer\":\"F.Cu\",\"netId\":\"net:gnd\",\"startMm\":{\"xMm\":2,\"yMm\":13},\"widthMm\":0.25}",
+        "netId": "net:gnd",
+        "layer": "F.Cu",
+        "widthMm": 0.25,
+        "startMm": {
+          "xMm": 2,
+          "yMm": 13
+        },
+        "endMm": {
+          "xMm": 18,
+          "yMm": 13
+        }
+      },
+      {
+        "id": "track:{\"endMm\":{\"xMm\":2,\"yMm\":13},\"layer\":\"F.Cu\",\"netId\":\"net:gnd\",\"startMm\":{\"xMm\":4,\"yMm\":7.5},\"widthMm\":0.25}",
+        "netId": "net:gnd",
+        "layer": "F.Cu",
+        "widthMm": 0.25,
+        "startMm": {
+          "xMm": 4,
+          "yMm": 7.5
+        },
+        "endMm": {
+          "xMm": 2,
+          "yMm": 13
+        }
+      },
+      {
+        "id": "track:{\"endMm\":{\"xMm\":7.25,\"yMm\":10},\"layer\":\"B.Cu\",\"netId\":\"net:vcc\",\"startMm\":{\"xMm\":7.25,\"yMm\":5},\"widthMm\":0.25}",
+        "netId": "net:vcc",
+        "layer": "B.Cu",
+        "widthMm": 0.25,
+        "startMm": {
+          "xMm": 7.25,
+          "yMm": 5
+        },
+        "endMm": {
+          "xMm": 7.25,
+          "yMm": 10
+        }
+      },
+      {
+        "id": "track:{\"endMm\":{\"xMm\":7.25,\"yMm\":5},\"layer\":\"B.Cu\",\"netId\":\"net:vcc\",\"startMm\":{\"xMm\":2,\"yMm\":7.5},\"widthMm\":0.25}",
+        "netId": "net:vcc",
+        "layer": "B.Cu",
+        "widthMm": 0.25,
+        "startMm": {
+          "xMm": 2,
+          "yMm": 7.5
+        },
+        "endMm": {
+          "xMm": 7.25,
+          "yMm": 5
+        }
+      },
+      {
+        "id": "track:{\"endMm\":{\"xMm\":8.75,\"yMm\":10},\"layer\":\"F.Cu\",\"netId\":\"net:gnd\",\"startMm\":{\"xMm\":11.25,\"yMm\":5},\"widthMm\":0.25}",
+        "netId": "net:gnd",
+        "layer": "F.Cu",
+        "widthMm": 0.25,
+        "startMm": {
+          "xMm": 11.25,
+          "yMm": 5
+        },
+        "endMm": {
+          "xMm": 8.75,
+          "yMm": 10
+        }
+      }
+    ],
+    "vias": [
+      {
+        "id": "via:{\"atMm\":{\"xMm\":12.75,\"yMm\":5},\"diameterMm\":0.8,\"drillMm\":0.4,\"layers\":[\"B.Cu\",\"F.Cu\"],\"netId\":\"net:led-a\"}",
+        "netId": "net:led-a",
+        "atMm": {
+          "xMm": 12.75,
+          "yMm": 5
+        },
+        "diameterMm": 0.8,
+        "drillMm": 0.4,
+        "layers": [
+          "B.Cu",
+          "F.Cu"
+        ]
+      },
+      {
+        "id": "via:{\"atMm\":{\"xMm\":2,\"yMm\":7.5},\"diameterMm\":0.8,\"drillMm\":0.4,\"layers\":[\"B.Cu\",\"F.Cu\"],\"netId\":\"net:vcc\"}",
+        "netId": "net:vcc",
+        "atMm": {
+          "xMm": 2,
+          "yMm": 7.5
+        },
+        "diameterMm": 0.8,
+        "drillMm": 0.4,
+        "layers": [
+          "B.Cu",
+          "F.Cu"
+        ]
+      },
+      {
+        "id": "via:{\"atMm\":{\"xMm\":7.25,\"yMm\":10},\"diameterMm\":0.8,\"drillMm\":0.4,\"layers\":[\"B.Cu\",\"F.Cu\"],\"netId\":\"net:vcc\"}",
+        "netId": "net:vcc",
+        "atMm": {
+          "xMm": 7.25,
+          "yMm": 10
+        },
+        "diameterMm": 0.8,
+        "drillMm": 0.4,
+        "layers": [
+          "B.Cu",
+          "F.Cu"
+        ]
+      },
+      {
+        "id": "via:{\"atMm\":{\"xMm\":7.25,\"yMm\":5},\"diameterMm\":0.8,\"drillMm\":0.4,\"layers\":[\"B.Cu\",\"F.Cu\"],\"netId\":\"net:vcc\"}",
+        "netId": "net:vcc",
+        "atMm": {
+          "xMm": 7.25,
+          "yMm": 5
+        },
+        "diameterMm": 0.8,
+        "drillMm": 0.4,
+        "layers": [
+          "B.Cu",
+          "F.Cu"
+        ]
+      },
+      {
+        "id": "via:{\"atMm\":{\"xMm\":8.75,\"yMm\":5},\"diameterMm\":0.8,\"drillMm\":0.4,\"layers\":[\"B.Cu\",\"F.Cu\"],\"netId\":\"net:led-a\"}",
+        "netId": "net:led-a",
+        "atMm": {
+          "xMm": 8.75,
+          "yMm": 5
+        },
+        "diameterMm": 0.8,
+        "drillMm": 0.4,
+        "layers": [
+          "B.Cu",
+          "F.Cu"
+        ]
+      }
+    ],
+    "courtyard": {
+      "status": "unavailable",
+      "reason": "canonical-data-not-provided"
+    },
+    "mask": {
+      "status": "unavailable",
+      "reason": "canonical-data-not-provided"
+    }
+  },
+  "sse": {
+    "initialPosition": 0,
+    "receivedPositions": [
+      0,
+      1
+    ],
+    "cursorPosition": 2,
+    "reconnectPosition": 1,
+    "replayedPositions": [
+      1
+    ],
+    "duplicateEventsSuppressed": true,
+    "observedWorkerState": "stopped",
+    "workerStateAvailableAfterBrowserClose": true
+  }
+}

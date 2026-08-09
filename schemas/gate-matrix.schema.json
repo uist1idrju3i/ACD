@@ -58,7 +58,7 @@
             "minItems": 1,
             "uniqueItems": true,
             "items": {
-              "enum": ["smoke", "golden"]
+              "enum": ["smoke", "golden", "phase4"]
             }
           },
           "inputs": {

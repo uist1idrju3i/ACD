@@ -22,6 +22,9 @@ import {
   physicalEvidenceSamplePath,
   physicalEvidenceSchemaPath,
   repositoryRoot,
+  toolEnvelopeSchemaPath,
+  budgetUsageSchemaPath,
+  stopRecordSchemaPath,
 } from "./paths.js";
 import { validatePhase1FixtureReferences } from "./phase1-semantic.js";
 import { gateMatrixSectionMatches, type GateMatrix } from "./gate-matrix.js";
@@ -36,6 +39,16 @@ export const createValidator = (): Ajv2020 => {
 
 export const loadValidator = async (schemaPath: string): Promise<ValidateFunction> => {
   const ajv = createValidator();
+  if (schemaPath === toolEnvelopeSchemaPath) {
+    const designGraph = JSON.parse(await readFile(designGraphSchemaPath, "utf8")) as object;
+    ajv.addSchema(designGraph);
+  }
+  if (schemaPath === stopRecordSchemaPath) {
+    const designGraph = JSON.parse(await readFile(designGraphSchemaPath, "utf8")) as object;
+    ajv.addSchema(designGraph);
+    const budgetUsage = JSON.parse(await readFile(budgetUsageSchemaPath, "utf8")) as object;
+    ajv.addSchema(budgetUsage);
+  }
   const schema = JSON.parse(await readFile(schemaPath, "utf8")) as object;
   return ajv.compile(schema);
 };
@@ -55,6 +68,9 @@ const samplePaths = [
   gateMatrixSchemaPath,
   libraryPatchSchemaPath,
   componentLibrarySchemaPath,
+  toolEnvelopeSchemaPath,
+  budgetUsageSchemaPath,
+  stopRecordSchemaPath,
 ];
 for (const schemaPath of samplePaths) {
   await loadValidator(schemaPath);

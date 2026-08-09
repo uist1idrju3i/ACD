@@ -21,7 +21,9 @@ export interface ACDEventEnvelope {
     | "fab.feedback.received"
     | "knowledge.candidate.created"
     | "knowledge.transitioned"
-    | "knowledge.applied";
+    | "knowledge.applied"
+    | "task.created"
+    | "task.transitioned";
   occurredAt: string;
   actor: string;
   projectId: string;

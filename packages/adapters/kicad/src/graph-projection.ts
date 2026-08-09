@@ -21,6 +21,26 @@ const sheetUuid = "00000000-0000-4000-8000-000000000001";
 
 const mm = (value: number): string => String(Number(value.toFixed(6)));
 
+export const renderBoardRoutes = (
+  tracks: BoardModel["tracks"],
+  vias: BoardModel["vias"],
+  netCode: (netId: string) => number,
+): string => {
+  const renderedVias = vias
+    .map(
+      (via) =>
+        `  (via (at ${mm(via.atMm.xMm)} ${mm(via.atMm.yMm)}) (size ${mm(via.diameterMm)}) (drill ${mm(via.drillMm)}) (layers ${via.layers.map((layer) => `"${layer}"`).join(" ")}) (net ${netCode(via.netId)}))`,
+    )
+    .join("\n");
+  const renderedTracks = tracks
+    .map(
+      (track) =>
+        `  (segment (start ${mm(track.startMm.xMm)} ${mm(track.startMm.yMm)}) (end ${mm(track.endMm.xMm)} ${mm(track.endMm.yMm)}) (width ${mm(track.widthMm)}) (layer "${track.layer}") (net ${netCode(track.netId)}))`,
+    )
+    .join("\n");
+  return [renderedVias, renderedTracks].filter((value) => value.length > 0).join("\n");
+};
+
 const netOfPin = (model: BoardModel, pinId: string): { code: number; name: string } => {
   const net = model.nets.find((candidate) => candidate.pinIds.includes(pinId));
   if (!net) throw new GraphCoreError("reference-integrity", `pin has no net: ${pinId}`);
@@ -91,18 +111,7 @@ export const renderGraphBoard = (model: BoardModel): string => {
     if (!net) throw new GraphCoreError("reference-integrity", `unknown net: ${netId}`);
     return net.code;
   };
-  const vias = model.vias
-    .map(
-      (via) =>
-        `  (via (at ${mm(via.atMm.xMm)} ${mm(via.atMm.yMm)}) (size ${mm(via.diameterMm)}) (drill ${mm(via.drillMm)}) (layers ${via.layers.map((layer) => `"${layer}"`).join(" ")}) (net ${netCode(via.netId)}))`,
-    )
-    .join("\n");
-  const tracks = model.tracks
-    .map(
-      (track) =>
-        `  (segment (start ${mm(track.startMm.xMm)} ${mm(track.startMm.yMm)}) (end ${mm(track.endMm.xMm)} ${mm(track.endMm.yMm)}) (width ${mm(track.widthMm)}) (layer "${track.layer}") (net ${netCode(track.netId)}))`,
-    )
-    .join("\n");
+  const routes = renderBoardRoutes(model.tracks, model.vias, netCode);
   const { originMm, widthMm, heightMm } = model.outline;
   return `(kicad_pcb
   (version 20240108)
@@ -126,8 +135,7 @@ ${nets}
     (layer "Edge.Cuts")
   )
 ${footprints}
-${vias}
-${tracks}
+${routes}
 )`;
 };
 

@@ -1,25 +1,152 @@
-import { appendFile, readFile } from "node:fs/promises";
+import { mkdir, open, readFile, unlink } from "node:fs/promises";
+import type { FileHandle } from "node:fs/promises";
+import { dirname } from "node:path";
 import { canonicalize } from "@acd/graph-core";
-import { verifyEvent, type EventEnvelope, type EventLog } from "@acd/graph-core";
+import {
+  GraphCoreError,
+  verifyEvent,
+  type EventEnvelope,
+  type EventLog,
+  type EventLogRead,
+} from "@acd/graph-core";
 
 export class FileEventLog implements EventLog {
+  private handle: FileHandle | undefined;
+  private lock: FileHandle | undefined;
+  private opening: Promise<FileHandle> | undefined;
+
   constructor(private readonly path: string) {}
 
   async append(event: EventEnvelope): Promise<void> {
     verifyEvent(event);
-    await appendFile(this.path, `${canonicalize(event)}\n`, "utf8");
+    const handle = await this.openWriter();
+    await handle.write(`${canonicalize(event)}\n`, undefined, "utf8");
+    await handle.sync();
   }
 
   async readAll(): Promise<EventEnvelope[]> {
     try {
-      const content = await readFile(this.path, "utf8");
-      return content
-        .split("\n")
-        .filter(Boolean)
-        .map((line) => JSON.parse(line) as EventEnvelope);
+      const content = await readFile(this.path);
+      const lastNewline = content.lastIndexOf(0x0a);
+      return this.parseEvents(content.subarray(0, lastNewline + 1));
     } catch (error) {
       if ((error as NodeJS.ErrnoException).code === "ENOENT") return [];
       throw error;
     }
   }
+
+  async readFrom(position: number): Promise<EventLogRead> {
+    const events = await this.readAll();
+    if (!Number.isInteger(position) || position < 0 || position > events.length) {
+      throw new GraphCoreError("event-replay-failure", `invalid event position: ${position}`);
+    }
+    return { position, events: structuredClone(events.slice(position)) };
+  }
+
+  async recover(): Promise<EventLogRecovery> {
+    const handle = await this.openWriter();
+    const content = await readFile(this.path);
+    const lastNewline = content.lastIndexOf(0x0a);
+    const complete = content.subarray(0, lastNewline + 1);
+    const events = this.parseEvents(complete);
+    const truncatedBytes = content.length - complete.length;
+    if (truncatedBytes > 0) {
+      await handle.truncate(complete.length);
+      await handle.sync();
+    }
+    return {
+      truncatedBytes,
+      finalEventId: events.at(-1)?.eventId ?? null,
+      eventPosition: events.length,
+    };
+  }
+
+  async close(): Promise<void> {
+    await this.handle?.close();
+    await this.lock?.close();
+    this.handle = undefined;
+    if (this.lock) {
+      this.lock = undefined;
+      try {
+        await unlink(`${this.path}.lock`);
+      } catch (error) {
+        if ((error as NodeJS.ErrnoException).code !== "ENOENT") throw error;
+      }
+    }
+  }
+
+  private async openWriter(): Promise<FileHandle> {
+    if (this.handle) return this.handle;
+    if (this.opening) return this.opening;
+    const opening = this.openWriterOnce();
+    this.opening = opening;
+    try {
+      return await opening;
+    } finally {
+      if (this.opening === opening) this.opening = undefined;
+    }
+  }
+
+  private async openWriterOnce(): Promise<FileHandle> {
+    await mkdir(dirname(this.path), { recursive: true });
+    let lock: FileHandle | undefined;
+    try {
+      lock = await open(`${this.path}.lock`, "wx");
+      const handle = await open(this.path, "a");
+      this.lock = lock;
+      this.handle = handle;
+      return handle;
+    } catch (error) {
+      await lock?.close();
+      if (lock) {
+        try {
+          await unlink(`${this.path}.lock`);
+        } catch {
+          // Preserve the original open error.
+        }
+      }
+      if ((error as NodeJS.ErrnoException).code === "EEXIST") {
+        throw new GraphCoreError(
+          "lock-conflict",
+          `event-log writer lock already held: ${this.path}`,
+        );
+      }
+      throw error;
+    }
+  }
+
+  private parseEvents(content: Buffer): EventEnvelope[] {
+    const lines = content.toString("utf8").split("\n").filter(Boolean);
+    return lines.map((line, index) => {
+      let event: EventEnvelope;
+      try {
+        event = JSON.parse(line) as EventEnvelope;
+      } catch (error) {
+        throw new GraphCoreError(
+          "event-replay-failure",
+          `invalid event JSON at line ${index + 1}`,
+          "critical",
+          { cause: error instanceof Error ? error.message : String(error) },
+        );
+      }
+      try {
+        verifyEvent(event);
+      } catch (error) {
+        if (error instanceof GraphCoreError) throw error;
+        throw new GraphCoreError(
+          "event-replay-failure",
+          `invalid event envelope at line ${index + 1}`,
+          "critical",
+          { cause: error instanceof Error ? error.message : String(error) },
+        );
+      }
+      return event;
+    });
+  }
 }
+
+export type EventLogRecovery = {
+  truncatedBytes: number;
+  finalEventId: string | null;
+  eventPosition: number;
+};
