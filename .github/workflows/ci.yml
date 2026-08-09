@@ -138,7 +138,7 @@ jobs:
           cache: pnpm
       - run: pnpm install --frozen-lockfile
       - run: pnpm web:build
-      - run: pnpm exec playwright install --with-deps chromium
+      - run: pnpm --filter @acd/web exec playwright install --with-deps chromium
       - run: pnpm web:test:e2e:chromium
       - name: Upload WP6 browser evidence
         if: always()
