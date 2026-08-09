@@ -93,6 +93,13 @@ export const checkBudget = (
   };
   if (!budget) return { status: "allowed", remaining };
 
+  if (
+    (budget.tokens !== undefined && usage.tokens.status === "unknown") ||
+    (budget.amount !== undefined && usage.money.status === "unknown")
+  ) {
+    return { status: "unknown-impact", remaining, reasonCode: "unknown-impact" };
+  }
+
   const checks: Array<{
     cap: number | undefined;
     current: number;
@@ -119,4 +126,21 @@ export const checkBudget = (
     return { status: "would-exceed", remaining, reasonCode: "budget-exceeded" };
   }
   return { status: "allowed", remaining };
+};
+
+export const assertExternalProcessUpperBound = (
+  stageId: string,
+  measured: number,
+  upperBound: number | undefined,
+): void => {
+  if (upperBound === undefined) return;
+  if (!Number.isInteger(measured) || measured < 0) {
+    throw new GraphCoreError("schema-invalid", "measured external process count is invalid");
+  }
+  if (measured > upperBound) {
+    throw new GraphCoreError(
+      "budget-exceeded",
+      `measured external process count exceeded upper bound for ${stageId}`,
+    );
+  }
 };

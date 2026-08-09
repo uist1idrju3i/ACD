@@ -1,5 +1,5 @@
 import type { Checkpoint as SchemaCheckpoint } from "@acd/schema";
-import { createEvent, type EventEnvelope, type EventLog } from "./event-log.js";
+import { createEvent, verifyReplay, type EventEnvelope, type EventLog } from "./event-log.js";
 import { GraphCoreError } from "./errors.js";
 import { canonicalize } from "./hash.js";
 
@@ -98,6 +98,8 @@ export class CheckpointRuntime {
 
   async create(input: CheckpointCreateInput): Promise<Checkpoint> {
     const events = await this.eventLog.readAll();
+    verifyReplay(events);
+    const revision = events.at(-1)?.resultRevision ?? 0;
     const checkpoint = {
       ...input,
       id: this.ids.next("checkpoint"),
@@ -113,8 +115,8 @@ export class CheckpointRuntime {
         occurredAt: this.clock.now(),
         actor: this.actor,
         projectId: this.projectId,
-        baseRevision: events.length,
-        resultRevision: events.length + 1,
+        baseRevision: revision,
+        resultRevision: revision + 1,
         payload: { checkpointId: checkpoint.id, checkpoint },
       }),
     );
@@ -161,6 +163,17 @@ const checkpointIsVerified = (checkpoint: Checkpoint, events: EventEnvelope[]): 
   );
 };
 
+const checkpointIsLogged = (checkpoint: Checkpoint, events: EventEnvelope[]): boolean =>
+  events.some((event) => {
+    if (event.type !== "checkpoint.created") return false;
+    const payload = event.payload as { checkpointId?: string; checkpoint?: Checkpoint };
+    return (
+      payload.checkpointId === checkpoint.id &&
+      payload.checkpoint !== undefined &&
+      canonicalize(payload.checkpoint) === canonicalize(checkpoint)
+    );
+  });
+
 export class ResumeOrchestrator {
   constructor(
     private readonly projectId: string,
@@ -177,6 +190,7 @@ export class ResumeOrchestrator {
     stages: readonly ResumeStage[],
   ): Promise<ResumePlan> {
     const events = await this.eventLog.readAll();
+    verifyReplay(events);
     const existing = events.find(
       (event) =>
         event.type === "run.resumed" &&
@@ -190,7 +204,12 @@ export class ResumeOrchestrator {
     }
 
     const candidates = (await this.store.readAll())
-      .filter((checkpoint) => checkpointIsVerified(checkpoint, events))
+      .filter(
+        (checkpoint) =>
+          checkpoint.status !== "stale" &&
+          checkpointIsLogged(checkpoint, events) &&
+          checkpointIsVerified(checkpoint, events),
+      )
       .map((checkpoint) => ({
         checkpoint,
         staleness: assessCheckpointStaleness(checkpoint, current),
@@ -210,8 +229,8 @@ export class ResumeOrchestrator {
           occurredAt: this.clock.now(),
           actor: this.actor,
           projectId: this.projectId,
-          baseRevision: events.length,
-          resultRevision: events.length + 1,
+          baseRevision: events.at(-1)?.resultRevision ?? 0,
+          resultRevision: events.at(-1)?.resultRevision ?? 0,
           payload: { reason: "no-reusable-verified-checkpoint", reasons },
         }),
       );
@@ -244,8 +263,8 @@ export class ResumeOrchestrator {
         occurredAt: this.clock.now(),
         actor: this.actor,
         projectId: this.projectId,
-        baseRevision: events.length,
-        resultRevision: events.length + 1,
+        baseRevision: events.at(-1)?.resultRevision ?? 0,
+        resultRevision: (events.at(-1)?.resultRevision ?? 0) + 1,
         payload: { resumeId, plan },
       }),
     );

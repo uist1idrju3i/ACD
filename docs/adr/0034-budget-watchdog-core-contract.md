@@ -11,6 +11,8 @@ Accepted（Step Aのコア契約とStep Bのrunner接続。Gate 25のstatus変�
    registry replayのlogical request数は別カウンタで記録する。
 2. budgetのcap宣言とusage snapshotを分離する。tokensとmoneyは測定せず、
    usageでは`{"status":"unknown"}`として明示的に保持し、0やpassへ変換しない。
+   tokensまたはamountのcapを宣言したままusageがunknownの場合は
+   `unknown-impact`として停止する。
 3. run scopeとtask scopeを独立に判定する。task capは既存ledger entryのbudget、
    run capはrunnerが宣言し、停止したscopeをstop recordへ残す。
 4. graph-coreには数値monotonic時刻を返す`MonotonicClockPort`を置き、実clock、
@@ -18,7 +20,8 @@ Accepted（Step Aのコア契約とStep Bのrunner接続。Gate 25のstatus変�
    重複統合は今回行わない。
 5. 操作前にusageと見積りコストを加算して判定する。tool callの見積りは、
    stageごとに実行し得る外部process数の保守的な上限を単一の表から取得し、
-   通常runと注入runで同じ表を使う。実測値は`gate:spice=3`、
+   通常runと注入runで同じ表を使う。外部processを起動しないstageは上限0を明示し、
+   未掲載stageは上限不明として`unknown-impact`で停止する。実測値は`gate:spice=3`、
    `gate:kicad-projection=2`、`gate:erc=1`、`gate:routing=3`、`gate:drc=1`、
    `gate:manufacturing=2`、`gate:library-patch=3`（合計15）であり、
    いずれも対応stageの実測外部process数未満ではない。時間はstage単位の注入値1秒
@@ -47,6 +50,9 @@ Accepted（Step Aのコア契約とStep Bのrunner接続。Gate 25のstatus変�
     baselineとresumedで必然的に異なるため、resumeの意味比較対象から除外する。
     除外一覧には`task.transitioned(kind=usage-updated)`を明示する。raw event countは
     実event logの全件数を保持し、比較用の件数は別フィールドで除外後の集合を示す。
+    resume workerは最初の操作前判定より前に、event logから再構成したtask usage snapshotを
+    集計し、elapsedSeconds、externalProcessExecutions、logicalToolRequestsのrun scopeを
+    復元する。復元できない場合は0として扱わず停止する。
 11. repair loopのjidoka停止条件は常に有効とし、進捗がない場合に継続させる
     core optionは持たない。`observe`で停止までに実測できた観測列だけを記録し、
     閾値未満の場合は観測不足として扱う。

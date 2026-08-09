@@ -320,7 +320,7 @@ const main = async (): Promise<void> => {
   await writeFile(join(root, "spikes/kicad-library/manifest.json"), manifestText, "utf8");
   for (const { path, fixture } of fixtures) {
     await writeFile(path, `${JSON.stringify(fixture, null, 2)}\n`, "utf8");
-    await processPort.execute({
+    const result = await processPort.execute({
       command: "pnpm",
       args: ["exec", "prettier", "--write", path],
       cwd: root,
@@ -329,6 +329,9 @@ const main = async (): Promise<void> => {
       maxOutputBytes: 64 * 1024 * 1024,
       killGraceMs: 5_000,
     });
+    if (result.kind !== "completed") {
+      throw new Error(`prettier failed for ${path}: ${result.kind}`);
+    }
   }
 
   const symbolsForFixture = (fixture: Fixture): string => {
