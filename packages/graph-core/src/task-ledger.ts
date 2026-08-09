@@ -96,7 +96,8 @@ export const listTaskLedgerAttention = (
       (entry) =>
         entry.status === "blocked" ||
         entry.status === "failed" ||
-        entry.approvalState === "pending",
+        entry.approvalState === "pending" ||
+        entry.approvalState === "rejected",
     )
     .sort((left, right) => compareIds(left.id, right.id))
     .map((entry) => ({
@@ -173,7 +174,11 @@ export const transitionTask = (
     artifactIds: context.artifactIds ?? entry.artifactIds,
   };
   const stopReason = context.stopReason ?? entry.stopReason;
-  if (stopReason && target !== "completed" && target !== "pending") next.stopReason = stopReason;
+  if (target === "completed" || target === "pending") {
+    delete next.stopReason;
+  } else if (stopReason) {
+    next.stopReason = stopReason;
+  }
   const checkpointIds = context.checkpointIds ?? entry.checkpointIds;
   if (checkpointIds) next.checkpointIds = checkpointIds;
   const resultId = context.resultId ?? entry.resultId;
@@ -216,6 +221,12 @@ export const replayTaskLedger = (events: readonly EventEnvelope[]): TaskLedgerSt
           `task transition does not match state: ${payload.taskId}`,
         );
       }
+      if (payload.taskId !== payload.entry.id || payload.entry.status !== payload.to) {
+        throw new GraphCoreError(
+          "event-replay-failure",
+          `task transition payload does not match target: ${payload.taskId}`,
+        );
+      }
       validateTaskLedgerEntry(payload.entry);
       state.entries[payload.taskId] = structuredClone(payload.entry);
     }
@@ -226,6 +237,8 @@ export const replayTaskLedger = (events: readonly EventEnvelope[]): TaskLedgerSt
 
 export class TaskLedgerRuntime {
   private state: TaskLedgerState = { revision: 0, entries: {} };
+  private loaded = false;
+  private loading: Promise<void> | undefined;
 
   constructor(
     private readonly projectId: string,
@@ -237,6 +250,7 @@ export class TaskLedgerRuntime {
 
   async load(): Promise<TaskLedgerState> {
     this.state = replayTaskLedger(await this.eventLog.readAll());
+    this.loaded = true;
     return structuredClone(this.state);
   }
 
@@ -251,6 +265,7 @@ export class TaskLedgerRuntime {
   }
 
   async create(entry: TaskLedgerEntry): Promise<TaskLedgerState> {
+    await this.ensureLoaded();
     validateTaskLedgerEntry(entry);
     if (this.state.entries[entry.id]) fail(`task already exists: ${entry.id}`);
     await this.append("task.created", { kind: "created", taskId: entry.id, entry });
@@ -262,6 +277,7 @@ export class TaskLedgerRuntime {
     target: TaskLedgerStatus,
     context: TaskTransitionContext = {},
   ): Promise<TaskLedgerState> {
+    await this.ensureLoaded();
     const entry = this.state.entries[taskId];
     if (!entry) throw new GraphCoreError("reference-integrity", `unknown task: ${taskId}`);
     const next = transitionTask(entry, target, Object.values(this.state.entries), context);
@@ -292,5 +308,17 @@ export class TaskLedgerRuntime {
     verifyEvent(event);
     await this.eventLog.append(event);
     this.state = replayTaskLedger(await this.eventLog.readAll());
+  }
+
+  private async ensureLoaded(): Promise<void> {
+    if (this.loaded) return;
+    if (this.loading) return this.loading;
+    const loading = this.load().then(() => undefined);
+    this.loading = loading;
+    try {
+      await loading;
+    } finally {
+      if (this.loading === loading) this.loading = undefined;
+    }
   }
 }

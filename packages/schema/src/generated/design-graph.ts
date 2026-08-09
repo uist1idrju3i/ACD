@@ -309,6 +309,7 @@ export interface Checkpoint {
   id: Id;
   type: "Checkpoint";
   revision: number;
+  status?: "active" | "stale";
   gate: string;
   inputRevision: number;
   inputHash: string;
