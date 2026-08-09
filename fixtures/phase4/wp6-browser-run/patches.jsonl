@@ -1,0 +1,1 @@
+{"patchId":"patch:wp6-fixture-revision-1","baseRevision":0,"resultRevision":1,"operations":[{"op":"replace","path":"/project/name","value":"WP6 browser fixture revision 1"}],"createdAt":"2026-01-01T00:00:00.000Z","createdBy":"fixture","verificationResultIds":["verification:wp6-fixture"]}

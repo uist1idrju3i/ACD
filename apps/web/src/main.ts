@@ -175,15 +175,40 @@ const render = async (): Promise<void> => {
 };
 
 const reconnect = (): void => {
-  let position = 0;
-  const events = new EventSource(`/events?from=${position}`);
-  events.addEventListener("cursor", (event) => {
-    const payload = JSON.parse((event as MessageEvent<string>).data) as { position: number };
-    position = payload.position;
-  });
-  events.onmessage = () => {
+  let lastReceivedPosition = -1;
+  const received = new Set<number>();
+  const events = new EventSource("/events?from=0");
+  const onEvent = (event: MessageEvent<string>): void => {
+    const eventPosition = Number(event.lastEventId);
+    if (
+      !Number.isInteger(eventPosition) ||
+      eventPosition <= lastReceivedPosition ||
+      received.has(eventPosition)
+    )
+      return;
+    received.add(eventPosition);
+    lastReceivedPosition = eventPosition;
     void render();
   };
+  for (const type of [
+    "snapshot.created",
+    "patch.accepted",
+    "patch.rejected",
+    "verification.started",
+    "verification.completed",
+    "verification.stale",
+    "checkpoint.created",
+    "run.stopped",
+    "run.resumed",
+    "fab.feedback.received",
+    "knowledge.candidate.created",
+    "knowledge.transitioned",
+    "knowledge.applied",
+    "task.created",
+    "task.transitioned",
+  ]) {
+    events.addEventListener(type, onEvent);
+  }
 };
 
 void render().then(reconnect);

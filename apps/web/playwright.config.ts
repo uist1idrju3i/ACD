@@ -14,7 +14,7 @@ export default defineConfig({
   webServer: [
     {
       command:
-        "pnpm --filter @acd/worker start -- --root=../../artifacts/phase4/after-drc/baseline --graph=../../fixtures/design-graphs/normal-2layer.json --port=4174",
+        "pnpm --filter @acd/worker start -- --root=../../fixtures/phase4/wp6-browser-run --graph=../../fixtures/phase4/wp6-browser-run/graph.json --port=4174",
       port: 4174,
       reuseExistingServer: false,
     },

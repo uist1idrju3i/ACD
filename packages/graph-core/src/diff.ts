@@ -1,4 +1,4 @@
-import { canonicalize, sha256 } from "./hash.js";
+import { canonicalize } from "./hash.js";
 import type { EventEnvelope } from "./event-log.js";
 import type { DesignGraph } from "./semantic.js";
 import type { Snapshot } from "./repository.js";
@@ -93,7 +93,10 @@ const sortedChanges = (changes: EntityChange[]): EntityChange[] =>
 export const diffSnapshots = (
   from: Snapshot,
   to: Snapshot,
-  source: { patches?: readonly { patchId: string }[]; events?: readonly EventEnvelope[] } = {},
+  source: {
+    patches?: readonly { patchId: string; baseRevision?: number; resultRevision?: number }[];
+    events?: readonly EventEnvelope[];
+  } = {},
 ): RevisionDiff => {
   const before = entityMap(from.graph);
   const after = entityMap(to.graph);
@@ -129,13 +132,23 @@ export const diffSnapshots = (
   return {
     fromRevision: from.revision,
     toRevision: to.revision,
-    sourcePatchIds: [...(source.patches ?? [])].map((patch) => patch.patchId).sort(),
+    sourcePatchIds: [...(source.patches ?? [])]
+      .filter(
+        (patch) =>
+          patch.resultRevision === undefined ||
+          (patch.resultRevision > from.revision && patch.resultRevision <= to.revision),
+      )
+      .map((patch) => patch.patchId)
+      .sort(),
     sourceEventIds: [...(source.events ?? [])]
-      .filter((event) => event.type === "patch.accepted")
+      .filter(
+        (event) =>
+          event.type === "patch.accepted" &&
+          event.resultRevision > from.revision &&
+          event.resultRevision <= to.revision,
+      )
       .map((event) => event.eventId)
       .sort(),
     changes: sortedChanges(changes),
   };
 };
-
-export const stableGeometryKey = (value: unknown): string => `geometry:${sha256(value)}`;

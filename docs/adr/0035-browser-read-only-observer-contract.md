@@ -25,6 +25,13 @@ Evidence、投影ジオメトリ、revision差分を観測する必要がある�
   identityとする。track/viaはcanonical geometry keyを使い、重複時だけ決定論的序数を付ける。
 - screenshotはcanonical evidenceではない。DOM/accessibility、geometry DTO、SSE cursorの
   正規化JSONをcanonical evidenceとする。
+- HTTP transportの失敗は`error.category: transport`と
+  `method-not-allowed`／`route-not-found`／`snapshot-unavailable`で表現し、
+  graph error codeと混同しない。cursor不正やevent検証失敗だけが
+  `event-replay-failure`となる。
+- web clientの通常の再接続はEventSource標準の`Last-Event-ID`送信に委ね、
+  受信済みSSE `id`をclient側で重複排除する。明示的な`from`指定は初回接続と
+  canonical cursor検証に限定する。
 
 ## 責務境界
 

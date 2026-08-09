@@ -3,9 +3,12 @@ import { readFile } from "node:fs/promises";
 import { join, resolve } from "node:path";
 import {
   diffSnapshots,
+  PatchEngine,
   projectBoardGeometry,
   replayTaskLedger,
+  sha256,
   type DesignGraph,
+  type PatchEnvelope,
   type Snapshot,
 } from "@acd/graph-core";
 import { FileEventLog } from "@acd/adapter-storage-fs";
@@ -17,6 +20,7 @@ type WorkerServerOptions = {
 };
 
 type JsonObject = Record<string, unknown>;
+type TransportErrorCode = "method-not-allowed" | "route-not-found" | "snapshot-unavailable";
 
 const json = (value: unknown): string => `${JSON.stringify(value, null, 2)}\n`;
 
@@ -54,6 +58,10 @@ const errorBody = (code: string, message: string): JsonObject => ({
   error: { code, message },
 });
 
+const transportError = (code: TransportErrorCode, message: string): JsonObject => ({
+  error: { category: "transport", code, message },
+});
+
 const cursor = (request: IncomingMessage, url: URL): number => {
   const header = request.headers["last-event-id"];
   const raw =
@@ -65,18 +73,39 @@ const cursor = (request: IncomingMessage, url: URL): number => {
 };
 
 const runSnapshot = async (runRoot: string, graph?: DesignGraph): Promise<Snapshot | undefined> => {
-  if (graph) return { revision: graph.project.revision, graph, hash: "" };
+  if (graph) {
+    const stored = await readJson<Snapshot>(join(runRoot, "snapshot.json"));
+    return stored ?? { revision: graph.project.revision, graph, hash: sha256(graph) };
+  }
   return readJson<Snapshot>(join(runRoot, "snapshot.json"));
 };
 
-const revisionSnapshot = async (
+const readPatches = async (runRoot: string): Promise<PatchEnvelope[]> =>
+  readJsonLines<PatchEnvelope>(join(runRoot, "patches.jsonl"));
+
+const revisionSnapshots = async (
   runRoot: string,
-  revision: number,
   current: Snapshot | undefined,
-): Promise<Snapshot | undefined> =>
-  current?.revision === revision
-    ? current
-    : readJson<Snapshot>(join(runRoot, `snapshot-${revision}.json`));
+  graph?: DesignGraph,
+): Promise<Map<number, Snapshot>> => {
+  const snapshots = new Map<number, Snapshot>();
+  if (current) snapshots.set(current.revision, current);
+  const initial = graph ?? (await readJson<Snapshot>(join(runRoot, "snapshot-0.json")))?.graph;
+  if (!initial) return snapshots;
+  const engine = new PatchEngine();
+  let state: Snapshot = {
+    revision: initial.project.revision,
+    graph: structuredClone(initial),
+    hash: sha256(initial),
+  };
+  snapshots.set(state.revision, state);
+  for (const patch of await readPatches(runRoot)) {
+    const result = engine.apply(state.graph, state.revision, patch);
+    state = { revision: result.revision, graph: result.graph, hash: result.snapshotHash };
+    snapshots.set(state.revision, state);
+  }
+  return snapshots;
+};
 
 const readState = async (runRoot: string, log: FileEventLog): Promise<JsonObject> => {
   const events = await log.readAll();
@@ -168,7 +197,7 @@ export const createWorkerServer = (options: WorkerServerOptions) => {
   const server = createServer(async (request, response) => {
     const url = requestUrl(request);
     if (request.method !== "GET") {
-      sendJson(response, 405, errorBody("verification-failed", "worker API is read-only"));
+      sendJson(response, 405, transportError("method-not-allowed", "worker API is read-only"));
       return;
     }
     try {
@@ -186,7 +215,7 @@ export const createWorkerServer = (options: WorkerServerOptions) => {
           sendJson(
             response,
             503,
-            errorBody("reference-integrity", "projection snapshot is unavailable"),
+            transportError("snapshot-unavailable", "projection snapshot is unavailable"),
           );
           return;
         }
@@ -200,24 +229,28 @@ export const createWorkerServer = (options: WorkerServerOptions) => {
           sendJson(response, 400, errorBody("revision-invalid", "revision query is invalid"));
           return;
         }
-        const fromSnapshot = await revisionSnapshot(runRoot, from, snapshot);
-        const toSnapshot = await revisionSnapshot(runRoot, to, snapshot);
+        const snapshots = await revisionSnapshots(runRoot, snapshot, options.graph);
+        const fromSnapshot = snapshots.get(from);
+        const toSnapshot = snapshots.get(to);
         if (!fromSnapshot || !toSnapshot) {
           sendJson(
             response,
             503,
-            errorBody("reference-integrity", "requested revision is unavailable"),
+            transportError("snapshot-unavailable", "requested revision is unavailable"),
           );
           return;
         }
         sendJson(
           response,
           200,
-          diffSnapshots(fromSnapshot, toSnapshot, { events: await log.readAll() }),
+          diffSnapshots(fromSnapshot, toSnapshot, {
+            patches: await readPatches(runRoot),
+            events: await log.readAll(),
+          }),
         );
         return;
       }
-      sendJson(response, 404, errorBody("reference-integrity", "unknown worker route"));
+      sendJson(response, 404, transportError("route-not-found", "unknown worker route"));
     } catch (error) {
       sendJson(
         response,

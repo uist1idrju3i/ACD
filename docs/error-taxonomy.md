@@ -62,6 +62,25 @@ contextのschemaを機械契約とします。このEnvelope自体のJSON Schema
 `schemas/error-taxonomy.schema.json`はtaxonomy dataのみを検証します。Schema化するまでは
 `context`の形状は文書上の契約として扱います。
 
+## HTTP transport分類
+
+workerのHTTP境界で発生するmethod not allowed、unknown route、snapshot未提供は
+graph error codeではありません。これらは次のtransport分類で返し、`error.category`
+を`transport`とします。
+
+```json
+{
+  "error": {
+    "category": "transport",
+    "code": "method-not-allowed",
+    "message": "worker API is read-only"
+  }
+}
+```
+
+cursor不正、event logの破損、event payload hash不一致はgraph-coreの
+`event-replay-failure`として扱います。
+
 ## 再試行と停止
 
 timeoutや一時的なtool起動失敗だけを、同一input hash、同一idempotency key、

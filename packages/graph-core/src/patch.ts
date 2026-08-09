@@ -4,6 +4,7 @@ import { canonicalize, sha256 } from "./hash.js";
 import { validateSemanticGraph, type DesignGraph } from "./semantic.js";
 
 export type PatchOperation = Patch["operations"][number];
+export type PatchEnvelope = Patch;
 export type PatchResult = {
   graph: DesignGraph;
   revision: number;

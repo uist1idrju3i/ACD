@@ -1,0 +1,11 @@
+[
+  {
+    "gate": 1,
+    "name": "Fixture/schema",
+    "status": "passed",
+    "evidence": {
+      "fixture": "fixture:phase1-golden-esp32",
+      "schemaVersion": "1.0.0-draft"
+    }
+  }
+]

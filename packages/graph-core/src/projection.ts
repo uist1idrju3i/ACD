@@ -55,8 +55,6 @@ export type ProjectionGeometry = {
   mask: UnavailableGeometry;
 };
 
-const pointKey = (point: ProjectionPointMm): string => canonicalize(point);
-
 const geometryKey = (value: unknown): string => canonicalize(value);
 
 const duplicateKeys = (values: readonly string[]): Set<string> => {
@@ -119,9 +117,10 @@ const boardTracks = (model: BoardModel): ProjectionTrack[] => {
     startMm: track.startMm,
     endMm: track.endMm,
   }));
+  const ids = stableGeometryIds(values, "track");
   return values
-    .map((track, index, all) => ({
-      id: stableGeometryIds(all, "track")[index] ?? `track:${index}`,
+    .map((track, index) => ({
+      id: ids[index] ?? `track:${index}`,
       ...track,
     }))
     .sort((left, right) => left.id.localeCompare(right.id));
@@ -135,9 +134,10 @@ const boardVias = (model: BoardModel): ProjectionVia[] => {
     drillMm: via.drillMm,
     layers: [...via.layers].sort(),
   }));
+  const ids = stableGeometryIds(values, "via");
   return values
-    .map((via, index, all) => ({
-      id: stableGeometryIds(all, "via")[index] ?? `via:${index}`,
+    .map((via, index) => ({
+      id: ids[index] ?? `via:${index}`,
       ...via,
     }))
     .sort((left, right) => left.id.localeCompare(right.id));
@@ -167,5 +167,3 @@ export const projectBoardGeometry = (
     mask: { status: "unavailable", reason: "canonical-data-not-provided" },
   };
 };
-
-export const projectionPointKey = pointKey;
