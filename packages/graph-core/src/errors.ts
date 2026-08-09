@@ -2,6 +2,7 @@ export const ERROR_CODES = [
   "schema-invalid",
   "reference-integrity",
   "patch-conflict",
+  "lock-conflict",
   "revision-invalid",
   "event-replay-failure",
   "stale-result",
