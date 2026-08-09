@@ -56,8 +56,9 @@ unknown reason、finding count、entity index、測定nm、閾値nmからなる�
 入力・出力の長さ、magic、index、status、unknown時のfinding欠如を検証し、超過や破損は
 明示的な`verification-failed`停止とする。
 
-入力bufferと出力bufferは固定アドレスに依存せず、moduleがexportする`__heap_base`から
-実行時に導出する。`__heap_base`が欠落または不正なmoduleはABI不一致として停止する。
+入力bufferと出力bufferは固定アドレスに依存せず、linkerが生成してmoduleがexportする
+`__heap_base`から実行時に導出する。Rust側の静的値で同名symbolを定義してはならない。
+`__heap_base`が欠落または不正なmoduleはABI不一致として停止する。
 
 WASM moduleが利用不能な場合だけnativeへ決定論的にfallbackする。Evidenceにはengine、
 理由、module version、build digest、toolchain versionを記録する。`.wasm`はcommitせず、
