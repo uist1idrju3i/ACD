@@ -47,6 +47,12 @@ kicad-cli pcb export drill -o artifacts/drill/ design.kicad_pcb
 kicad-cli pcb export step -o artifacts/board.step design.kicad_pcb
 ```
 
+### 任意の追加検証候補
+
+現行の必須コマンドとは別に、KiCad 10.0.5で能力を確認したうえで、`pcb drc --format json`、`pcb drc --schematic-parity`、`pcb export ipc2581`、`pcb export odb`、`pcb export stats`、`pcb export ipcd`、および関連exportの`--variant`を追加検証候補とします。これらは現行プロファイルの必須要件ではありません。
+
+KiCad 11で予定される`kicad-cli gerber diff`、`gerber info`（`--exit-code-only`、JSON出力を含む）と`api-server`は、将来の製造データ差分検査・構造検査・CI内IPC利用の候補です。開発版由来で変更の可能性があり、現行の固定10.0.5プロファイルは変更しません。
+
 入力は生成したprojectとし、出力先を空にしてから実行します。exit codeだけで
 判定せず、reportのseverity、入力revision、tool version、stdout/stderr、生成物
 hashを保存します。

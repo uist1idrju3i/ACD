@@ -30,6 +30,8 @@ MIT、Apache-2.0、BSD-2-Clause、BSD-3-Clause、ISC、0BSD、Python-2.0です�
 
 | `Rust` / `acd-geometry-wasm` | 1.97.1 / 0.1.0 | MIT | Optional integer geometry primitive compiled to WASM |
 
+2026年8月時点の上流最新はFreerouting v2.3.0（2026年8月7日。MCP/A2Aサーバーと実験的KiCad JSON/API経路を含むが、DSNが推奨本番経路で、protobuf IPC対応はv2.4以降の予定）およびngspice 46系（2026年3月29日）です。ACDは固定KiCad container同梱のFreerouting 2.2.4／ngspice 44.2を維持し、更新は依存変更としてレビューします。
+
 ngspice `44.2`はKiCad container（同一digest）同梱のバイナリを`ngspice -b`で
 外部processとしてのみ実行し、ACDへlink・vendor・再配布しません。vendor提供の
 `.lib`∕`.mod`は取り込まず、利用者が用意する外部入力として扱います

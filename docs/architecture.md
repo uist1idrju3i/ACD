@@ -57,7 +57,7 @@ ACDの要件取得、設計グラフ参照、候補生成、検証実行、差�
 
 ### KiCad境界
 
-KiCadは相互運用・レビュー・退避先です。`kicad-cli`はバッチ検証・エクスポート、IPC APIは稼働中エディタへの検査・ガード付き変更を担当します。KiCad 10を最低対応にするか、KiCad 11の回路図IPCを必須にするかは未決定（[ADR-0007](adr/0007-kicad-minimum-version.md)で決定予定）です。Phase 0/1 CIは[ADR-0009](adr/0009-provisional-kicad-ci-baseline.md)の暫定基準に従います。回路図を正にせず設計グラフから投影します（詳細は[`kicad-interop.md`](kicad-interop.md)）。
+KiCadは相互運用・レビュー・退避先です。`kicad-cli`はバッチ検証・エクスポート、IPC APIは稼働中エディタへの検査・ガード付き変更を担当します。KiCad 11で予定されるヘッドレス`kicad-cli api-server`により、CI内でもIPC APIを使う選択肢が生まれる見込みですが、開発版由来で変更の可能性があります。KiCad 10を最低対応にするか、KiCad 11の回路図IPCを必須にするかは未決定（[ADR-0007](adr/0007-kicad-minimum-version.md)で決定予定）です。Phase 0/1 CIは[ADR-0009](adr/0009-provisional-kicad-ci-baseline.md)の暫定基準に従います。回路図を正にせず設計グラフから投影します（詳細は[`kicad-interop.md`](kicad-interop.md)）。
 
 ### 機械CAD境界
 
