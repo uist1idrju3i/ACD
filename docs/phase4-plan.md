@@ -1,6 +1,6 @@
 # Phase 4実装計画
 
-**ステータス：Accepted（WP1〜WP4、WP6〜WP7実装済み、WP5未着手、WP8 docs/schema同期中）**
+**ステータス：Accepted（WP1〜WP4、WP6〜WP8実装済み、WP5部分実装、WP9未着手）**
 
 ## 目的と権威範囲
 
@@ -24,11 +24,13 @@ Phase 5の範囲です。FWパッケージと仮想実機はPhase 6、自働発�
 - 再利用できる基盤：append-only event log（`checkpoint.created`／`run.resumed`の
   イベント型を含む）、revision付きpatch、input hashとtool versionを持つEvidence、
   gate matrixの`runsAfter`、KnowledgeItemのライフサイクル、library overlay revision。
-- WP1〜WP7で実装済みの基盤：
+- WP1〜WP8で実装済みの基盤：
   - `TaskLedgerRuntime`、checkpoint runtime、resume orchestrator、budget watchdog、
     無進捗検知は`scripts/phase4-resume.mts`から実workerで実行される。
   - Rust/WASM geometry runtimeはWP7で実装済み。tool request／result／error envelopeの
-    完全なschema化は未着手で、WP5の残課題である。
+    schema、typed runtime、冪等registryはWP5で実装済みである。既存の
+    `scripts/golden-run.mts`、`scripts/phase1-smoke.mts`、`scripts/extract-kicad-library.mts`
+    に残る`NodeProcessPort`直接呼び出しをenvelope経由へ移行することがWP5の残課題である。
 - 現状のPhase 1〜3のrunは`scripts/*.mts`の単発runnerであり、途中終了すると先頭から
   やり直します。README §7 Phase 4の完了条件は、この構造では測定できません。
 
@@ -167,17 +169,21 @@ checkpoint選択、無中断runとのhash／gate結果／event列比較で検査
 
 ### WP5：型付き冪等ツール境界のschema化
 
-**状態：未着手。** tool request／result／error envelopeの完全なschema化と冪等境界の統合は
-WP8後の残課題である。
+**状態：部分実装。** `schemas/tool-envelope.schema.json`、
+`packages/adapters/storage-fs/src/tool-runtime.ts`にtool request／result／error envelope、
+typed runtime、冪等registryを実装済みである。既存の外部process callerをenvelope経由へ移行する
+統合が残る。
 
 **作業**
 
 - [`tool-contract.md`](tool-contract.md)のrequest／result envelopeと
-  [`error-taxonomy.md`](error-taxonomy.md)のerror envelopeを、機械検証可能なschemaにする
-  （現状は文書のみで、error envelope schemaは未定義と明記されている）。
+  [`error-taxonomy.md`](error-taxonomy.md)のerror envelopeを、機械検証可能なschemaで固定する。
 - 相関ID、冪等性キー、timeout、cancel、retry予算、Evidence IDを必須項目として型付ける。
-- 既存の外部process呼び出し（`kicad-cli`、ngspice、freerouting）をこのenvelope越しにそろえ、
-  再試行で二重の副作用が起きないことをテストで固定する。
+- 既存の外部process呼び出し（`kicad-cli`、ngspice、freerouting）をこのenvelope越しにそろえる。
+  対象は[`scripts/golden-run.mts`](../scripts/golden-run.mts)、
+  [`scripts/phase1-smoke.mts`](../scripts/phase1-smoke.mts)、
+  [`scripts/extract-kicad-library.mts`](../scripts/extract-kicad-library.mts)であり、
+  `NodeProcessPort`直接呼び出しをなくし、再試行で二重の副作用が起きないことをテストで固定する。
 
 **受入基準**
 
@@ -248,7 +254,7 @@ CI buildを含む。
 
 ### WP8：docsとschemaの同期、振り返り
 
-**状態：実装中。**
+**状態：実装済み。**
 
 Gate 23〜25は`appliesTo: ["phase4"]`へ分離する。Phase 1 golden artifactのscopeは
 変更せず、`artifacts/phase1-golden/gate-results.json`へPhase 4結果を混在させない。
@@ -292,6 +298,10 @@ Phase 4完了条件には含まれないため、Phase 4の受入gateには入�
 
 - Gate 22でのreopen／DRC拡張（現状のGate 22はprojectionと適用記録までで、patched boardの
   reopen／DRCはGate 21のみが実行している）。
+- Gate 22で`applicability: unknown`のadopted knowledgeが適用対象に含まれたまま
+  `passed`に到達し得る経路の意味論を確認する。
+- WP5の外部process caller（`scripts/golden-run.mts`、`scripts/phase1-smoke.mts`、
+  `scripts/extract-kicad-library.mts`）をtyped envelope経由へ移行する。
 - overlay library revisionをboardから直接参照するモデル（現状はboard sourceへの
   materialize）。
 - 未宣言の必須process条件を`fail`とするか`unknown`とするか。
