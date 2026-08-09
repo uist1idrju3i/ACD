@@ -3,12 +3,18 @@ import type { DesignGraph } from "./semantic.js";
 
 export type PointMm = { xMm: number; yMm: number };
 
+export type BoardPolygon = { points: PointMm[] };
+
+export type BoardPadShape = { kind: "rect" } | { kind: "polygon"; points: PointMm[] };
+
 export type BoardPad = {
   number: string;
   xMm: number;
   yMm: number;
   widthMm: number;
   heightMm: number;
+  shape?: BoardPadShape;
+  maskExpansionMm?: number;
 };
 
 export type BoardFootprint = {
@@ -16,6 +22,7 @@ export type BoardFootprint = {
   libraryId: string;
   name: string;
   pads: BoardPad[];
+  courtyard?: BoardPolygon;
 };
 
 export type BoardPin = {
@@ -154,20 +161,59 @@ const readFootprint = (entity: Entity): BoardFootprint => {
   const pads = list(attributes["pads"], `${entity.id}.attributes.pads`).map((pad, index) => {
     const where = `${entity.id}.attributes.pads[${index}]`;
     const source = record(pad, where);
+    const shapeValue = source["shape"];
+    const shape =
+      shapeValue && typeof shapeValue === "object" && !Array.isArray(shapeValue)
+        ? (() => {
+            const shapeRecord = shapeValue as Record<string, unknown>;
+            const kind = shapeRecord["kind"];
+            if (kind === "rect") return { kind: "rect" as const };
+            if (kind !== "polygon" || !Array.isArray(shapeRecord["points"])) {
+              return undefined;
+            }
+            return {
+              kind: "polygon" as const,
+              points: shapeRecord["points"].map((pointValue, pointIndex) =>
+                point(pointValue, `${where}.shape.points[${pointIndex}]`),
+              ),
+            };
+          })()
+        : undefined;
+    const maskExpansionMm =
+      source["maskExpansionMm"] === undefined
+        ? undefined
+        : number(source["maskExpansionMm"], `${where}.maskExpansionMm`);
     return {
       number: text(source["number"], `${where}.number`),
       xMm: number(source["xMm"], `${where}.xMm`),
       yMm: number(source["yMm"], `${where}.yMm`),
       widthMm: number(source["widthMm"], `${where}.widthMm`),
       heightMm: number(source["heightMm"], `${where}.heightMm`),
+      ...(shape ? { shape } : {}),
+      ...(maskExpansionMm === undefined ? {} : { maskExpansionMm }),
     };
   });
   if (pads.length === 0) invalid(`${entity.id} must define at least one pad`);
+  const courtyardValue = attributes["courtyard"];
+  const courtyard =
+    courtyardValue && typeof courtyardValue === "object" && !Array.isArray(courtyardValue)
+      ? (() => {
+          const value = courtyardValue as Record<string, unknown>;
+          return Array.isArray(value["points"])
+            ? {
+                points: value["points"].map((pointValue, pointIndex) =>
+                  point(pointValue, `${entity.id}.attributes.courtyard.points[${pointIndex}]`),
+                ),
+              }
+            : undefined;
+        })()
+      : undefined;
   return {
     id: entity.id,
     libraryId: text(attributes["libraryId"], `${entity.id}.attributes.libraryId`),
     name: text(attributes["name"], `${entity.id}.attributes.name`),
     pads,
+    ...(courtyard ? { courtyard } : {}),
   };
 };
 

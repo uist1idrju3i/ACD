@@ -7,6 +7,7 @@
     { "path": "./packages/adapters/fab-feedback" },
     { "path": "./packages/adapters/storage-fs" },
     { "path": "./packages/adapters/spice" },
+    { "path": "./packages/adapters/wasm-geometry" },
     { "path": "./apps/worker" },
     { "path": "./apps/web" }
   ]

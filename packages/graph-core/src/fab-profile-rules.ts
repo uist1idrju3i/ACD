@@ -38,6 +38,11 @@ export type FabProfileRules = {
   profileId: string;
   version: string;
   confidenceFloor: number;
+  geometryThresholdsNm?: {
+    minimumCopperClearanceNm?: number;
+    minimumMaskSliverNm?: number;
+    minimumCourtyardClearanceNm?: number;
+  };
   rules: FabProfileRule[];
 };
 

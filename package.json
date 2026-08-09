@@ -28,7 +28,9 @@
     "phase2:record-repairs": "tsx scripts/phase2-record-repairs.mts",
     "phase1:gate13": "tsx scripts/phase1-gate13.mts",
     "web:build": "pnpm --filter @acd/web build",
-    "web:test:e2e:chromium": "pnpm --filter @acd/web test:e2e:chromium"
+    "web:test:e2e:chromium": "pnpm --filter @acd/web test:e2e:chromium",
+    "wasm:build": "cargo build --manifest-path packages/adapters/wasm-geometry/rust/Cargo.toml --release --target wasm32-unknown-unknown",
+    "wasm:test": "cargo test --manifest-path packages/adapters/wasm-geometry/rust/Cargo.toml"
   },
   "devDependencies": {
     "@eslint/js": "9.30.1",

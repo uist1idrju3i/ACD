@@ -46,6 +46,11 @@ export interface ACDPhase1Fixture {
   manufacturingProfile?: {
     fabProfileId: string;
     processConditions: string[];
+    geometryThresholdsNm?: {
+      minimumCopperClearanceNm?: number;
+      minimumMaskSliverNm?: number;
+      minimumCourtyardClearanceNm?: number;
+    };
   };
   orderConstraints?: OrderConstraints;
   rationales?: Rationale[];

@@ -23,5 +23,6 @@ export * from "./verification.js";
 export * from "./tool-process.js";
 export * from "./budget.js";
 export * from "./progress.js";
+export * from "./geometry-checks.js";
 export * from "./stop-record.js";
 export * from "./diff.js";

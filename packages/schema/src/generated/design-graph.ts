@@ -187,6 +187,24 @@ export interface Patch {
 }
 /**
  * This interface was referenced by `ACDDesignGraphPhase0Draft`'s JSON-Schema
+ * via the `definition` "pointMm".
+ */
+export interface PointMm {
+  xMm: number;
+  yMm: number;
+}
+/**
+ * This interface was referenced by `ACDDesignGraphPhase0Draft`'s JSON-Schema
+ * via the `definition` "polygonMm".
+ */
+export interface PolygonMm {
+  /**
+   * @minItems 3
+   */
+  points: [PointMm, PointMm, PointMm, ...PointMm[]];
+}
+/**
+ * This interface was referenced by `ACDDesignGraphPhase0Draft`'s JSON-Schema
  * via the `definition` "evidence".
  */
 export interface Evidence {

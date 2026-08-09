@@ -1,0 +1,208 @@
+{
+  "schemaVersion": "1.0.0",
+  "fixtureId": "fixture:wp7-geometry-parity",
+  "cases": [
+    {
+      "id": "pad-clearance-boundary",
+      "input": {
+        "pads": [
+          {
+            "id": "pad:a:1",
+            "polygon": {
+              "points": [
+                { "xNm": 0, "yNm": 0 },
+                { "xNm": 1000, "yNm": 0 },
+                { "xNm": 1000, "yNm": 1000 },
+                { "xNm": 0, "yNm": 1000 }
+              ]
+            },
+            "maskExpansionNm": 0
+          },
+          {
+            "id": "pad:b:1",
+            "polygon": {
+              "points": [
+                { "xNm": 2000, "yNm": 0 },
+                { "xNm": 3000, "yNm": 0 },
+                { "xNm": 3000, "yNm": 1000 },
+                { "xNm": 2000, "yNm": 1000 }
+              ]
+            },
+            "maskExpansionNm": 0
+          }
+        ],
+        "courtyards": [],
+        "thresholds": { "minimumCopperClearanceNm": 1000, "minimumMaskSliverNm": 0 }
+      }
+    },
+    {
+      "id": "pad-clearance-violation",
+      "input": {
+        "pads": [
+          {
+            "id": "pad:a:1",
+            "polygon": {
+              "points": [
+                { "xNm": 0, "yNm": 0 },
+                { "xNm": 1000, "yNm": 0 },
+                { "xNm": 1000, "yNm": 1000 },
+                { "xNm": 0, "yNm": 1000 }
+              ]
+            },
+            "maskExpansionNm": 0
+          },
+          {
+            "id": "pad:b:1",
+            "polygon": {
+              "points": [
+                { "xNm": 1999, "yNm": 0 },
+                { "xNm": 2999, "yNm": 0 },
+                { "xNm": 2999, "yNm": 1000 },
+                { "xNm": 1999, "yNm": 1000 }
+              ]
+            },
+            "maskExpansionNm": 0
+          }
+        ],
+        "courtyards": [],
+        "thresholds": { "minimumCopperClearanceNm": 1000, "minimumMaskSliverNm": 0 }
+      }
+    },
+    {
+      "id": "mask-sliver-violation",
+      "input": {
+        "pads": [
+          {
+            "id": "pad:a:1",
+            "polygon": {
+              "points": [
+                { "xNm": 0, "yNm": 0 },
+                { "xNm": 1000, "yNm": 0 },
+                { "xNm": 1000, "yNm": 1000 },
+                { "xNm": 0, "yNm": 1000 }
+              ]
+            },
+            "maskExpansionNm": 600
+          },
+          {
+            "id": "pad:b:1",
+            "polygon": {
+              "points": [
+                { "xNm": 2000, "yNm": 0 },
+                { "xNm": 3000, "yNm": 0 },
+                { "xNm": 3000, "yNm": 1000 },
+                { "xNm": 2000, "yNm": 1000 }
+              ]
+            },
+            "maskExpansionNm": 600
+          }
+        ],
+        "courtyards": [],
+        "thresholds": { "minimumMaskSliverNm": 1 }
+      }
+    },
+    {
+      "id": "courtyard-overlap-violation",
+      "input": {
+        "pads": [],
+        "courtyards": [
+          {
+            "componentId": "c1",
+            "polygon": {
+              "points": [
+                { "xNm": 0, "yNm": 0 },
+                { "xNm": 1000, "yNm": 0 },
+                { "xNm": 1000, "yNm": 1000 },
+                { "xNm": 0, "yNm": 1000 }
+              ]
+            }
+          },
+          {
+            "componentId": "c2",
+            "polygon": {
+              "points": [
+                { "xNm": 900, "yNm": 0 },
+                { "xNm": 1900, "yNm": 0 },
+                { "xNm": 1900, "yNm": 1000 },
+                { "xNm": 900, "yNm": 1000 }
+              ]
+            }
+          }
+        ],
+        "thresholds": { "minimumCourtyardClearanceNm": 1 }
+      }
+    },
+    {
+      "id": "mask-sliver-non-violation",
+      "input": {
+        "pads": [
+          {
+            "id": "pad:a:1",
+            "polygon": {
+              "points": [
+                { "xNm": 0, "yNm": 0 },
+                { "xNm": 1000, "yNm": 0 },
+                { "xNm": 1000, "yNm": 1000 },
+                { "xNm": 0, "yNm": 1000 }
+              ]
+            },
+            "maskExpansionNm": 0
+          },
+          {
+            "id": "pad:b:1",
+            "polygon": {
+              "points": [
+                { "xNm": 3000, "yNm": 0 },
+                { "xNm": 4000, "yNm": 0 },
+                { "xNm": 4000, "yNm": 1000 },
+                { "xNm": 3000, "yNm": 1000 }
+              ]
+            },
+            "maskExpansionNm": 0
+          }
+        ],
+        "courtyards": [],
+        "thresholds": { "minimumMaskSliverNm": 1 }
+      }
+    },
+    {
+      "id": "courtyard-overlap-non-violation",
+      "input": {
+        "pads": [],
+        "courtyards": [
+          {
+            "componentId": "c1",
+            "polygon": {
+              "points": [
+                { "xNm": 0, "yNm": 0 },
+                { "xNm": 1000, "yNm": 0 },
+                { "xNm": 1000, "yNm": 1000 },
+                { "xNm": 0, "yNm": 1000 }
+              ]
+            }
+          },
+          {
+            "componentId": "c2",
+            "polygon": {
+              "points": [
+                { "xNm": 3000, "yNm": 0 },
+                { "xNm": 4000, "yNm": 0 },
+                { "xNm": 4000, "yNm": 1000 },
+                { "xNm": 3000, "yNm": 1000 }
+              ]
+            }
+          }
+        ],
+        "thresholds": { "minimumCourtyardClearanceNm": 1 }
+      }
+    },
+    {
+      "id": "canonical-data-missing",
+      "input": {
+        "pads": [],
+        "courtyards": [],
+        "thresholds": {}
+      }
+    }
+  ]
+}

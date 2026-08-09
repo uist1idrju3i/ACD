@@ -28,6 +28,8 @@ MIT、Apache-2.0、BSD-2-Clause、BSD-3-Clause、ISC、0BSD、Python-2.0です�
 | `Freerouting`               | 2.2.4    | GPL-3.0      | External routing process only; pinned container, not vendored or linked |
 | `ngspice`                   | 44.2     | BSD-3-Clause | External simulation process only; shipped in the pinned KiCad container |
 
+| `Rust` / `acd-geometry-wasm` | 1.97.1 / 0.1.0 | MIT | Optional integer geometry primitive compiled to WASM |
+
 ngspice `44.2`はKiCad container（同一digest）同梱のバイナリを`ngspice -b`で
 外部processとしてのみ実行し、ACDへlink・vendor・再配布しません。vendor提供の
 `.lib`∕`.mod`は取り込まず、利用者が用意する外部入力として扱います

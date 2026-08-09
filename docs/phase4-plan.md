@@ -230,6 +230,7 @@ courtyard/maskは正本geometry未提供のため未提供として表示し、s
 **作業**
 
 - 対象は幾何系の高速チェックに限定する（pad間クリアランス、mask sliver、courtyard重なり）。
+- Footprintと製造profileへoptionalな正本データ／型付き閾値を加算し、既存fixtureは変更しない。
 - Rustで実装し、nm単位の整数固定小数点と正規化findingsの完全一致を使う。native TS実装を
   正とし、WASM経路は同一入力で同一結果になるparityテストを必須にする。
 - `.wasm`はリポジトリへコミットせず、CIでRustからビルドし、build digestをprovenanceへ記録する。

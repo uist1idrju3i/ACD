@@ -98,6 +98,27 @@
       },
       "additionalProperties": false
     },
+    "pointMm": {
+      "type": "object",
+      "required": ["xMm", "yMm"],
+      "properties": {
+        "xMm": { "type": "number" },
+        "yMm": { "type": "number" }
+      },
+      "additionalProperties": false
+    },
+    "polygonMm": {
+      "type": "object",
+      "required": ["points"],
+      "properties": {
+        "points": {
+          "type": "array",
+          "minItems": 3,
+          "items": { "$ref": "#/$defs/pointMm" }
+        }
+      },
+      "additionalProperties": false
+    },
     "evidence": {
       "type": "object",
       "required": [
@@ -474,6 +495,41 @@
       },
       "additionalProperties": true,
       "allOf": [
+        {
+          "if": { "properties": { "type": { "const": "Footprint" } } },
+          "then": {
+            "properties": {
+              "attributes": {
+                "properties": {
+                  "courtyard": { "$ref": "#/$defs/polygonMm" },
+                  "pads": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "shape": {
+                          "type": "object",
+                          "required": ["kind"],
+                          "properties": {
+                            "kind": { "enum": ["rect", "polygon"] },
+                            "points": {
+                              "type": "array",
+                              "minItems": 3,
+                              "items": { "$ref": "#/$defs/pointMm" }
+                            }
+                          },
+                          "additionalProperties": false
+                        },
+                        "maskExpansionMm": { "type": "number", "minimum": 0 }
+                      },
+                      "additionalProperties": true
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
         {
           "if": { "properties": { "type": { "const": "Evidence" } } },
           "then": { "$ref": "#/$defs/evidence" }
