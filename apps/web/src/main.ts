@@ -34,6 +34,21 @@ type WorkerState = {
 const root = document.querySelector<HTMLDivElement>("#app");
 if (!root) throw new Error("app root is missing");
 
+const observerSseState = {
+  initialPosition: 0,
+  receivedPositions: [] as number[],
+  duplicateEventsSuppressed: false,
+};
+
+const renderSseState = (): void => {
+  const element = document.querySelector<HTMLParagraphElement>("#sse-observer-state");
+  if (!element) return;
+  element.dataset.initialPosition = String(observerSseState.initialPosition);
+  element.dataset.receivedPositions = JSON.stringify(observerSseState.receivedPositions);
+  element.dataset.duplicateEventsSuppressed = String(observerSseState.duplicateEventsSuppressed);
+  element.textContent = `SSE received positions: ${observerSseState.receivedPositions.join(",")}; duplicate events suppressed: ${observerSseState.duplicateEventsSuppressed}`;
+};
+
 const statusClass = (status: string): string =>
   ["passed", "failed", "blocked", "stale", "unknown", "unverified"].includes(status)
     ? status
@@ -125,7 +140,9 @@ const render = async (): Promise<void> => {
       <p id="geometry-status"></p>
       <canvas id="board" width="640" height="420" aria-label="ACD board projection"></canvas>
     </section>
+    <p id="sse-observer-state" aria-label="SSE observer state"></p>
   `;
+  renderSseState();
   const state = await fetchJson<WorkerState>("/state");
   const projection = await fetchJson<Projection>("/projection");
   const connection = document.querySelector<HTMLParagraphElement>("#connection-status");
@@ -172,6 +189,7 @@ const render = async (): Promise<void> => {
   const canvas = document.querySelector<HTMLCanvasElement>("#board");
   if (!canvas) throw new Error("board canvas missing");
   drawProjection(canvas, projection);
+  renderSseState();
 };
 
 const reconnect = (): void => {
@@ -180,14 +198,15 @@ const reconnect = (): void => {
   const events = new EventSource("/events?from=0");
   const onEvent = (event: MessageEvent<string>): void => {
     const eventPosition = Number(event.lastEventId);
-    if (
-      !Number.isInteger(eventPosition) ||
-      eventPosition <= lastReceivedPosition ||
-      received.has(eventPosition)
-    )
+    if (!Number.isInteger(eventPosition)) return;
+    if (eventPosition <= lastReceivedPosition || received.has(eventPosition)) {
+      observerSseState.duplicateEventsSuppressed = true;
+      renderSseState();
       return;
+    }
     received.add(eventPosition);
     lastReceivedPosition = eventPosition;
+    observerSseState.receivedPositions.push(eventPosition);
     void render();
   };
   for (const type of [

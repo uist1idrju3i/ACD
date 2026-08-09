@@ -91,7 +91,7 @@ const boardPads = (model: BoardModel): ProjectionPad[] => {
         const radians = (placement.rotationDeg * Math.PI) / 180;
         return [
           {
-            id: `pad:${footprint.id}:${pad.number}`,
+            id: `pad:${component.id}:${pad.number}`,
             number: pad.number,
             componentId: component.id,
             layer: placement.layer,

@@ -10,7 +10,7 @@
     "2D projection"
   ],
   "accessibility": {
-    "connectionStatus": "worker connected",
+    "connectionStatus": "worker connected; event position 2",
     "courtyard": "unavailable",
     "mask": "unavailable"
   },
@@ -31,7 +31,7 @@
     },
     "pads": [
       {
-        "id": "pad:footprint:c0603:1",
+        "id": "pad:component:c1:1",
         "number": "1",
         "componentId": "component:c1",
         "layer": "F.Cu",
@@ -44,7 +44,7 @@
         "shape": "rectangle"
       },
       {
-        "id": "pad:footprint:c0603:2",
+        "id": "pad:component:c1:2",
         "number": "2",
         "componentId": "component:c1",
         "layer": "F.Cu",
@@ -57,33 +57,7 @@
         "shape": "rectangle"
       },
       {
-        "id": "pad:footprint:conn-1x02:1",
-        "number": "1",
-        "componentId": "component:j1",
-        "layer": "F.Cu",
-        "positionMm": {
-          "xMm": 2,
-          "yMm": 7.5
-        },
-        "widthMm": 1.2,
-        "heightMm": 1.2,
-        "shape": "rectangle"
-      },
-      {
-        "id": "pad:footprint:conn-1x02:2",
-        "number": "2",
-        "componentId": "component:j1",
-        "layer": "F.Cu",
-        "positionMm": {
-          "xMm": 4,
-          "yMm": 7.5
-        },
-        "widthMm": 1.2,
-        "heightMm": 1.2,
-        "shape": "rectangle"
-      },
-      {
-        "id": "pad:footprint:led0603:1",
+        "id": "pad:component:d1:1",
         "number": "1",
         "componentId": "component:d1",
         "layer": "F.Cu",
@@ -96,7 +70,7 @@
         "shape": "rectangle"
       },
       {
-        "id": "pad:footprint:led0603:2",
+        "id": "pad:component:d1:2",
         "number": "2",
         "componentId": "component:d1",
         "layer": "F.Cu",
@@ -109,7 +83,33 @@
         "shape": "rectangle"
       },
       {
-        "id": "pad:footprint:r0603:1",
+        "id": "pad:component:j1:1",
+        "number": "1",
+        "componentId": "component:j1",
+        "layer": "F.Cu",
+        "positionMm": {
+          "xMm": 2,
+          "yMm": 7.5
+        },
+        "widthMm": 1.2,
+        "heightMm": 1.2,
+        "shape": "rectangle"
+      },
+      {
+        "id": "pad:component:j1:2",
+        "number": "2",
+        "componentId": "component:j1",
+        "layer": "F.Cu",
+        "positionMm": {
+          "xMm": 4,
+          "yMm": 7.5
+        },
+        "widthMm": 1.2,
+        "heightMm": 1.2,
+        "shape": "rectangle"
+      },
+      {
+        "id": "pad:component:r1:1",
         "number": "1",
         "componentId": "component:r1",
         "layer": "F.Cu",
@@ -122,7 +122,7 @@
         "shape": "rectangle"
       },
       {
-        "id": "pad:footprint:r0603:2",
+        "id": "pad:component:r1:2",
         "number": "2",
         "componentId": "component:r1",
         "layer": "F.Cu",

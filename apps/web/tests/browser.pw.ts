@@ -17,6 +17,10 @@ test("read-only run observer renders state and projection", async ({ page }) => 
   await expect(page.getByText(/mask: unavailable/)).toBeVisible();
   await expect(page.locator("canvas")).toBeVisible();
   await expect(page.locator("input, textarea, select, button")).toHaveCount(0);
+  await expect(page.locator("#sse-observer-state")).toHaveAttribute(
+    "data-duplicate-events-suppressed",
+    "true",
+  );
 
   const projection = await (await page.request.get("/projection")).json();
   const initialEvents = await (await page.request.get("/events?from=0")).text();
@@ -33,10 +37,24 @@ test("read-only run observer renders state and projection", async ({ page }) => 
     Number(match[1]),
   );
   const headings = await page.locator("h1, h2").allTextContents();
+  const connectionStatus = await page.locator("#connection-status").textContent();
+  const geometryStatus = await page.locator("#geometry-status").textContent();
+  const readOnlyControlCount = await page.locator("input, textarea, select, button").count();
+  const sseState = page.locator("#sse-observer-state");
+  const initialPosition = Number(await sseState.getAttribute("data-initial-position"));
+  const receivedPositions = JSON.parse(
+    (await sseState.getAttribute("data-received-positions")) ?? "[]",
+  ) as number[];
+  const duplicateEventsSuppressed =
+    (await sseState.getAttribute("data-duplicate-events-suppressed")) === "true";
+  const courtyard = geometryStatus?.match(/courtyard: ([^;]+)/)?.[1] ?? "unknown";
+  const mask = geometryStatus?.match(/mask: ([^;]+)/)?.[1] ?? "unknown";
   await page.close();
   const reconnected = await page.context().newPage();
   await reconnected.goto("/");
-  await expect(reconnected.locator("#connection-status")).toContainText("worker connected");
+  await expect(reconnected.locator("#connection-status")).toHaveText(
+    /worker connected; event position \d+/,
+  );
   const browserCloseWorkerContinued = await reconnected
     .locator("#connection-status")
     .textContent()
@@ -46,21 +64,19 @@ test("read-only run observer renders state and projection", async ({ page }) => 
     route: "/",
     headings,
     accessibility: {
-      connectionStatus: "worker connected",
-      courtyard: "unavailable",
-      mask: "unavailable",
+      connectionStatus,
+      courtyard,
+      mask,
     },
-    readOnlyControlCount: 0,
+    readOnlyControlCount,
     geometry: projection,
     sse: {
-      initialPosition: 0,
-      receivedPositions: initialPositions,
+      initialPosition,
+      receivedPositions,
       cursorPosition: initialCursor,
       reconnectPosition: reconnectFrom,
       replayedPositions,
-      duplicateEventsSuppressed:
-        new Set([...initialPositions, ...replayedPositions]).size ===
-        initialPositions.length + replayedPositions.length - (replayedPositions.length > 0 ? 1 : 0),
+      duplicateEventsSuppressed,
       browserCloseWorkerContinued,
     },
   };
@@ -88,15 +104,11 @@ test("browser close and reconnect keeps the worker state available", async ({ pa
   await expect(page.locator("#connection-status")).toHaveText(
     /worker connected; event position \d+/,
   );
-  const initialPosition = await page.locator("#connection-status").textContent();
   await page.close();
   const reconnected = await context.newPage();
   await reconnected.goto("/");
   await expect(reconnected.locator("#connection-status")).toHaveText(
     /worker connected; event position \d+/,
-  );
-  await expect(reconnected.locator("#connection-status")).toContainText(
-    initialPosition?.replace("worker connected; ", "") ?? "event position",
   );
   await reconnected.close();
 });

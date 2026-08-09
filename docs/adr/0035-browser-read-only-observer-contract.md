@@ -21,7 +21,7 @@ Evidence、投影ジオメトリ、revision差分を観測する必要がある�
   `/diff`はfrom/to revisionとpatch/event provenanceを含むsemantic diffとする。
 - courtyardとmaskはcanonical geometryが提供されるまで
   `status: unavailable`、`reason: canonical-data-not-provided`として表示し、推定しない。
-- entityは`entity.id`、placementは`componentId`、padは`footprintId + pad.number`を
+- entityは`entity.id`、placementは`componentId`、padは`componentId + pad.number`を
   identityとする。track/viaはcanonical geometry keyを使い、重複時だけ決定論的序数を付ける。
 - screenshotはcanonical evidenceではない。DOM/accessibility、geometry DTO、SSE cursorの
   正規化JSONをcanonical evidenceとする。
