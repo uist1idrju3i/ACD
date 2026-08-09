@@ -50,6 +50,9 @@ export const verifyEvent = (event: EventEnvelope): void => {
   }
 };
 
+export const eventAdvancesRevision = (event: EventEnvelope): boolean =>
+  event.type !== "patch.rejected" && event.type !== "run.stopped";
+
 export const verifyReplay = (events: EventEnvelope[]): void => {
   let revision = 0;
   const ids = new Set<string>();
@@ -65,7 +68,8 @@ export const verifyReplay = (events: EventEnvelope[]): void => {
         "critical",
       );
     }
-    if (event.resultRevision < revision || event.resultRevision > revision + 1) {
+    const expectedResultRevision = revision + (eventAdvancesRevision(event) ? 1 : 0);
+    if (event.resultRevision !== expectedResultRevision) {
       throw new GraphCoreError(
         "event-replay-failure",
         `invalid result revision: ${event.eventId}`,
