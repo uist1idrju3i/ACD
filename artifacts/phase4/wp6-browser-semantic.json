@@ -9,6 +9,10 @@
     "Evidence references",
     "2D projection"
   ],
+  "gateResults": [
+    "gate 1 — Fixture/schema — passed — verification verification:gate:fixture-reference"
+  ],
+  "evidenceReferences": "evidence:wp6-fixture, verification:gate:fixture-reference",
   "accessibility": {
     "connectionStatus": "worker connected; event position 2",
     "courtyard": "unavailable",

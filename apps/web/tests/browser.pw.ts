@@ -15,6 +15,14 @@ test("read-only run observer renders state and projection", async ({ page }) => 
   await expect(page.getByRole("heading", { name: "2D projection" })).toBeVisible();
   await expect(page.getByText(/courtyard: unavailable/)).toBeVisible();
   await expect(page.getByText(/mask: unavailable/)).toBeVisible();
+  await expect(
+    page.getByText(
+      /gate 1 — Fixture\/schema — passed — verification verification:gate:fixture-reference/,
+    ),
+  ).toBeVisible();
+  await expect(page.locator("#evidence")).toHaveText(
+    "evidence:wp6-fixture, verification:gate:fixture-reference",
+  );
   await expect(page.locator("canvas")).toBeVisible();
   await expect(page.locator("input, textarea, select, button")).toHaveCount(0);
   await expect(page.locator("#sse-observer-state")).toHaveAttribute(
@@ -37,6 +45,8 @@ test("read-only run observer renders state and projection", async ({ page }) => 
     Number(match[1]),
   );
   const headings = await page.locator("h1, h2").allTextContents();
+  const gateResults = await page.locator("#gate-results li").allTextContents();
+  const evidenceReferences = await page.locator("#evidence").textContent();
   const connectionStatus = await page.locator("#connection-status").textContent();
   const geometryStatus = await page.locator("#geometry-status").textContent();
   const readOnlyControlCount = await page.locator("input, textarea, select, button").count();
@@ -52,17 +62,17 @@ test("read-only run observer renders state and projection", async ({ page }) => 
   await page.close();
   const reconnected = await page.context().newPage();
   await reconnected.goto("/");
-  await expect(reconnected.locator("#connection-status")).toHaveText(
-    /worker connected; event position \d+/,
-  );
-  const browserCloseWorkerContinued = await reconnected
-    .locator("#connection-status")
-    .textContent()
-    .then((text) => text?.startsWith("worker connected") ?? false);
+  const reconnectedStatus = reconnected.locator("#connection-status");
+  await expect(reconnectedStatus).toHaveText(/worker connected; event position \d+/);
+  await expect(reconnected.locator("body")).toHaveAttribute("data-worker-state", "connected");
+  const browserCloseWorkerContinued =
+    (await reconnected.locator("body").getAttribute("data-worker-state")) === "connected";
   await reconnected.close();
   const evidence = {
     route: "/",
     headings,
+    gateResults,
+    evidenceReferences,
     accessibility: {
       connectionStatus,
       courtyard,

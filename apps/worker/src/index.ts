@@ -107,6 +107,38 @@ const revisionSnapshots = async (
   return snapshots;
 };
 
+const addReferenceValues = (target: Set<string>, value: unknown): void => {
+  if (Array.isArray(value)) {
+    for (const item of value) addReferenceValues(target, item);
+    return;
+  }
+  if (typeof value === "string" && /^(?:evidence|verification|artifact):/.test(value)) {
+    target.add(value);
+    return;
+  }
+  if (!value || typeof value !== "object") return;
+  for (const nested of Object.values(value)) addReferenceValues(target, nested);
+};
+
+const collectEvidenceReferences = (
+  events: Awaited<ReturnType<FileEventLog["readAll"]>>,
+  gates: unknown,
+  stopRecord: unknown,
+  checkpoints: unknown[],
+): string[] => {
+  const references = new Set<string>();
+  for (const event of events) {
+    if (!event.payload || typeof event.payload !== "object" || Array.isArray(event.payload))
+      continue;
+    const payload = event.payload as { evidenceIds?: unknown };
+    addReferenceValues(references, payload.evidenceIds);
+  }
+  addReferenceValues(references, gates);
+  addReferenceValues(references, stopRecord);
+  addReferenceValues(references, checkpoints);
+  return [...references].sort();
+};
+
 const readState = async (runRoot: string, log: FileEventLog): Promise<JsonObject> => {
   const events = await log.readAll();
   const ledger = replayTaskLedger(events);
@@ -135,19 +167,29 @@ const readState = async (runRoot: string, log: FileEventLog): Promise<JsonObject
           : gate;
       })
     : (gates ?? []);
+  const checkpointVerificationIds = checkpoints.flatMap((checkpoint) => {
+    if (!checkpoint || typeof checkpoint !== "object" || Array.isArray(checkpoint)) return [];
+    const ids = (checkpoint as { verificationResultIds?: unknown }).verificationResultIds;
+    return Array.isArray(ids) ? ids.filter((id): id is string => typeof id === "string") : [];
+  });
+  const gateResultsWithReferences =
+    Array.isArray(gateResults) && gateResults.length === checkpointVerificationIds.length
+      ? gateResults.map((gate, index) => {
+          if (!gate || typeof gate !== "object" || Array.isArray(gate)) return gate;
+          const value = gate as { verificationResultId?: unknown };
+          return value.verificationResultId === undefined
+            ? { ...gate, verificationResultId: checkpointVerificationIds[index] }
+            : gate;
+        })
+      : gateResults;
   return {
     revision: events.at(-1)?.resultRevision ?? 0,
     eventPosition: events.length,
     taskLedger: ledger,
-    gateResults,
+    gateResults: gateResultsWithReferences,
     stopRecord: stopRecord ?? null,
     checkpoints: checkpoints ?? [],
-    evidenceIds: events.flatMap((event) => {
-      const payload = event.payload;
-      if (!payload || typeof payload !== "object" || Array.isArray(payload)) return [];
-      const ids = (payload as { evidenceIds?: unknown }).evidenceIds;
-      return Array.isArray(ids) ? ids.filter((id): id is string => typeof id === "string") : [];
-    }),
+    evidenceIds: collectEvidenceReferences(events, gateResults, stopRecord, checkpoints ?? []),
     run: run ?? null,
   };
 };

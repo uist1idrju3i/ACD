@@ -23,6 +23,8 @@ Evidence、投影ジオメトリ、revision差分を観測する必要がある�
   `status: unavailable`、`reason: canonical-data-not-provided`として表示し、推定しない。
 - entityは`entity.id`、placementは`componentId`、padは`componentId + pad.number`を
   identityとする。track/viaはcanonical geometry keyを使い、重複時だけ決定論的序数を付ける。
+- projectionのrevisionは描画snapshotのrevisionであり、worker stateやrun recordのrevisionとは
+  別の値である。patch適用後snapshotへの追従描画はWP6の範囲外とする。
 - screenshotはcanonical evidenceではない。DOM/accessibility、geometry DTO、SSE cursorの
   正規化JSONをcanonical evidenceとする。
 - HTTP transportの失敗は`error.category: transport`と

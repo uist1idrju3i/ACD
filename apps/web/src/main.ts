@@ -25,7 +25,12 @@ type WorkerState = {
   eventPosition: number;
   revision: number;
   taskLedger: { entries: Record<string, { id: string; status: string; attemptCount: number }> };
-  gateResults: Array<{ id?: string; gate?: string; status?: string }>;
+  gateResults: Array<{
+    gate?: number;
+    name?: string;
+    status?: string;
+    verificationResultId?: string;
+  }>;
   stopRecord: { reasonCode?: string; evidenceIds?: string[] } | null;
   checkpoints: unknown[];
   evidenceIds: string[];
@@ -39,6 +44,7 @@ const observerSseState = {
   receivedPositions: [] as number[],
   duplicateEventsSuppressed: false,
 };
+let latestRenderVersion = 0;
 
 const renderSseState = (): void => {
   const element = document.querySelector<HTMLParagraphElement>("#sse-observer-state");
@@ -112,6 +118,7 @@ const drawProjection = (canvas: HTMLCanvasElement, projection: Projection): void
 };
 
 const render = async (): Promise<void> => {
+  const renderVersion = ++latestRenderVersion;
   root.innerHTML = `
     <h1>ACD Run Observer</h1>
     <p id="connection-status" class="unknown">worker state: loading</p>
@@ -145,10 +152,13 @@ const render = async (): Promise<void> => {
   renderSseState();
   const state = await fetchJson<WorkerState>("/state");
   const projection = await fetchJson<Projection>("/projection");
+  if (renderVersion !== latestRenderVersion) return;
   const connection = document.querySelector<HTMLParagraphElement>("#connection-status");
   if (!connection) throw new Error("connection status missing");
   connection.textContent = `worker connected; event position ${state.eventPosition}`;
   connection.className = "passed";
+  connection.dataset.workerState = "connected";
+  document.body.dataset.workerState = "connected";
   const ledger = document.querySelector<HTMLUListElement>("#task-ledger");
   if (!ledger) throw new Error("task ledger missing");
   ledger.replaceChildren(
@@ -166,9 +176,9 @@ const render = async (): Promise<void> => {
     ...state.gateResults.map((gate) => {
       const item = document.createElement("li");
       const status = statusClass(gate.status ?? "unverified");
-      item.textContent = `${gate.gate ?? "unknown gate"} — ${status} — verification ${gate.id ?? "missing"}`;
+      item.textContent = `gate ${gate.gate ?? "unknown"} — ${gate.name ?? "unknown gate"} — ${status} — verification ${gate.verificationResultId ?? "unknown"}`;
       item.dataset.status = status;
-      item.dataset.verificationResultId = gate.id ?? "";
+      item.dataset.verificationResultId = gate.verificationResultId ?? "";
       return item;
     }),
   );
@@ -185,7 +195,7 @@ const render = async (): Promise<void> => {
   evidence.textContent = state.evidenceIds.length > 0 ? state.evidenceIds.join(", ") : "none";
   const geometry = document.querySelector<HTMLParagraphElement>("#geometry-status");
   if (!geometry) throw new Error("geometry status missing");
-  geometry.textContent = `unit: ${projection.unit}; revision: ${projection.revision}; courtyard: ${projection.courtyard.status}; mask: ${projection.mask.status}`;
+  geometry.textContent = `unit: ${projection.unit}; projection revision: ${projection.revision}; courtyard: ${projection.courtyard.status}; mask: ${projection.mask.status}`;
   const canvas = document.querySelector<HTMLCanvasElement>("#board");
   if (!canvas) throw new Error("board canvas missing");
   drawProjection(canvas, projection);
@@ -236,5 +246,7 @@ window.addEventListener("offline", () => {
   if (connection) {
     connection.textContent = "browser disconnected; worker may continue";
     connection.className = "unknown";
+    connection.dataset.workerState = "disconnected";
+    document.body.dataset.workerState = "disconnected";
   }
 });

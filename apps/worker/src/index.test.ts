@@ -86,4 +86,32 @@ describe("worker read-only API", () => {
       });
     });
   });
+
+  it("exposes verification and evidence references from the read model", async () => {
+    await withServer(async (baseUrl) => {
+      const response = await fetch(`${baseUrl}/state`);
+      expect(response.status).toBe(200);
+      const state = (await response.json()) as {
+        gateResults: Array<{
+          gate: number;
+          name: string;
+          status: string;
+          verificationResultId?: string;
+        }>;
+        evidenceIds: string[];
+      };
+      expect(state.gateResults).toEqual([
+        expect.objectContaining({
+          gate: 1,
+          name: "Fixture/schema",
+          status: "passed",
+          verificationResultId: "verification:gate:fixture-reference",
+        }),
+      ]);
+      expect(state.evidenceIds).toEqual([
+        "evidence:wp6-fixture",
+        "verification:gate:fixture-reference",
+      ]);
+    });
+  });
 });
