@@ -24,6 +24,7 @@ codeは小文字kebab-caseの`<class>-<condition>`形式とします。例：
 | `schema-invalid`       | JSON Schema違反                      | error         | 即時停止、pathを表示                                                                |
 | `reference-integrity`  | ID重複、未解決参照、循環など         | error         | snapshotを確定せず停止                                                              |
 | `patch-conflict`       | base revision、test、ID競合          | error         | 自動mergeせず停止                                                                   |
+| `lock-conflict`        | append-only writer lockの競合        | error         | 書き込みを停止し、保持中writerの終了または手動復旧を待つ                            |
 | `revision-invalid`     | 欠番、逆行、result revision不一致    | error         | replay停止、監査通知                                                                |
 | `event-replay-failure` | event/hash/replay不一致              | critical      | 再開を止め、snapshotを保全                                                          |
 | `tool-timeout`         | deterministic toolの期限超過         | error         | cancel、再試行上限後停止                                                            |
@@ -88,6 +89,10 @@ timeoutや一時的なtool起動失敗だけを、同一input hash、同一idemp
 license-restriction、patent-concern、approval-required、budget-exceededは
 盲目的に再試行しません。停止時は何が、どこで、なぜ、再開条件、推奨アクション
 をイベントへ記録します。停止を閉じるときは、処置区分（再実行、修正、要求・設計変更、免除、破棄してやり直し）、再開時のrevisionと入力hash、再発防止の要否、水平展開の対象もイベントへ記録します。既存codeの意味を黙って広げず、code追加や意味変更はtaxonomy dataと本書を同じ変更で更新します。
+
+`lock-conflict`は既存writerが保持するlockを検出した停止です。プロセスがクラッシュ
+した場合もlockを自動削除せず、所有者の終了を確認してから、運用者が残存lockと実行状態を
+調査し、必要ならrunを破棄して再実行します。
 
 ## 関連文書
 

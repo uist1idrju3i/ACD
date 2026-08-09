@@ -1,6 +1,6 @@
 # Phase 4実装計画
 
-**ステータス：Accepted（WP1〜WP7実装済み、WP8 docs/schema同期中）**
+**ステータス：Accepted（WP1〜WP4、WP6〜WP7実装済み、WP5未着手、WP8 docs/schema同期中）**
 
 ## 目的と権威範囲
 

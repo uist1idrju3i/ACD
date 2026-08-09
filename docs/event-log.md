@@ -54,7 +54,10 @@ Phase 0では少なくとも次を扱います。
   resolved library revision、projection artifactを含み、KnowledgeItem→library→projectionの追跡を可能にする。
 - `task.created`：タスク台帳エントリを作成した記録。payloadは対象taskIdと作成時のentryスナップショットを含む。
 - `task.transitioned`：タスク台帳エントリの状態遷移を記録したイベント。payloadは対象taskId、
-  遷移前後のstatus、遷移後のentryスナップショットを含む。
+  遷移前後のstatus、遷移後のentryスナップショットを含む。予算使用量を永続化するときは
+  `kind: "usage-updated"`を指定し、`{ kind, taskId, usage }`（usageは
+  `BudgetUsageSnapshot`）をpayloadとする。このvariantは状態遷移を進めず、replay時に
+  task単位の最新使用量として再構成される。
 
 event typeの一覧は`schemas/event.schema.json`と`packages/graph-core/src/event-log.ts`に
 定義されています。現状、event-logの読み込み処理はevent種別ごとのpayload schemaを
@@ -108,8 +111,9 @@ fab／manufacturing profile、参照KnowledgeItem status、成果物hash、検�
 負数または現在件数を超える場合は`event-replay-failure`とする。
 
 workerの`GET /events`は検証済みraw `EventEnvelope`だけをSSEで配信する。SSE `id`は
-event position、canonical `eventId`はpayload内に保持する。`Last-Event-ID`がqueryの
-`from`より優先される。破損したlogはSSEを継続せずjidoka停止する。
+event position、canonical `eventId`はpayload内に保持する。`Last-Event-ID: N`がqueryの
+`from`より優先され、Nは受信済み位置としてN+1から再開する。`from=N`はN件のskip
+countとして維持する。破損したlogはSSEを継続せずjidoka停止する。
 
 Phase 4では一つのrunをworkerが所有するJSONLを正規状態とします。分散順序、
 マルチユーザー同期、暗号化、署名、worker間イベントは後続のruntime仕様で拡張します。

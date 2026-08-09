@@ -17,6 +17,11 @@
       "jidokaAction": "stop"
     },
     {
+      "code": "lock-conflict",
+      "severity": ["error"],
+      "jidokaAction": "stop"
+    },
+    {
       "code": "revision-invalid",
       "severity": ["error"],
       "jidokaAction": "stop"

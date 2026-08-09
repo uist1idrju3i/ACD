@@ -9,9 +9,9 @@ import {
 import type { ACDPhase1Fixture } from "../packages/schema/src/generated/phase1-fixture.js";
 import {
   createPhase1Context,
+  failureResult,
   runPhase1Stages,
   setToolRunId,
-  type Result,
 } from "./phase1-stages.mts";
 
 const root = resolve(import.meta.dirname, "..");
@@ -50,15 +50,7 @@ try {
     );
   }
 } catch (error) {
-  const failedResults: Result[] = [
-    ...context.results,
-    {
-      gate: context.results.at(-1)?.gate ?? 1,
-      name: context.results.at(-1)?.name ?? "golden",
-      status: "failed",
-      reason: error instanceof Error ? error.message : String(error),
-    },
-  ];
+  const failedResults = [...context.results, failureResult(context, error)];
   await mkdir(artifactRoot, { recursive: true });
   await writeFile(join(artifactRoot, "gate-results.json"), JSON.stringify(failedResults, null, 2));
   throw error;

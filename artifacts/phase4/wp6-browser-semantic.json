@@ -14,7 +14,7 @@
   ],
   "evidenceReferences": "evidence:wp6-fixture, verification:gate:fixture-reference",
   "accessibility": {
-    "connectionStatus": "worker connected; event position 2",
+    "connectionStatus": "worker stopped; event position 2",
     "courtyard": "unavailable",
     "mask": "unavailable"
   },
@@ -332,6 +332,7 @@
       1
     ],
     "duplicateEventsSuppressed": true,
-    "browserCloseWorkerContinued": true
+    "observedWorkerState": "stopped",
+    "workerStateAvailableAfterBrowserClose": true
   }
 }

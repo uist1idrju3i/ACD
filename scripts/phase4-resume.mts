@@ -295,6 +295,7 @@ const appendVerification = async (log: FileEventLog, stage: StageDefinition): Pr
   const events = await log.readAll();
   const verificationResultId = `verification:${stage.id}`;
   if (events.some((event) => event.eventId === verificationResultId)) return;
+  const revision = events.at(-1)?.resultRevision ?? 0;
   await log.append(
     createEvent({
       eventId: verificationResultId,
@@ -302,8 +303,8 @@ const appendVerification = async (log: FileEventLog, stage: StageDefinition): Pr
       occurredAt: "2026-01-01T00:00:00.000Z",
       actor: "phase4-resume-worker",
       projectId: "project:phase4-resume",
-      baseRevision: events.length,
-      resultRevision: events.length + 1,
+      baseRevision: revision,
+      resultRevision: revision + 1,
       payload: {
         verificationResultId,
         status: "passed",
@@ -319,6 +320,7 @@ const appendStopped = async (
   runCaseId: string,
 ): Promise<void> => {
   const events = await log.readAll();
+  const revision = events.at(-1)?.resultRevision ?? 0;
   await log.append(
     createEvent({
       eventId: `run.stopped:${runCaseId}`,
@@ -326,8 +328,8 @@ const appendStopped = async (
       occurredAt: "2026-01-01T00:00:00.000Z",
       actor: "phase4-resume-worker",
       projectId: "project:phase4-resume",
-      baseRevision: events.length,
-      resultRevision: events.length + 1,
+      baseRevision: revision,
+      resultRevision: revision,
       payload: { caseId: runCaseId, reason },
     }),
   );
@@ -419,7 +421,7 @@ const runWorker = async (runRoot: string): Promise<void> => {
         existingEvents.filter((event) => event.type.startsWith("task.")).length,
       ),
     );
-    const state = await ledger.load();
+    let heldLedger = await ledger.load();
     let context: StageContext;
     let skipped = new Set<string>();
     let selectedCheckpoint: Checkpoint | undefined;
@@ -428,7 +430,10 @@ const runWorker = async (runRoot: string): Promise<void> => {
 
     if (resumeMode) {
       mode = "resume";
-      context = deserializeStageContext(await readFile(contextPath(runRoot), "utf8"));
+      context = deserializeStageContext(
+        await readFile(contextPath(runRoot), "utf8"),
+        designGraphValidator,
+      );
       const store = new FileCheckpointStore(checkpointPath(runRoot));
       const orchestrator = new ResumeOrchestrator(
         "project:phase4-resume",
@@ -462,9 +467,12 @@ const runWorker = async (runRoot: string): Promise<void> => {
       skipped = new Set(plan.skippedStageIds);
       await store.close();
       for (const stage of phase1Stages.filter((candidate) => skipped.has(candidate.id))) {
-        const entry = (await ledger.load()).entries[`task:${stage.id}`];
+        const entry = heldLedger.entries[`task:${stage.id}`];
         if (entry?.status === "running") {
-          await ledger.transition(entry.id, "completed", { resultId: `result:${stage.id}` });
+          await ledger.load();
+          heldLedger = await ledger.transition(entry.id, "completed", {
+            resultId: `result:${stage.id}`,
+          });
         }
       }
     } else {
@@ -479,8 +487,11 @@ const runWorker = async (runRoot: string): Promise<void> => {
         context.watchdogInjection = true;
       }
       if (noProgressInjectionMode) context.watchdogAttemptInjection = true;
-      if (Object.keys(state.entries).length === 0) {
-        for (const stage of phase1Stages) await ledger.create(taskEntry(stage));
+      if (Object.keys(heldLedger.entries).length === 0) {
+        for (const stage of phase1Stages) {
+          await ledger.load();
+          heldLedger = await ledger.create(taskEntry(stage));
+        }
       }
     }
     setToolRunId(context, activeToolRunId);
@@ -488,9 +499,9 @@ const runWorker = async (runRoot: string): Promise<void> => {
     const executedRecords = await readJson<ExecutionRecord[]>(executionPath(runRoot), []);
     for (const stage of phase1Stages.filter((candidate) => !skipped.has(candidate.id))) {
       if (stopRequested) break;
-      const entry = (await ledger.load()).entries[`task:${stage.id}`];
+      const entry = heldLedger.entries[`task:${stage.id}`];
       if (!entry) throw new Error(`reference-integrity: missing task ${stage.id}`);
-      const taskUsageBefore = (await ledger.load()).usage?.[entry.id];
+      const taskUsageBefore = heldLedger.usage?.[entry.id];
       const taskExternalBefore = taskUsageBefore?.externalProcessExecutions ?? 0;
       const taskLogicalBefore = taskUsageBefore?.logicalToolRequests ?? 0;
       const taskElapsedBefore = taskUsageBefore?.elapsedSeconds ?? 0;
@@ -550,10 +561,14 @@ const runWorker = async (runRoot: string): Promise<void> => {
           join(runRoot, "stop-record.json"),
           `${JSON.stringify(stopRecord, null, 2)}\n`,
         );
-        await ledger.transition(entry.id, "blocked", { stopReason: reasonCode });
+        await ledger.load();
+        heldLedger = await ledger.transition(entry.id, "blocked", { stopReason: reasonCode });
         break;
       }
-      if (entry.status === "pending") await ledger.transition(entry.id, "running");
+      await ledger.load();
+      if (entry.status === "pending") {
+        heldLedger = await ledger.transition(entry.id, "running");
+      }
       activeTaskId = entry.id;
       activeAttempt = entry.attemptCount;
       setToolObservationContext(context, {
@@ -567,13 +582,14 @@ const runWorker = async (runRoot: string): Promise<void> => {
       stageExternalProcessExecutions[stage.id] = runExternalProcessExecutions - runExternalBefore;
       const taskUsageAfter = createBudgetUsageSnapshot({
         scope: "task",
-        attempts: (await ledger.load()).entries[entry.id]?.attemptCount ?? entry.attemptCount,
+        attempts: heldLedger.entries[entry.id]?.attemptCount ?? entry.attemptCount,
         elapsedSeconds: taskElapsedBefore + (monotonicClock.now() - monotonicStart),
         externalProcessExecutions:
           taskExternalBefore + (runExternalProcessExecutions - runExternalBefore),
         logicalToolRequests: taskLogicalBefore + (runLogicalToolRequests - runLogicalBefore),
       });
-      await ledger.updateUsage(entry.id, taskUsageAfter);
+      await ledger.load();
+      heldLedger = await ledger.updateUsage(entry.id, taskUsageAfter);
       await appendVerification(log, stage);
       const contextHash = await writeContext(runRoot, context);
       const hashes = await artifactHashes(runRoot);
@@ -602,24 +618,29 @@ const runWorker = async (runRoot: string): Promise<void> => {
         await log.close();
         process.kill(process.pid, "SIGKILL");
       }
-      const current = (await ledger.load()).entries[`task:${stage.id}`];
+      const current = heldLedger.entries[`task:${stage.id}`];
       if (noProgressInjectionMode && stage.id === "gate:repair-loop") {
         if (!current || current.status !== "running") {
           throw new Error("verification-failed: repair-loop retry did not remain running");
         }
-        await ledger.transition(current.id, "failed", { stopReason: "unknown-impact" });
-        await ledger.transition(current.id, "pending");
-        const retryEntry = (await ledger.load()).entries[entry.id];
+        await ledger.load();
+        heldLedger = await ledger.transition(current.id, "failed", {
+          stopReason: "unknown-impact",
+        });
+        await ledger.load();
+        heldLedger = await ledger.transition(current.id, "pending");
+        const retryEntry = heldLedger.entries[entry.id];
         if (!retryEntry) throw new Error(`reference-integrity: missing retry task ${stage.id}`);
-        await ledger.transition(retryEntry.id, "running");
+        await ledger.load();
+        heldLedger = await ledger.transition(retryEntry.id, "running");
         activeTaskId = retryEntry.id;
-        activeAttempt = (await ledger.load()).entries[retryEntry.id]?.attemptCount;
+        activeAttempt = heldLedger.entries[retryEntry.id]?.attemptCount;
         setToolObservationContext(context, {
           runId: activeToolRunId,
           taskId: activeTaskId,
           attempt: activeAttempt,
         });
-        const retryTaskUsageBefore = (await ledger.load()).usage?.[retryEntry.id];
+        const retryTaskUsageBefore = heldLedger.usage?.[retryEntry.id];
         const retryTaskExternalBefore = retryTaskUsageBefore?.externalProcessExecutions ?? 0;
         const retryTaskLogicalBefore = retryTaskUsageBefore?.logicalToolRequests ?? 0;
         const retryTaskElapsedBefore = retryTaskUsageBefore?.elapsedSeconds ?? 0;
@@ -633,15 +654,15 @@ const runWorker = async (runRoot: string): Promise<void> => {
           (runExternalProcessExecutions - retryRunExternalBefore);
         const retryTaskUsageAfter = createBudgetUsageSnapshot({
           scope: "task",
-          attempts:
-            (await ledger.load()).entries[retryEntry.id]?.attemptCount ?? retryEntry.attemptCount,
+          attempts: heldLedger.entries[retryEntry.id]?.attemptCount ?? retryEntry.attemptCount,
           elapsedSeconds: retryTaskElapsedBefore + (monotonicClock.now() - retryMonotonicStart),
           externalProcessExecutions:
             retryTaskExternalBefore + (runExternalProcessExecutions - retryRunExternalBefore),
           logicalToolRequests:
             retryTaskLogicalBefore + (runLogicalToolRequests - retryRunLogicalBefore),
         });
-        await ledger.updateUsage(retryEntry.id, retryTaskUsageAfter);
+        await ledger.load();
+        heldLedger = await ledger.updateUsage(retryEntry.id, retryTaskUsageAfter);
         const retryContextHash = await writeContext(runRoot, context);
         const retryHashes = await artifactHashes(runRoot);
         const retryRecord: ExecutionRecord = {
@@ -690,7 +711,10 @@ const runWorker = async (runRoot: string): Promise<void> => {
           join(runRoot, "stop-record.json"),
           `${JSON.stringify(retryStopRecord, null, 2)}\n`,
         );
-        await ledger.transition(retryEntry.id, "blocked", { stopReason: "unknown-impact" });
+        await ledger.load();
+        heldLedger = await ledger.transition(retryEntry.id, "blocked", {
+          stopReason: "unknown-impact",
+        });
         noProgressStop = {
           stoppedStageId: stage.id,
           stoppedAttempt: activeAttempt ?? retryEntry.attemptCount,
@@ -702,7 +726,10 @@ const runWorker = async (runRoot: string): Promise<void> => {
         continue;
       }
       if (current?.status === "running") {
-        await ledger.transition(current.id, "completed", { resultId: `result:${stage.id}` });
+        await ledger.load();
+        heldLedger = await ledger.transition(current.id, "completed", {
+          resultId: `result:${stage.id}`,
+        });
       }
     }
 
@@ -730,7 +757,6 @@ const runWorker = async (runRoot: string): Promise<void> => {
       },
     };
     await writeFile(join(runRoot, "run.json"), `${JSON.stringify(manifest, null, 2)}\n`);
-    const heldLedger = await ledger.load();
     await ledger.assertConsistent(heldLedger);
     await writeFile(join(runRoot, "ledger-state.json"), `${JSON.stringify(heldLedger, null, 2)}\n`);
     await writeFile(
@@ -1058,6 +1084,7 @@ const buildBudgetWatchdogEvidence = async (): Promise<BudgetWatchdogEvidence> =>
   }>(join(noProgressRoot, "budget-runtime.json"), {} as never);
   const noProgressContext = deserializeStageContext(
     await readFile(contextPath(noProgressRoot), "utf8"),
+    designGraphValidator,
   );
   const noProgressObservations = noProgressContext.watchdogProgressObservations ?? [];
   const noProgressStop = noProgressRuntime.noProgressStop;

@@ -24,7 +24,10 @@ describe("FileEventLog", () => {
     const second = new FileEventLog(path);
 
     await first.append(event);
-    await expect(second.append(event)).rejects.toThrow(/writer lock already held/);
+    await expect(second.append(event)).rejects.toMatchObject({
+      code: "lock-conflict",
+      message: expect.stringMatching(/writer lock already held/),
+    });
     await first.append({
       ...event,
       eventId: "event:storage:2",
@@ -51,7 +54,10 @@ describe("FileEventLog", () => {
     const second = new FileEventLog(path);
 
     await first.append(event);
-    await expect(second.append(event)).rejects.toThrow(/writer lock already held/);
+    await expect(second.append(event)).rejects.toMatchObject({
+      code: "lock-conflict",
+      message: expect.stringMatching(/writer lock already held/),
+    });
     await second.close();
     await expect(
       first.append({ ...event, eventId: "event:storage:2", resultRevision: 2, baseRevision: 1 }),
@@ -72,7 +78,6 @@ describe("FileEventLog", () => {
 
     await second.close();
   });
-
   it("recovers a crash-truncated trailing partial line", async () => {
     const directory = await mkdtemp(join(tmpdir(), "acd-event-log-"));
     const path = join(directory, "events.jsonl");
@@ -148,7 +153,6 @@ describe("FileEventLog", () => {
 
     await log.close();
   });
-
   it("reads from a zero-based event cursor", async () => {
     const directory = await mkdtemp(join(tmpdir(), "acd-event-log-"));
     const path = join(directory, "events.jsonl");
@@ -164,5 +168,25 @@ describe("FileEventLog", () => {
     await expect(log.readFrom(1)).resolves.toEqual({ position: 1, events: [secondEvent] });
     await expect(log.readFrom(3)).rejects.toMatchObject({ code: "event-replay-failure" });
     await log.close();
+  });
+
+  it("shares one in-flight writer open between concurrent appends", async () => {
+    const directory = await mkdtemp(join(tmpdir(), "acd-event-log-"));
+    const path = join(directory, "events.jsonl");
+    const writer = new FileEventLog(path);
+    const secondEvent = {
+      ...event,
+      eventId: "event:storage:2",
+      resultRevision: 2,
+      baseRevision: 1,
+    };
+
+    await Promise.all([writer.append(event), writer.append(secondEvent)]);
+
+    expect((await writer.readAll()).map(({ eventId }) => eventId)).toEqual([
+      event.eventId,
+      secondEvent.eventId,
+    ]);
+    await writer.close();
   });
 });

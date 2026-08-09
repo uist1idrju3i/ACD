@@ -136,6 +136,7 @@ export class FileToolInvocationRegistry {
   private handle: FileHandle | undefined;
   private lock: FileHandle | undefined;
   private records: Map<string, StoredInvocation> | undefined;
+  private loadFailure: unknown;
 
   constructor(
     private readonly path: string,
@@ -152,6 +153,13 @@ export class FileToolInvocationRegistry {
     context: ToolObservationContext = {},
   ): Promise<{ result?: ToolResult; error?: ToolError }> {
     try {
+      if (this.handle || this.lock) {
+        throw new GraphCoreError(
+          "lock-conflict",
+          `tool invocation registry lock already held: ${this.path}`,
+        );
+      }
+      await this.openWriter();
       await this.load();
       this.observe?.({ kind: "logical-request", ...context });
       const previous = this.records?.get(request.idempotencyKey);
@@ -202,13 +210,12 @@ export class FileToolInvocationRegistry {
   }
 
   private async load(): Promise<void> {
-    if (this.records) return;
-    this.records = new Map();
+    if (this.loadFailure !== undefined) throw this.loadFailure;
+    const records = new Map<string, StoredInvocation>();
     try {
       const bytes = await readFile(this.path);
       const lastNewline = bytes.lastIndexOf(0x0a);
       const complete = bytes.subarray(0, lastNewline + 1);
-      await this.openWriter();
       if (complete.length !== bytes.length) {
         await this.handle?.truncate(complete.length);
         await this.handle?.sync();
@@ -232,22 +239,47 @@ export class FileToolInvocationRegistry {
             "critical",
           );
         }
-        this.records.set(parsed.idempotencyKey, parsed);
+        records.set(parsed.idempotencyKey, parsed);
       }
+      this.records = records;
     } catch (error) {
-      if ((error as NodeJS.ErrnoException).code !== "ENOENT") throw error;
+      if ((error as NodeJS.ErrnoException).code === "ENOENT") {
+        this.records = records;
+        return;
+      }
+      this.loadFailure = error;
+      throw error;
     }
   }
 
   private async openWriter(): Promise<void> {
-    if (this.handle) return;
     await mkdir(dirname(this.path), { recursive: true });
-    this.lock = await open(`${this.path}.lock`, "wx");
-    this.handle = await open(this.path, "a+");
+    let lock: FileHandle | undefined;
+    try {
+      lock = await open(`${this.path}.lock`, "wx");
+      const handle = await open(this.path, "a+");
+      this.lock = lock;
+      this.handle = handle;
+    } catch (error) {
+      await lock?.close();
+      if (lock) {
+        try {
+          await unlink(`${this.path}.lock`);
+        } catch {
+          // Preserve the original open error.
+        }
+      }
+      if ((error as NodeJS.ErrnoException).code === "EEXIST") {
+        throw new GraphCoreError(
+          "lock-conflict",
+          `tool invocation registry lock already held: ${this.path}`,
+        );
+      }
+      throw error;
+    }
   }
 
   private async append(record: StoredInvocation): Promise<void> {
-    await this.openWriter();
     await this.handle?.write(`${canonicalize(record)}\n`, undefined, "utf8");
     await this.handle?.sync();
   }
@@ -270,6 +302,16 @@ export class ToolBoundary {
     },
     context: ToolObservationContext = {},
   ): Promise<ToolResult> {
+    const resultRequest = {
+      toolName: request.toolName,
+      contractVersion: request.contractVersion,
+      inputHash: request.inputHash,
+      graphRevision: request.graphRevision,
+      correlationId: request.correlationId,
+      idempotencyKey: request.idempotencyKey,
+      operationClass: request.operationClass,
+      timeoutMs: request.timeoutMs,
+    };
     const outcome = await this.registry.execute(
       request,
       async () => {
@@ -284,7 +326,7 @@ export class ToolBoundary {
           return {
             result: {
               kind: "result",
-              ...request,
+              ...resultRequest,
               status: "completed",
               startedAt,
               endedAt,
@@ -310,7 +352,7 @@ export class ToolBoundary {
             status: "cancelled",
             result: {
               kind: "result",
-              ...request,
+              ...resultRequest,
               status: "cancelled",
               startedAt,
               endedAt,

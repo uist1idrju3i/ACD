@@ -24,11 +24,12 @@ type TransportErrorCode = "method-not-allowed" | "route-not-found" | "snapshot-u
 
 const json = (value: unknown): string => `${JSON.stringify(value, null, 2)}\n`;
 
-const readJson = async <T>(path: string): Promise<T | undefined> => {
+export const readJson = async <T>(path: string): Promise<T | undefined> => {
   try {
     return JSON.parse(await readFile(path, "utf8")) as T;
-  } catch {
-    return undefined;
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code === "ENOENT") return undefined;
+    throw error;
   }
 };
 
@@ -64,12 +65,12 @@ const transportError = (code: TransportErrorCode, message: string): JsonObject =
 
 const cursor = (request: IncomingMessage, url: URL): number => {
   const header = request.headers["last-event-id"];
-  const raw =
-    typeof header === "string" && header.length > 0 ? header : url.searchParams.get("from");
+  const hasHeader = typeof header === "string" && header.length > 0;
+  const raw = hasHeader ? header : url.searchParams.get("from");
   if (raw === null || raw === undefined || raw === "") return 0;
   const value = Number(raw);
   if (!Number.isInteger(value) || value < 0) throw new Error(`invalid event cursor: ${raw}`);
-  return value;
+  return hasHeader ? value + 1 : value;
 };
 
 const runSnapshot = async (runRoot: string, graph?: DesignGraph): Promise<Snapshot | undefined> => {
@@ -210,6 +211,7 @@ const serveEvents = async (
     response.setHeader("cache-control", "no-cache");
     response.setHeader("connection", "keep-alive");
     response.setHeader("access-control-allow-origin", "http://127.0.0.1:4173");
+    response.write("retry: 100\n\n");
     const read = await log.readFrom(from);
     for (const [index, event] of read.events.entries()) {
       const position = from + index;

@@ -1,7 +1,8 @@
 import { describe, expect, it } from "vitest";
 import { readFile } from "node:fs/promises";
 import { resolve } from "node:path";
-import { readBoardModel } from "./board.js";
+import { readBoardModel, type BoardModel } from "./board.js";
+import { GraphCoreError } from "./errors.js";
 import { rulesForFabProfile } from "./fab-profile-rules.js";
 import {
   quantizeBoardGeometry,
@@ -53,6 +54,102 @@ describe("integer geometry checks", () => {
     expect(checks.padClearance.status).toBe("passed");
     expect(checks.maskSliver.status).toBe("passed");
     expect(checks.courtyardOverlap.status).toBe("passed");
+  });
+
+  it("canonicalizes finding subjects before building stable ids", () => {
+    const checks = runGeometryChecks(
+      input({
+        pads: [
+          {
+            id: "pad:z:1",
+            polygon: rectangle(0, 0, 1000, 1000),
+            netId: "net:z",
+            layer: "F.Cu",
+          },
+          {
+            id: "pad:a:1",
+            polygon: rectangle(100, 0, 1100, 1000),
+            netId: "net:a",
+            layer: "F.Cu",
+          },
+        ],
+        courtyards: [],
+        thresholds: { minimumCopperClearanceNm: 1001 },
+      }),
+    );
+    expect(checks.padClearance.findings[0]).toMatchObject({
+      id: "finding:pad-clearance:pad:a:1:pad:z:1",
+      subjectIds: ["pad:a:1", "pad:z:1"],
+    });
+  });
+
+  it("keeps integer distance parity at the largest accepted coordinate scale", () => {
+    const coordinate = 1_000_000_000_000_000;
+    const checks = runGeometryChecks({
+      pads: [
+        {
+          id: "pad:left",
+          polygon: rectangle(0, 0, 1, 1),
+          netId: "net:left",
+          layer: "F.Cu",
+        },
+        {
+          id: "pad:right",
+          polygon: rectangle(coordinate, 0, coordinate + 1, 1),
+          netId: "net:right",
+          layer: "F.Cu",
+        },
+      ],
+      courtyards: [],
+      thresholds: { minimumCopperClearanceNm: coordinate + 1 },
+    });
+    expect(checks.padClearance.findings[0]?.measuredNm).toBe(coordinate - 1);
+  });
+
+  it("rotates non-square rect pads before quantization", () => {
+    const model: BoardModel = {
+      projectId: "project:test",
+      outline: { originMm: { xMm: 0, yMm: 0 }, widthMm: 10, heightMm: 10 },
+      stackup: { id: "stackup:test", layerCount: 2, thicknessMm: 1, copperLayers: ["F.Cu"] },
+      components: [
+        {
+          id: "component:test",
+          role: "device",
+          reference: "U1",
+          value: "test",
+          partId: undefined,
+          footprintId: "footprint:test",
+          symbol: { libraryId: "lib", name: "test" },
+          schematic: { xMm: 0, yMm: 0, rotationDeg: 0 },
+          pins: [],
+        },
+      ],
+      footprints: new Map([
+        [
+          "footprint:test",
+          {
+            id: "footprint:test",
+            libraryId: "lib",
+            name: "test",
+            pads: [{ number: "1", xMm: 0, yMm: 0, widthMm: 2, heightMm: 1 }],
+          },
+        ],
+      ]),
+      pins: new Map(),
+      nets: [],
+      placements: [
+        { componentId: "component:test", xMm: 0, yMm: 0, rotationDeg: 90, layer: "F.Cu" },
+      ],
+      tracks: [],
+      vias: [],
+    };
+    const polygon = quantizeBoardGeometry(model).pads[0]?.polygon.points;
+    expect(polygon).toEqual([
+      { xNm: -500000, yNm: 1000000 },
+      { xNm: -500000, yNm: -1000000 },
+      { xNm: 500000, yNm: -1000000 },
+      { xNm: 500000, yNm: 1000000 },
+    ]);
   });
 
   it("reports a one-nanometre threshold breach", () => {
@@ -187,5 +284,47 @@ describe("integer geometry checks", () => {
     expect(checks.padClearance.status).not.toBe("unknown");
     expect(checks.maskSliver.status).toBe("unknown");
     expect(checks.courtyardOverlap.status).toBe("unknown");
+  });
+
+  it.each([
+    [
+      "unknown pad shape",
+      (attributes: Record<string, unknown>) => {
+        attributes.pads = [
+          { number: "1", xMm: 0, yMm: 0, widthMm: 1, heightMm: 1, shape: { kind: "ellipse" } },
+        ];
+      },
+    ],
+    [
+      "polygon without points",
+      (attributes: Record<string, unknown>) => {
+        attributes.pads = [
+          { number: "1", xMm: 0, yMm: 0, widthMm: 1, heightMm: 1, shape: { kind: "polygon" } },
+        ];
+      },
+    ],
+    [
+      "courtyard without points",
+      (attributes: Record<string, unknown>) => {
+        attributes.courtyard = { kind: "polygon" };
+      },
+    ],
+  ])("rejects malformed canonical geometry: %s", async (_name, mutate) => {
+    const graph = JSON.parse(
+      await readFile(
+        resolve(import.meta.dirname, "../../../fixtures/design-graphs/normal-2layer.json"),
+        "utf8",
+      ),
+    ) as { entities: Array<{ type: string; attributes?: Record<string, unknown> }> };
+    const footprint = graph.entities.find((entity) => entity.type === "Footprint");
+    expect(footprint?.attributes).toBeDefined();
+    mutate(footprint!.attributes!);
+    try {
+      readBoardModel(graph as never);
+      throw new Error("expected malformed geometry to be rejected");
+    } catch (error) {
+      expect(error).toBeInstanceOf(GraphCoreError);
+      expect((error as GraphCoreError).code).toBe("schema-invalid");
+    }
   });
 });

@@ -313,6 +313,7 @@
         "id": { "$ref": "#/$defs/id" },
         "type": { "const": "Checkpoint" },
         "revision": { "type": "integer", "minimum": 0 },
+        "status": { "type": "string", "enum": ["active", "stale"] },
         "gate": { "type": "string", "minLength": 1 },
         "inputRevision": { "type": "integer", "minimum": 0 },
         "inputHash": { "type": "string", "minLength": 1 },
@@ -518,7 +519,13 @@
                               "items": { "$ref": "#/$defs/pointMm" }
                             }
                           },
-                          "additionalProperties": false
+                          "additionalProperties": false,
+                          "allOf": [
+                            {
+                              "if": { "properties": { "kind": { "const": "polygon" } } },
+                              "then": { "required": ["points"] }
+                            }
+                          ]
                         },
                         "maskExpansionMm": { "type": "number", "minimum": 0 }
                       },
