@@ -169,6 +169,7 @@ jobs:
         with:
           toolchain: 1.97.1
           targets: wasm32-unknown-unknown
+          components: rustfmt, clippy
       - name: Verify Rust formatting
         run: cargo fmt --manifest-path packages/adapters/wasm-geometry/rust/Cargo.toml --check
       - name: Run Rust tests
