@@ -20,7 +20,7 @@ READMEの「やらないこと」により、Phase 2では**高忠実度SI／熱
 
 ## engine境界
 
-- image：`kicad/kicad@sha256:182c...`（Gate 6以降と同じ固定digest。ngspice 44.2を同梱）
+- image：`kicad/kicad@sha256:182c...`（Gate 6以降と同じ固定digest。ngspice 44.2を同梱）。これはACDの固定KiCad container版であり、上流最新は2026年8月時点で46系（2026年3月）です。
 - 起動：引数配列で`ngspice -b <deck>`。jar／libraryをACDへvendorせず、in-process linkしません。
 - 生成物：`artifacts/phase1-golden/spice/<analysis>.cir`、同`.log`、`results.json`。
 
