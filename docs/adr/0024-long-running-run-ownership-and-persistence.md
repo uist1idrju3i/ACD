@@ -42,12 +42,14 @@ Phase 4の長時間ランの正規永続化のみをworker側JSONLに限定し�
   Phase 4受入gateで検証します。
 - worker停止、JSONL破損、欠落revision、event replay不一致、正規状態との不一致は
   jidoka停止条件とし、未検証状態から再開しません。
-- workerの起動、停止、再接続、JSONLの排他と保持期間は実装時に決定論的なテストで固定します。
+- workerの起動、停止、再接続、JSONLの排他と保持期間は、`scripts/phase4-resume.mts`、
+  storage-fsのevent-logテスト、CIの`phase4-resume` jobで決定論的に検証します。
 - ブラウザのみの実行やIndexedDB／OPFSの採用は、必要性が明確になった場合に後続ADRで再検討します。
 - ブラウザのみモードを廃止する決定ではありません。Phase 4のREADME完了条件を測定する
   受入経路だけをworker-owned runに固定します。
-- `architecture.md`のブラウザのみモードとPhase 4の正規永続化の関係、およびADR-0006の
-  候補列挙との同期はWP8で行います。本ADRはその同期までのPhase 4実装契約を定めます。
+- Phase 4のworker-owned JSONLとブラウザread-only HTTP/SSEは、`architecture.md`および
+  ADR-0006のPhase 4限定決定への参照として同期されています。最終製品全体の決定は
+  ADR-0006の未決定範囲に残します。
 
 ## 参照
 

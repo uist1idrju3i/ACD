@@ -1,6 +1,6 @@
 # Phase 4実装計画
 
-**ステータス：Accepted（実装未着手。ADR-0024〜0031はAccepted）**
+**ステータス：Accepted（WP1〜WP7実装済み、WP8 docs/schema同期中）**
 
 ## 目的と権威範囲
 
@@ -24,17 +24,11 @@ Phase 5の範囲です。FWパッケージと仮想実機はPhase 6、自働発�
 - 再利用できる基盤：append-only event log（`checkpoint.created`／`run.resumed`の
   イベント型を含む）、revision付きpatch、input hashとtool versionを持つEvidence、
   gate matrixの`runsAfter`、KnowledgeItemのライフサイクル、library overlay revision。
-- 既に**契約だけ存在し、runtimeが無い**もの（Phase 4の主対象）：
-  - `TaskLedgerEntry`（[`../schemas/design-graph.schema.json`](../schemas/design-graph.schema.json)）は
-    schemaと[`agent-runtime.md`](agent-runtime.md)にあるが、台帳を駆動するruntimeが無い。
-  - `checkpoint.created`／`run.resumed`はイベント型としてあるが、checkpointを書き、
-    そこから再開するorchestratorが無い。
-  - 予算・ウォッチドッグ・無進捗検知は[`agent-runtime.md`](agent-runtime.md)の記述のみ。
-    Phase 4は実LLMを呼ばず、Phase 2と同じ記録済み提案を駆動源とする。token／moneyは
-    スキーマへ保持するが計測せず、unknownとして保持する。
-  - tool request／result／error envelopeは[`tool-contract.md`](tool-contract.md)と
-    [`error-taxonomy.md`](error-taxonomy.md)の記述のみで、機械検証可能なschemaが無い。
-  - WASMモジュールは未実装。ブラウザUIとviewerはWP6でread-only基盤を実装済み。
+- WP1〜WP7で実装済みの基盤：
+  - `TaskLedgerRuntime`、checkpoint runtime、resume orchestrator、budget watchdog、
+    無進捗検知は`scripts/phase4-resume.mts`から実workerで実行される。
+  - Rust/WASM geometry runtimeはWP7で実装済み。tool request／result／error envelopeの
+    完全なschema化は未着手で、WP5の残課題である。
 - 現状のPhase 1〜3のrunは`scripts/*.mts`の単発runnerであり、途中終了すると先頭から
   やり直します。README §7 Phase 4の完了条件は、この構造では測定できません。
 
@@ -47,7 +41,7 @@ JSONL耐久性の設計判断は、AcceptedのADR-0024〜0031に記録済みで�
 | ------------- | -------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------- |
 | ADR-0024      | 長時間ランの所有者と永続化形式   | [ADR-0024](adr/0024-long-running-run-ownership-and-persistence.md)：ランはworker processが所有し、台帳・checkpointはappend-only JSONL（`.acd/runs/<runId>/`）で保持する。ブラウザは再接続して状態を見る端末に限定し、IndexedDB／OPFSはPhase 4では採用しない                                                                                                                         | WP1、WP2、WP6 |
 | ADR-0025      | checkpointの粒度と無効化条件     | [ADR-0025](adr/0025-checkpoint-granularity-and-invalidation.md)：checkpointはgate境界単位。input revision／hash、tool／model／library／container version、provenance、measurement-system qualification、fab／manufacturing profile、参照KnowledgeItem statusのいずれかが変わったcheckpointはstaleとして再実行する（再利用しない）。完了条件の受入測定はworker process強制終了とする | WP2、WP3      |
-| ADR-0026/0030 | 高速チェックのWASM対象と実装言語 | [ADR-0026](adr/0026-fast-check-wasm-scope-and-language.md)／[ADR-0030](adr/0030-wasm-rust-fixed-point-supplement.md)：対象は幾何系の高速チェックに限定。Rust、nm単位の整数固定小数点、正規化findingsの完全一致、CIビルドdigest、native TSへの決定論的fallbackを採用する                                                                                                             | WP7           |
+| ADR-0026/0030 | 高速チェックのWASM対象と実装言語 | [ADR-0026](adr/0026-fast-check-wasm-scope-and-language.md)／[ADR-0030](adr/0030-wasm-rust-fixed-point-supplement.md)：対象は幾何系の高速チェックに限定。Rust、nm単位の整数固定小数点、正規化findingsの完全一致、CIビルドdigest、module不在時だけnative TSへfallbackし、runtime／parity不一致は停止する                                                                              | WP7           |
 | ADR-0027/0031 | ブラウザUIの技術選択と範囲       | [ADR-0027](adr/0027-browser-ui-scope-and-technology.md)／[ADR-0031](adr/0031-browser-ui-canvas2d-sse-supplement.md)：read-only 2D投影を依存なし素TS＋Canvas2Dで実装し、ACD投影ジオメトリを正とする。`apps/web`はVite、worker伝送はローカルHTTP＋SSE、回帰はPlaywright Chromium限定                                                                                                  | WP6           |
 | ADR-0029      | JSONL耐久・回復                  | [ADR-0029](adr/0029-jsonl-durability-and-recovery-semantics.md)：毎appendのsync、run単位の単一writerロック、末尾部分行のみ切り捨て回復、途中行破損は即停止unknown、無期限保持・圧縮なし                                                                                                                                                                                             | WP1、WP2      |
 
@@ -55,7 +49,8 @@ JSONL耐久性の設計判断は、AcceptedのADR-0024〜0031に記録済みで�
 
 ### WP1：タスク台帳runtime（gate 23）
 
-**状態：未着手。** gate契約案はgate 23（`gate:task-ledger`、`runsAfter: gate:knowledge-application`）。
+**状態：実装済み（Phase 4 scope）。** gate 23はPhase 1 goldenではなく、Phase 4 runnerの
+実際のtask.transitioned列とrun manifestを検査する。
 
 **作業**
 
@@ -94,7 +89,8 @@ JSONL耐久性の設計判断は、AcceptedのADR-0024〜0031に記録済みで�
 
 ### WP2：チェックポイントと再開（gate 24）
 
-**状態：未着手。** gate契約案はgate 24（`gate:checkpoint-resume`、`runsAfter: gate:task-ledger`）。
+**状態：実装済み（Phase 4 scope）。** gate 24は`scripts/phase4-resume.mts`のworker kill、
+checkpoint選択、無中断runとのhash／gate結果／event列比較で検査する。
 
 **作業**
 
@@ -122,7 +118,7 @@ JSONL耐久性の設計判断は、AcceptedのADR-0024〜0031に記録済みで�
 
 ### WP3：中断・再開のgolden task（README完了条件の測定）
 
-**状態：未着手。**
+**状態：実装済み（Phase 4 scope）。** gate 24は実workerを使ったkill/resume比較で検査する。
 
 **作業**
 
@@ -149,7 +145,8 @@ JSONL耐久性の設計判断は、AcceptedのADR-0024〜0031に記録済みで�
 
 ### WP4：予算、ウォッチドッグ、無進捗検知（gate 25）
 
-**状態：未着手。** gate契約案はgate 25（`gate:budget-watchdog`、`runsAfter: gate:checkpoint-resume`）。
+**状態：実装済み（Phase 4 scope）。** gate 25（`gate:budget-watchdog`）は、
+`scripts/phase4-resume.mts`のbudget超過・無進捗注入結果を検査する。
 
 **作業**
 
@@ -170,7 +167,8 @@ JSONL耐久性の設計判断は、AcceptedのADR-0024〜0031に記録済みで�
 
 ### WP5：型付き冪等ツール境界のschema化
 
-**状態：未着手。**
+**状態：未着手。** tool request／result／error envelopeの完全なschema化と冪等境界の統合は
+WP8後の残課題である。
 
 **作業**
 
@@ -200,7 +198,7 @@ JSONL耐久性の設計判断は、AcceptedのADR-0024〜0031に記録済みで�
   描画入力の正本はKiCad成果物やGerberではなくACD投影ジオメトリとし、UIが正のデータを作らない。
 - workerとの伝送はローカルHTTP＋SSEとし、再接続時はイベント位置から再送する。WebSocketは使わない。
 
-実装済みのWP6基盤は`apps/worker`のread-only HTTP/SSE API、`apps/web`のCanvas2D観測UI、
+実装済みのWP6基盤は`apps/worker`のread-only HTTP/SSE API、`apps/web`のVite＋Canvas2D観測UI、
 `EventLog.readFrom`、canonical projection DTO、revision diffの純粋関数を含む。
 courtyard/maskは正本geometry未提供のため未提供として表示し、schema追加は別handoffで扱う。
 
@@ -225,7 +223,8 @@ courtyard/maskは正本geometry未提供のため未提供として表示し、s
 
 ### WP7：高速チェックのWASM化
 
-**状態：未着手。**
+**状態：実装済み。** Rustの素C ABI／linear memory runtime、native/WASM parity、provenance、
+CI buildを含む。
 
 **作業**
 
@@ -240,7 +239,8 @@ courtyard/maskは正本geometry未提供のため未提供として表示し、s
 
 - 同一fixture集合でnativeとWASMの結果が完全一致する（不一致は停止）。
 - WASM経路のprovenance（build digest、toolchain version）がEvidenceに残る。
-- WASMが使えない環境ではnative経路へ決定論的にフォールバックする。
+- module不在または実行環境がWASMを提供しない場合だけnative経路へfallbackし、
+  parity mismatchやruntime failureは`verification-failed`で停止する。
 
 **やらないこと**
 
@@ -248,7 +248,22 @@ courtyard/maskは正本geometry未提供のため未提供として表示し、s
 
 ### WP8：docsとschemaの同期、振り返り
 
-**状態：未着手。**
+**状態：実装中。**
+
+Gate 23〜25は`appliesTo: ["phase4"]`へ分離する。Phase 1 golden artifactのscopeは
+変更せず、`artifacts/phase1-golden/gate-results.json`へPhase 4結果を混在させない。
+`phase4-resume.mts`はtask ledger、checkpoint/resume、budget watchdogの実測結果から
+executed orderの和集合を作り、`missingExecutedGates`でPhase 4 scopeを検査する。
+Phase 4で現在実測できるgate 23、24、25はimplementedへ変更し、実行されていないgateを
+statusだけ先行して上げない。
+
+Event logの保存順replay、event type runtime検査未実装、event種別ごとのpayload schema
+未実装は既知の制約として残す。unknown event拒否の実装はWP8の範囲外とする。
+
+CIでは`browser` jobのPlaywright Chromium回帰、`phase4-resume` jobのworker kill/resume、
+`wasm-geometry` jobの実runtime parityが必須実行される。`.acd/`と`artifacts/`はignore対象で、
+Phase 4のコミット対象証跡は`resume.json`、WP6 browser evidence JSON／SHA-256である。
+`budget-watchdog.json`とPhase 4 gate resultはrunnerが生成してCIへuploadする。
 
 **作業**
 
@@ -270,7 +285,7 @@ courtyard/maskは正本geometry未提供のため未提供として表示し、s
 
 ### WP9：Phase 3残債（Phase 4受入対象外）
 
-**状態：未着手。着手可否は未決定。**
+**状態：未着手。着手可否は未決定。** Phase 5以降の実装計画。
 
 [`phase3-retrospective.md`](phase3-retrospective.md)が挙げた知識ループの残債です。README §7の
 Phase 4完了条件には含まれないため、Phase 4の受入gateには入れず、独立した契約変更として扱います。

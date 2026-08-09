@@ -20,7 +20,10 @@ READMEの「9. 長時間タスクを走り切る実行基盤」と設計原則�
 
 ## イベントログ
 
-計画、観測、ツール呼び出し、結果、パッチ、承認、停止、再開、ゲート結果をappend-onlyで記録します。イベントはリビジョンとタスクIDを参照し、リプレイ、監査、回帰評価、知識抽出に使います。
+snapshot、patch、verification、checkpoint、run停止／再開、fab feedback、knowledge lifecycle、
+task ledger、gate結果をappend-onlyで記録します。現在のevent type集合は
+`schemas/event.schema.json`と`packages/graph-core/src/event-log.ts`を正とし、イベントは
+revisionとtask IDを参照してreplay、監査、回帰評価、知識抽出に使います。
 
 ## サブエージェントレーン
 

@@ -4,7 +4,7 @@
 
 ## 目的と権威範囲
 
-本書は、READMEの「4. アーキテクチャの方向性」と「9. 長時間タスクを走り切る実行基盤」を実装へ落とすための境界を定義します。具体的な言語、フレームワーク、データベース、LLMプロバイダは未決定であり、[`adr/0006-implementation-language-storage.md`](adr/0006-implementation-language-storage.md)で扱います。
+本書は、READMEの「4. アーキテクチャの方向性」と「9. 長時間タスクを走り切る実行基盤」を実装へ落とすための境界を定義します。プロジェクト全体の最終言語・ストレージ・LLMプロバイダはADR-0006の未決定範囲に残しますが、Phase 4限定のworker JSONL、Rust geometry WASM、Vite＋素TypeScript＋Canvas2D、HTTP/SSEはADR-0024、ADR-0030、ADR-0031で決定済みです。
 
 ## 境界
 
@@ -14,11 +14,11 @@
 - 軽量なパーサー、グラフ操作、差分計算、UI状態をブラウザで実行する。
 - Web Workersで重い非同期処理をUIスレッドから分離する。
 - 2D/3Dレンダリングは可能な範囲でOffscreenCanvasを使う。対応ブラウザとフォールバックは未決定。
-- IndexedDBをメタデータ、イベント、チェックポイントのローカルキャッシュ候補、OPFSを大きな設計成果物のローカル保管候補とする。どちらを採用するか、また他のストレージとどう組み合わせるかは未決定（ADR-0006で決定）。
+- Phase 4ではIndexedDB/OPFSを正規状態にせず、worker-owned JSONLを正規永続化とする。ブラウザはVite＋素TypeScript＋Canvas2Dのread-only clientで、workerとはHTTP/SSEで接続する。
 
 ### 決定論的WASM層
 
-トポロジー検査、軽量ERC/DRC、設計グラフのスキーマ検証、Gerber/IPC-2581の構造検査など、ブラウザで安全に実行できる検査をWASMまたは同等のサンドボックスで実行します。AIの出力を合否判定に使わず、同一入力・同一ツールバージョンから再現可能な結果を返します。これはtarget architectureであり、Phase 0/1では独自WASM engineを受入対象とせず、既存CLI、fixture runner、外部tool境界を使います。
+トポロジー検査、軽量ERC/DRC、設計グラフのスキーマ検証、Gerber/IPC-2581の構造検査など、ブラウザで安全に実行できる検査をWASMまたは同等のサンドボックスで実行します。AIの出力を合否判定に使わず、同一入力・同一ツールバージョンから再現可能な結果を返します。これはtarget architectureであり、Phase 0/1では独自WASM engineを受入対象としません。Phase 4 WP7では幾何系高速チェックに限定したRust/WASM runtimeを受入し、native TypeScriptとのparityを必須とします。
 
 ### 任意のローカル／サーバーワーカー
 
@@ -36,7 +36,7 @@
 
 各エンジンのモデル、制御文、収束オプション、波形形式には差があるため、同一ネットリストを無条件に流用しません。重要な値については、必要に応じて複数エンジンのサニティ比較を任意ゲートとして実行します。シミュレータの詳細と検証境界は[`verification-gates.md`](verification-gates.md)を参照します。
 
-ワーカーはブラウザが閉じてもランを継続でき、UIは再接続して状態を取得します。ワーカーを必須にするか、どのジョブを委譲するかは未決定です。
+ワーカーはブラウザが閉じてもランを継続でき、UIは再接続して状態を取得します。Phase 4の受入経路ではworker-owned runを必須とし、台帳、checkpoint、event logをworkerが所有します。追加ジョブを将来どこまで委譲するかは未決定です。
 
 ### LLMポリシー
 
@@ -44,7 +44,9 @@ BYOK（利用者自身のAPIキー）とセルフホストLLMを第一級の選�
 
 ### チェックポイントと実行形態
 
-- **ブラウザのみ：** IndexedDB/OPFS候補に設計グラフのリビジョン、イベント、タスク台帳、成果物のハッシュを保存する。タブを閉じると実行は一時停止し得るが、最後のチェックポイントから再開する。
+- **ブラウザのみ（Phase 0/1の歴史的境界）：** IndexedDB/OPFS候補に設計グラフの
+  リビジョン、イベント、タスク台帳、成果物のハッシュを保存する。Phase 4のcanonical
+  persistenceではなく、Phase 0/1のtarget mode記述として保持する。
 - **ワーカーモード：** ワーカーがイベントログとチェックポイントの所有者となり、ブラウザは観測・操作端末となる。再接続時はグラフリビジョンとイベントIDから追いつく。
 - **制約：** ブラウザのみのモードはタブ終了中に処理を進めません。ワーカーモードでは、ブラウザから切断してもワーカーが独立して継続します。
 - 両モードは同じ型付きツール契約と検証ゲートを使い、モード差で合否が変わらないことを目標とする。
@@ -79,12 +81,12 @@ Phase 9のローカル製造では、`PrinterProfile`または`ManufacturingProf
 ```mermaid
 flowchart LR
   User[利用者] --> UI[ブラウザUI]
-  UI --> State[IndexedDB / OPFS]
-  UI --> Graph[設計グラフサービス]
+  UI --> Worker[Phase 4 worker HTTP / SSE]
+  Worker --> State[worker-owned JSONL]
+  Worker --> Graph[設計グラフサービス]
   UI --> MCP[MCP公開境界]
-  Graph --> WASM[決定論的WASM検証]
+  Graph --> WASM[Rust/WASM geometry verification]
   Graph --> Ledger[タスク台帳・イベントログ]
-  Graph --> Worker[任意のローカル/サーバーワーカー]
   Worker --> LLM[BYOK / セルフホストLLM]
   Worker --> Native[kicad-cli / freerouting / SPICE / SI / 熱]
   Native --> KiCad[KiCad IPC API]
@@ -97,7 +99,7 @@ flowchart LR
 
 ## 未決定事項
 
-ブラウザ内グラフDBの有無、イベントログの物理形式、ワーカーのキュー、認証、マルチユーザー同期、WASM実装言語、OffscreenCanvasのフォールバック、LLMルーティングは未決定です。候補を実装へ持ち込むときはADRを追加します。
+ブラウザ内グラフDBの有無、ワーカーのキュー、認証、マルチユーザー同期、OffscreenCanvasのフォールバック、LLMルーティングは未決定です。Phase 4のworker JSONL、Rust geometry WASM、Vite＋Canvas2D、HTTP/SSEはADR-0024、ADR-0030、ADR-0031を参照します。
 
 ACD自身は、利用者の設計データを同意なく第三者の学習へ提供しない方針を持ちます。BYOKや外部LLMを選ぶ場合の送信・保持・学習利用は、利用者と各プロバイダの契約および設定が適用されます。
 

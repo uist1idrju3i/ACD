@@ -53,13 +53,14 @@ describe("gate matrix", () => {
     expect(orders.indexOf(21)).toBeGreaterThan(orders.indexOf(12));
   });
 
-  it("scopes smoke to gates 1-11 and golden through pre-order readiness", () => {
+  it("scopes smoke, phase1 golden, and phase4 independently", () => {
     expect(gatesForScope(matrix, "smoke").map((gate) => gate.order)).toEqual([
       1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11,
     ]);
     expect(gatesForScope(matrix, "golden").map((gate) => gate.order)).toEqual([
-      1, 2, 3, 4, 5, 14, 15, 16, 17, 18, 19, 20, 6, 7, 8, 9, 10, 11, 12, 21, 22, 23, 24, 25, 13,
+      1, 2, 3, 4, 5, 14, 15, 16, 17, 18, 19, 20, 6, 7, 8, 9, 10, 11, 12, 21, 22, 13,
     ]);
+    expect(gatesForScope(matrix, "phase4").map((gate) => gate.order)).toEqual([23, 24, 25]);
     expect(gateByOrder(matrix, 13).status).toBe("contract-only");
   });
 
@@ -78,6 +79,11 @@ describe("gate matrix", () => {
         includeContractOnly: true,
       }).map((gate) => gate.order),
     ).toEqual([19, 20, 21, 22, 13]);
+  });
+
+  it("requires all implemented phase4 gates in the phase4 scope", () => {
+    expect(missingExecutedGates(matrix, "phase4", [23, 24])).toEqual([gateByOrder(matrix, 25)]);
+    expect(missingExecutedGates(matrix, "phase4", [23, 24, 25])).toEqual([]);
   });
 
   it("stops when an unknown gate order is requested", () => {

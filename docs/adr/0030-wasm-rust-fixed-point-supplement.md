@@ -15,7 +15,11 @@ ADR-0026は高速チェックのWASM対象とnative TypeScriptを正とする方
 3. findingsは正規化した表現を比較し、native TypeScriptとWASMの完全一致を要求する。
 4. WASMのbuild digestをprovenanceへ記録し、`.wasm`バイナリはリポジトリへコミットせず
    CIでRustからビルドする。
-5. WASMが失敗または利用不能な場合は、native TypeScriptへ決定論的にフォールバックする。
+5. `.wasm` moduleが不在、または実行環境がWASMを提供しない場合だけ、native TypeScriptへ
+   決定論的にfallbackする。module version、build digest、toolchain version、fallback理由を
+   provenanceへ記録する。instantiate失敗、C ABI／linear memory不備、入力／出力長超過、
+   packed output破損、runtime error、native/WASM parity mismatchは
+   `verification-failed`で停止し、native結果へfallbackしない。
 
 ## 代替案
 
@@ -25,7 +29,8 @@ ADR-0026は高速チェックのWASM対象とnative TypeScriptを正とする方
 ## 結果とリスク
 
 整数固定小数点と正規化比較により、数値差を含む不一致を検出できる。Rust toolchainと
-CIビルドの再現性、WASM runtime failure時のfallbackを受入テストで固定する。
+CIビルドの再現性、module不在時のfallback、runtime failureとparity mismatch時の停止を
+受入テストで固定する。
 
 ## 参照
 

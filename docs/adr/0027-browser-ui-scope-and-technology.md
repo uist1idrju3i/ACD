@@ -9,8 +9,8 @@ Phase 4は、長時間runの状態をブラウザから確認し、設計成果�
 Evidenceを直接変更すると、投影と正規状態の境界が崩れます。
 
 ADR-0004はbrowser-firstと任意workerを定めています。本ADRはそのブラウザ側のPhase 4
-受入範囲を定めますが、UIフレームワーク自体は実装と検証の結果を踏まえて選ぶため、
-現時点では固定しません。
+受入範囲を定めます。UI frameworkはADR-0031で、Vite、依存なしの素TypeScript、
+Canvas2D、ローカルHTTP＋SSEとして決定済みです。
 
 ## 決定
 
@@ -23,8 +23,7 @@ Phase 4のブラウザUI受入範囲は次のとおりとします。
 
 UIは正の設計データ、KnowledgeItem、Evidenceを作成・変更しません。表示値は成果物IDまたは
 Evidence IDへ辿れることを必須とし、要約値を権威として扱いません。UIフレームワークは
-本ADRでは決定せず、WP6着手時に別ADRでread-only、再接続、性能、license、保守性を比較して
-決定します。
+read-only、再接続、性能、license、保守性の比較と技術選択はADR-0031で実施済みです。
 
 以下はPhase 4の受入対象外です。README §7のPhase 4行を更新し、3Dビューアとタブレット対応は
 後続フェーズへ移しました。
@@ -36,8 +35,8 @@ Evidence IDへ辿れることを必須とし、要約値を権威として扱い
 ### 未解決の論点
 
 README §7を更新してPhase 4受入をread-only 2Dに限定し、3Dビューアとタブレット対応を
-後続フェーズへ移すことは決定済みです。本ADRで未決定として残るのはUIフレームワークだけで、
-WP6着手時に別ADRとして記録します。
+後続フェーズへ移すことは決定済みです。Phase 4のUI frameworkはADR-0031で決定済みで、
+将来のUI拡張技術は後続ADRで扱います。
 
 ## 代替案
 
@@ -45,18 +44,17 @@ WP6着手時に別ADRとして記録します。
   導入するため却下する。
 - **3Dビューアを受入対象にする**：表示・性能・投影範囲が拡大し、README §7のPhase 4
   完了条件に対する必須性がないため、Phase 4では採用せず後続フェーズへ送る。
-- **UIフレームワークを今決定する**：実装速度は上がるが、worker再接続、2D描画、成果物
-  provenanceの検証前に技術を固定するため、本ADRでは決定せず別ADRへ分離する。
+- **UIフレームワークを今決定する**：Phase 4ではADR-0031のVite＋素TypeScript＋Canvas2Dを
+  採用し、将来のUI拡張frameworkは本ADRの範囲外に残す。
 
 ## 結果とリスク
 
 - read-only境界により、ブラウザ表示と正規設計グラフ・Evidenceを分離できます。
 - 表示対象が成果物ID／Evidence IDへ追跡できない、またはUIから正のデータを書き換えられる
   場合は停止します。
-- ブラウザ強制終了後の再接続とworker継続はPlaywright UI回帰で検証します。受入gateの
+- ブラウザ強制終了後の再接続とworker継続はADR-0031で選択したPlaywright Chromium UI回帰で検証します。受入gateの
   実行基盤耐久性はADR-0025に従いworker process強制終了で測定します。
-- UIフレームワークの決定は本ADRでは行わず、WP6着手時に実測した受入条件とlicense境界を
-  根拠として別ADRで記録します。
+- UI frameworkの決定とlicense境界はADR-0031に記録済みです。
 
 ## 参照
 

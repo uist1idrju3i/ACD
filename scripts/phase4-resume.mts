@@ -24,7 +24,11 @@ import {
   type ToolObservation,
 } from "../packages/adapters/storage-fs/src/index.js";
 import { canonicalize } from "../packages/graph-core/src/hash.js";
-import { loadGateMatrix, loadSchemaValidator } from "../packages/schema/src/index.js";
+import {
+  loadGateMatrix,
+  loadSchemaValidator,
+  missingExecutedGates,
+} from "../packages/schema/src/index.js";
 import type { ACDPhase1Fixture } from "../packages/schema/src/generated/phase1-fixture.js";
 import type { Budget } from "../packages/schema/src/generated/design-graph.js";
 import {
@@ -1065,6 +1069,70 @@ const buildBudgetWatchdogEvidence = async (): Promise<BudgetWatchdogEvidence> =>
   };
 };
 
+type Phase4GateResult = {
+  gate: number;
+  name: string;
+  status: "passed";
+  evidence: string;
+};
+
+const writePhase4GateResults = async (
+  resumeResults: readonly Record<string, unknown>[],
+  budgetEvidence: BudgetWatchdogEvidence,
+): Promise<void> => {
+  const taskLedgerObserved = resumeResults.every(
+    (result) =>
+      Array.isArray(result.actualStageExecution) &&
+      result.actualStageExecution.length > 0 &&
+      typeof result.baselineEventCount === "number" &&
+      result.baselineEventCount > 0,
+  );
+  const checkpointResumeObserved = resumeResults.every(
+    (result) =>
+      (result.verification as { passed?: boolean } | undefined)?.passed === true &&
+      (result.resumedCheckpoint as string | null) !== null,
+  );
+  const budgetWatchdogObserved =
+    budgetEvidence.injectedBudget.stopRecord.reasonCode === "budget-exceeded" &&
+    budgetEvidence.injectedBudget.nextStageStarted === false &&
+    budgetEvidence.injectedNoProgress.noProgressObservationStatus === "detected" &&
+    budgetEvidence.injectedNoProgress.stopRecord.reasonCode === "unknown-impact";
+  const executedOrders = [
+    ...(taskLedgerObserved ? [23] : []),
+    ...(checkpointResumeObserved ? [24] : []),
+    ...(budgetWatchdogObserved ? [25] : []),
+  ];
+  const missing = missingExecutedGates(gateMatrix, "phase4", executedOrders);
+  if (missing.length > 0) {
+    throw new Error(
+      `verification-failed: phase4 run skipped contracted gates ${missing
+        .map((gate) => gate.order)
+        .join(", ")}`,
+    );
+  }
+  const results: Phase4GateResult[] = [
+    {
+      gate: 23,
+      name: "Task ledger",
+      status: "passed",
+      evidence: "phase4 task.transitioned events and reconstructed run manifests",
+    },
+    {
+      gate: 24,
+      name: "Checkpoint and resume",
+      status: "passed",
+      evidence: "phase4 baseline/interrupted/resumed comparisons",
+    },
+    {
+      gate: 25,
+      name: "Budget watchdog",
+      status: "passed",
+      evidence: "phase4 budget-watchdog injected stop records",
+    },
+  ];
+  await writeFile(join(artifactRoot, "gate-results.json"), `${JSON.stringify(results, null, 2)}\n`);
+};
+
 if (workerMode) {
   const runRoot = process.argv.find((value) => value.startsWith("--root="))?.slice(7);
   if (!runRoot) throw new Error("worker root is required");
@@ -1110,5 +1178,6 @@ if (workerMode) {
     join(artifactRoot, "budget-watchdog.json"),
     `${JSON.stringify(budgetEvidence, null, 2)}\n`,
   );
+  await writePhase4GateResults(results, budgetEvidence);
   process.stdout.write(`${JSON.stringify(results, null, 2)}\n`);
 }
