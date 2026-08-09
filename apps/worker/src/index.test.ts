@@ -1,7 +1,9 @@
 import { readFile } from "node:fs/promises";
 import { join, resolve } from "node:path";
+import { mkdtemp, writeFile } from "node:fs/promises";
+import { tmpdir } from "node:os";
 import { describe, expect, it } from "vitest";
-import { attachVerificationResultIds, createWorkerServer } from "./index.js";
+import { attachVerificationResultIds, createWorkerServer, readJson } from "./index.js";
 import type { DesignGraph } from "@acd/graph-core";
 
 const fixtureRoot = resolve(import.meta.dirname, "../../../fixtures/phase4/wp6-browser-run");
@@ -64,8 +66,19 @@ describe("worker read-only API", () => {
       });
       const lastEventIdBody = await lastEventId.text();
       expect(lastEventIdBody).not.toContain("id: 0");
-      expect(lastEventIdBody).toContain("id: 1");
+      expect(lastEventIdBody).not.toContain("id: 1");
+      expect(lastEventIdBody).toContain('"position":2');
+      expect(lastEventIdBody).toContain("retry: 100");
     });
+  });
+
+  it("returns undefined only for missing JSON and preserves corruption errors", async () => {
+    const directory = await mkdtemp(join(tmpdir(), "acd-worker-json-"));
+    const missing = await readJson(join(directory, "missing.json"));
+    expect(missing).toBeUndefined();
+    const malformed = join(directory, "malformed.json");
+    await writeFile(malformed, "{not-json", "utf8");
+    await expect(readJson(malformed)).rejects.toThrow(SyntaxError);
   });
 
   it("rejects a cursor beyond the event log as event-replay-failure", async () => {

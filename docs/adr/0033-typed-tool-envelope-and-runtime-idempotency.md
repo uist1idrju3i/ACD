@@ -13,8 +13,10 @@ worker/runtime共通で防ぎ、失敗を既存のerror taxonomyで停止させ�
 1. tool request/result/error envelopeを`schemas/tool-envelope.schema.json`で型付けする。
    既存のprovenanceとID定義をSchema参照で再利用する。
 2. 冪等性registryはtool adapterごとではなくworker/runtime共通とし、
-   `.acd/runs/<runId>/tool-invocations.jsonl`へappend-onlyで保存する。appendごとの
-   sync、single-writer lock、末尾部分行だけの回復、無期限保持を適用する。
+   `.acd/runs/<runId>/tool-invocations.jsonl`へappend-onlyで保存する。`execute()`開始前に
+   single-writer lockを取得し、load、operation実行、appendまで保持してから解放する。
+   appendごとのsync、末尾部分行だけの回復、無期限保持を適用する。SIGKILL後のlockは
+   Phase 4 resume runnerの明示的な復旧経路だけで削除し、一般経路の自動takeoverは行わない。
 3. 同一keyの再送は保存済みresult/errorを返し、外部processを再実行しない。同一keyで
    input hashが変わる再送は`reference-integrity`で停止する。
    registryのスコープは1 run内に限定し、run開始時に一意な`runId`を発行して
@@ -22,6 +24,8 @@ worker/runtime共通で防ぎ、失敗を既存のerror taxonomyで停止させ�
    registryは再利用しない。runIdはartifact、hash、`gate-results.json`へ含めない。
    keyには`/attempt:<n>`を含め、同一attemptはreplayし、新しいattemptは新しい
    keyで再実行する。resumeは同じattemptを引き継ぐ。
+   replayは記録済みresult/errorを返すだけでfile side effectを再生成しないため、
+   artifactを必要とするcallerはmount path上のartifactを別途検証する。
 4. retry budgetはtask ledgerが単独で所有する。tool envelopeにretry loopを持ち込まない。
 5. `correlationId`、`idempotencyKey`、`eventId`を分離する。
    `correlationId`にはhostの絶対パスを含めず、run-scopedなtool run IDを使う。

@@ -15,7 +15,8 @@ Evidence、投影ジオメトリ、revision差分を観測する必要がある�
 - `apps/worker`をHTTP/SSEのcomposition root、`apps/web`をread-only clientとする。
 - `GET /events?from=N`は検証済みraw `EventEnvelope`を配信する。`N`は0-based event countで、
   SSE `id`はevent position、payload内の`eventId`はcanonical identityとする。
-- `Last-Event-ID`がquery cursorより優先される。cursorがlog長を超える場合、またはlogの
+- `Last-Event-ID: N`がquery cursorより優先され、受信済みN件の次であるN+1から再開する。
+  `?from=N`はN件をskipする意味を維持する。cursorがlog長を超える場合、またはlogの
   検証に失敗した場合は`event-replay-failure`として停止し、SSEを成功扱いで継続しない。
 - `/state`はraw eventと分離されたtyped read model、`/projection`はmm単位のcanonical DTO、
   `/diff`はfrom/to revisionとpatch/event provenanceを含むsemantic diffとする。
@@ -34,6 +35,7 @@ Evidence、投影ジオメトリ、revision差分を観測する必要がある�
 - web clientの通常の再接続はEventSource標準の`Last-Event-ID`送信に委ね、
   受信済みSSE `id`をclient側で重複排除する。明示的な`from`指定は初回接続と
   canonical cursor検証に限定する。
+- worker停止とSSE transport切断は別状態として表示し、切断中もworker停止を推定しない。
 
 ## 責務境界
 

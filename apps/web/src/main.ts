@@ -45,6 +45,21 @@ const observerSseState = {
   duplicateEventsSuppressed: false,
 };
 let latestRenderVersion = 0;
+let observerEvents: EventSource | undefined;
+let initialRetryCount = 0;
+
+const setConnectionState = (
+  state: "connected" | "stream-disconnected" | "stopped" | "error",
+  message: string,
+): void => {
+  const connection = document.querySelector<HTMLParagraphElement>("#connection-status");
+  if (connection) {
+    connection.textContent = message;
+    connection.className = state === "connected" ? "passed" : "unknown";
+    connection.dataset.workerState = state;
+  }
+  document.body.dataset.workerState = state;
+};
 
 const renderSseState = (): void => {
   const element = document.querySelector<HTMLParagraphElement>("#sse-observer-state");
@@ -155,10 +170,11 @@ const render = async (): Promise<void> => {
   if (renderVersion !== latestRenderVersion) return;
   const connection = document.querySelector<HTMLParagraphElement>("#connection-status");
   if (!connection) throw new Error("connection status missing");
-  connection.textContent = `worker connected; event position ${state.eventPosition}`;
-  connection.className = "passed";
-  connection.dataset.workerState = "connected";
-  document.body.dataset.workerState = "connected";
+  if (state.stopRecord) {
+    setConnectionState("stopped", `worker stopped; event position ${state.eventPosition}`);
+  } else {
+    setConnectionState("connected", `worker connected; event position ${state.eventPosition}`);
+  }
   const ledger = document.querySelector<HTMLUListElement>("#task-ledger");
   if (!ledger) throw new Error("task ledger missing");
   ledger.replaceChildren(
@@ -205,7 +221,25 @@ const render = async (): Promise<void> => {
 const reconnect = (): void => {
   let lastReceivedPosition = -1;
   const received = new Set<number>();
+  observerEvents?.close();
   const events = new EventSource("/events?from=0");
+  observerEvents = events;
+  events.onopen = () => {
+    const stopped = document.body.dataset.workerState === "stopped";
+    if (!stopped) setConnectionState("connected", "worker connected; event stream open");
+    if (observerSseState.receivedPositions.length > 0) {
+      observerSseState.duplicateEventsSuppressed = true;
+      renderSseState();
+    }
+  };
+  events.onerror = () => {
+    if (
+      events.readyState === EventSource.CLOSED ||
+      observerSseState.receivedPositions.length === 0
+    ) {
+      setConnectionState("stream-disconnected", "event stream disconnected; worker may continue");
+    }
+  };
   const onEvent = (event: MessageEvent<string>): void => {
     const eventPosition = Number(event.lastEventId);
     if (!Number.isInteger(eventPosition)) return;
@@ -217,7 +251,7 @@ const reconnect = (): void => {
     received.add(eventPosition);
     lastReceivedPosition = eventPosition;
     observerSseState.receivedPositions.push(eventPosition);
-    void render();
+    void render().catch(showRenderError);
   };
   for (const type of [
     "snapshot.created",
@@ -240,7 +274,33 @@ const reconnect = (): void => {
   }
 };
 
-void render().then(reconnect);
+const showRenderError = (error: unknown): void => {
+  root.innerHTML = `
+    <h1>ACD Run Observer</h1>
+    <p id="connection-status" class="unknown">observer render failed</p>
+    <p id="render-error"></p>
+  `;
+  const detail = document.querySelector<HTMLParagraphElement>("#render-error");
+  if (detail) detail.textContent = error instanceof Error ? error.message : String(error);
+  setConnectionState("error", "observer render failed; retrying");
+};
+
+const bootstrap = async (): Promise<void> => {
+  try {
+    await render();
+    initialRetryCount = 0;
+    reconnect();
+  } catch (error) {
+    showRenderError(error);
+    reconnect();
+    if (initialRetryCount < 2) {
+      initialRetryCount += 1;
+      window.setTimeout(() => void bootstrap(), 100 * 2 ** initialRetryCount);
+    }
+  }
+};
+
+void bootstrap();
 window.addEventListener("offline", () => {
   const connection = document.querySelector<HTMLParagraphElement>("#connection-status");
   if (connection) {

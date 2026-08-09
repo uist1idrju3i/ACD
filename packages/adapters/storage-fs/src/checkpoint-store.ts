@@ -1,7 +1,12 @@
 import { mkdir, open, readFile, unlink } from "node:fs/promises";
 import type { FileHandle } from "node:fs/promises";
 import { dirname } from "node:path";
-import { canonicalize, type Checkpoint, type CheckpointStore } from "@acd/graph-core";
+import {
+  canonicalize,
+  GraphCoreError,
+  type Checkpoint,
+  type CheckpointStore,
+} from "@acd/graph-core";
 
 export class FileCheckpointStore implements CheckpointStore {
   private handle: FileHandle | undefined;
@@ -18,10 +23,23 @@ export class FileCheckpointStore implements CheckpointStore {
   async readAll(): Promise<Checkpoint[]> {
     try {
       const content = await readFile(this.path, "utf8");
+      const lastNewline = content.lastIndexOf("\n");
       return content
+        .slice(0, lastNewline + 1)
         .split("\n")
         .filter(Boolean)
-        .map((line) => JSON.parse(line) as Checkpoint);
+        .map((line, index) => {
+          try {
+            return JSON.parse(line) as Checkpoint;
+          } catch (error) {
+            throw new GraphCoreError(
+              "event-replay-failure",
+              `invalid checkpoint JSON at line ${index + 1}`,
+              "critical",
+              { cause: error instanceof Error ? error.message : String(error) },
+            );
+          }
+        });
     } catch (error) {
       if ((error as NodeJS.ErrnoException).code === "ENOENT") return [];
       throw error;

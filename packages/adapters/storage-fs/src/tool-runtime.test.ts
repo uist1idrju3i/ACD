@@ -2,6 +2,7 @@ import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
+import { loadSchemaValidator } from "@acd/schema";
 import { FileToolInvocationRegistry, NodeProcessPort, ToolBoundary } from "./tool-runtime.js";
 
 describe("NodeProcessPort", () => {
@@ -195,6 +196,41 @@ describe("FileToolInvocationRegistry", () => {
     await rm(root, { recursive: true, force: true });
   });
 
+  it("produces a result accepted by the tool envelope schema", async () => {
+    const root = await mkdtemp(join(tmpdir(), "acd-tool-envelope-schema-"));
+    const registry = new FileToolInvocationRegistry(join(root, "tool-invocations.jsonl"));
+    const result = await new ToolBoundary(new NodeProcessPort(), registry).execute(
+      {
+        toolName: "node.schema",
+        contractVersion: "0.1.0",
+        inputHash: `sha256:${"1".repeat(64)}`,
+        graphRevision: 0,
+        correlationId: "correlation-schema",
+        idempotencyKey: "tool:node.schema:once",
+        operationClass: "read",
+        timeoutMs: 1000,
+        maxOutputBytes: 1024,
+        input: { marker: "schema" },
+      },
+      {
+        command: process.execPath,
+        args: ["-e", "process.stdout.write('schema')"],
+        timeoutMs: 1000,
+        maxOutputBytes: 1024,
+        killGraceMs: 50,
+      },
+      {
+        toolVersion: process.version,
+        containerVersion: "test",
+        provenance: [{ kind: "tool-output", locator: "node.schema" }],
+      },
+    );
+    const validate = await loadSchemaValidator("tool-envelope");
+    expect(validate(result)).toBe(true);
+    await registry.close();
+    await rm(root, { recursive: true, force: true });
+  });
+
   it("records and replays cancellation as a result status", async () => {
     const root = await mkdtemp(join(tmpdir(), "acd-tool-cancel-replay-"));
     const registry = new FileToolInvocationRegistry(join(root, "tool-invocations.jsonl"));
@@ -321,6 +357,41 @@ describe("FileToolInvocationRegistry", () => {
     await rm(root, { recursive: true, force: true });
   });
 
+  it("rejects a concurrent writer while the first operation is running", async () => {
+    const root = await mkdtemp(join(tmpdir(), "acd-tool-lock-"));
+    const path = join(root, "tool-invocations.jsonl");
+    const first = new FileToolInvocationRegistry(path);
+    const second = new FileToolInvocationRegistry(path);
+    const request = {
+      toolName: "lock.test",
+      contractVersion: "0.1.0",
+      inputHash: `sha256:${"2".repeat(64)}`,
+      graphRevision: 0,
+      correlationId: "correlation-lock",
+      idempotencyKey: "tool:lock:first",
+      operationClass: "read" as const,
+      timeoutMs: 100,
+      input: {},
+    };
+    let release: (() => void) | undefined;
+    const running = first.execute(
+      request,
+      () =>
+        new Promise((resolve) => {
+          release = () => resolve({ error: toolFailureForTest() });
+        }),
+    );
+    await new Promise((resolve) => setTimeout(resolve, 10));
+    await expect(
+      second.execute({ ...request, idempotencyKey: "tool:lock:second" }, async () => ({
+        error: toolFailureForTest(),
+      })),
+    ).rejects.toMatchObject({ code: "lock-conflict" });
+    release?.();
+    await running;
+    await rm(root, { recursive: true, force: true });
+  });
+
   it("stops on a mid-stream corrupt record", async () => {
     const root = await mkdtemp(join(tmpdir(), "acd-tool-corrupt-"));
     const path = join(root, "tool-invocations.jsonl");
@@ -331,7 +402,7 @@ describe("FileToolInvocationRegistry", () => {
       '{"idempotencyKey":"x","correlationId":"c","inputHash":"h","status":"completed","result":{}}\nnot-json\n',
     );
     const registry = new FileToolInvocationRegistry(path);
-    await expect(
+    const execute = () =>
       registry.execute(
         {
           toolName: "test",
@@ -345,8 +416,9 @@ describe("FileToolInvocationRegistry", () => {
           input: {},
         },
         async () => ({ error: toolFailureForTest() }),
-      ),
-    ).rejects.toMatchObject({ code: "event-replay-failure" });
+      );
+    await expect(execute()).rejects.toMatchObject({ code: "event-replay-failure" });
+    await expect(execute()).rejects.toMatchObject({ code: "event-replay-failure" });
     await rm(root, { recursive: true, force: true });
   });
 });

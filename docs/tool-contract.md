@@ -61,11 +61,18 @@ timestamp normalizationを定義していないため、両hashは同じ出力�
 ## 冪等性、timeout、cancel
 
 worker/runtime共通registryを`.acd/runs/<runId>/tool-invocations.jsonl`に置く。
-appendごとにsyncし、single-writer lockを使い、末尾部分行だけを回復する。保持は
-無期限である。同じidempotency keyは一度だけ確定し、再送時は保存済みresultまたは
+`execute()`の開始前にsingle-writer lockを取得し、registryのload、operation実行、
+record appendまで同じlockを保持してから解放する。appendごとにsyncし、末尾部分行だけを
+回復する。保持は無期限である。同じidempotency keyは一度だけ確定し、再送時は保存済みresultまたは
 errorを返して外部processを再実行しない。同じkeyでinput hashが違えば
 `reference-integrity`で停止し、上書きしない。`correlationId`はinvocationを関連
 付ける値であり、`idempotencyKey`および各eventの`eventId`とは別である。
+
+registry replayは記録済みのresultまたはerrorを返すだけで、過去のfile side effectを再生成
+しない。生成artifactを前提とするcallerは、replay後もmount path上のartifactの存在と内容を
+別途検証する。SIGKILL後に残った`tool-invocations.jsonl.lock`は、Phase 4 resume runnerが
+events／checkpointsのlockと同じ復旧箇所で、所有者停止を確認したうえで削除する。それ以外の
+経路では自動削除やliveness／takeoverを行わない。
 
 retry loopとretry budgetの所有者はtask ledgerだけである。tool envelopeは
 `retryable`、timeout、cancel、終了情報を返すが、独自のnested retry budgetを持たない。

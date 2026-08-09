@@ -1,6 +1,6 @@
 import { test, expect } from "@playwright/test";
 import { createHash } from "node:crypto";
-import { mkdir, writeFile } from "node:fs/promises";
+import { mkdir, readFile, writeFile } from "node:fs/promises";
 
 const canonical = (value: unknown): string => JSON.stringify(value, null, 2);
 
@@ -63,10 +63,10 @@ test("read-only run observer renders state and projection", async ({ page }) => 
   const reconnected = await page.context().newPage();
   await reconnected.goto("/");
   const reconnectedStatus = reconnected.locator("#connection-status");
-  await expect(reconnectedStatus).toHaveText(/worker connected; event position \d+/);
-  await expect(reconnected.locator("body")).toHaveAttribute("data-worker-state", "connected");
+  await expect(reconnectedStatus).toHaveText(/worker stopped; event position \d+/);
+  await expect(reconnected.locator("body")).toHaveAttribute("data-worker-state", "stopped");
   const browserCloseWorkerContinued =
-    (await reconnected.locator("body").getAttribute("data-worker-state")) === "connected";
+    (await reconnected.locator("body").getAttribute("data-worker-state")) === "stopped";
   await reconnected.close();
   const evidence = {
     route: "/",
@@ -91,6 +91,18 @@ test("read-only run observer renders state and projection", async ({ page }) => 
     },
   };
   const bytes = canonical(evidence);
+  if (process.env.ACD_UPDATE_BROWSER_EVIDENCE !== "1") {
+    const committedBytes = await readFile(
+      "../../artifacts/phase4/wp6-browser-semantic.json",
+      "utf8",
+    );
+    const committedHash = await readFile(
+      "../../artifacts/phase4/wp6-browser-semantic.sha256",
+      "utf8",
+    );
+    expect(bytes + "\n").toBe(committedBytes);
+    expect(createHash("sha256").update(`${bytes}\n`).digest("hex") + "\n").toBe(committedHash);
+  }
   await mkdir("../../artifacts/phase4", { recursive: true });
   await writeFile("../../artifacts/phase4/wp6-browser-semantic.json", `${bytes}\n`, "utf8");
   await writeFile(
@@ -111,14 +123,12 @@ test("event stream exposes a reconnect cursor", async ({ page, request }) => {
 
 test("browser close and reconnect keeps the worker state available", async ({ page, context }) => {
   await page.goto("/");
-  await expect(page.locator("#connection-status")).toHaveText(
-    /worker connected; event position \d+/,
-  );
+  await expect(page.locator("#connection-status")).toHaveText(/worker stopped; event position \d+/);
   await page.close();
   const reconnected = await context.newPage();
   await reconnected.goto("/");
   await expect(reconnected.locator("#connection-status")).toHaveText(
-    /worker connected; event position \d+/,
+    /worker stopped; event position \d+/,
   );
   await reconnected.close();
 });

@@ -147,7 +147,20 @@ describe("checkpoint runtime", () => {
         payload: { verificationResultId: "verification:1", status: "passed" },
       }),
     );
-    await store.write(checkpoint({ eventPosition: 1 }));
+    const stored = checkpoint({ eventPosition: 1 });
+    await store.write(stored);
+    await eventLog.append(
+      createEvent({
+        eventId: "event:checkpoint:1",
+        type: "checkpoint.created",
+        occurredAt: clock.now(),
+        actor: "test",
+        projectId: "project:test",
+        baseRevision: 1,
+        resultRevision: 2,
+        payload: { checkpointId: stored.id, checkpoint: stored },
+      }),
+    );
     const orchestrator = new ResumeOrchestrator(
       "project:test",
       "test",
@@ -178,5 +191,122 @@ describe("checkpoint runtime", () => {
     expect((await eventLog.readAll()).filter((event) => event.type === "run.resumed")).toHaveLength(
       1,
     );
+  });
+
+  it("rejects a checkpoint that is present only in the store", async () => {
+    const eventLog = new InMemoryEventLog();
+    const store = new InMemoryCheckpointStore();
+    await eventLog.append(
+      createEvent({
+        eventId: "event:verification:unlogged",
+        type: "verification.completed",
+        occurredAt: clock.now(),
+        actor: "test",
+        projectId: "project:test",
+        baseRevision: 0,
+        resultRevision: 1,
+        payload: { verificationResultId: "verification:1", status: "passed" },
+      }),
+    );
+    await store.write(checkpoint({ eventPosition: 1 }));
+    const orchestrator = new ResumeOrchestrator(
+      "project:test",
+      "test",
+      eventLog,
+      store,
+      clock,
+      ids,
+    );
+
+    await expect(orchestrator.resume("resume:unlogged", checkpoint(), [])).rejects.toMatchObject({
+      code: "stale-result",
+    });
+  });
+
+  it("rejects a checkpoint whose store content differs from its creation event", async () => {
+    const eventLog = new InMemoryEventLog();
+    const store = new InMemoryCheckpointStore();
+    const logged = checkpoint({ eventPosition: 1 });
+    const tampered = checkpoint({ eventPosition: 1, inputHash: "hash:tampered" });
+    await eventLog.append(
+      createEvent({
+        eventId: "event:verification:mismatch",
+        type: "verification.completed",
+        occurredAt: clock.now(),
+        actor: "test",
+        projectId: "project:test",
+        baseRevision: 0,
+        resultRevision: 1,
+        payload: { verificationResultId: "verification:1", status: "passed" },
+      }),
+    );
+    await eventLog.append(
+      createEvent({
+        eventId: "event:checkpoint:mismatch",
+        type: "checkpoint.created",
+        occurredAt: clock.now(),
+        actor: "test",
+        projectId: "project:test",
+        baseRevision: 1,
+        resultRevision: 2,
+        payload: { checkpointId: logged.id, checkpoint: logged },
+      }),
+    );
+    await store.write(tampered);
+    const orchestrator = new ResumeOrchestrator(
+      "project:test",
+      "test",
+      eventLog,
+      store,
+      clock,
+      ids,
+    );
+
+    await expect(orchestrator.resume("resume:mismatch", tampered, [])).rejects.toMatchObject({
+      code: "stale-result",
+    });
+  });
+
+  it("excludes a checkpoint explicitly marked stale", async () => {
+    const eventLog = new InMemoryEventLog();
+    const store = new InMemoryCheckpointStore();
+    await eventLog.append(
+      createEvent({
+        eventId: "event:verification:stale",
+        type: "verification.completed",
+        occurredAt: clock.now(),
+        actor: "test",
+        projectId: "project:test",
+        baseRevision: 0,
+        resultRevision: 1,
+        payload: { verificationResultId: "verification:1", status: "passed" },
+      }),
+    );
+    const stale = checkpoint({ status: "stale", eventPosition: 1 });
+    await store.write(stale);
+    await eventLog.append(
+      createEvent({
+        eventId: "event:checkpoint:stale",
+        type: "checkpoint.created",
+        occurredAt: clock.now(),
+        actor: "test",
+        projectId: "project:test",
+        baseRevision: 1,
+        resultRevision: 2,
+        payload: { checkpointId: stale.id, checkpoint: stale },
+      }),
+    );
+    const orchestrator = new ResumeOrchestrator(
+      "project:test",
+      "test",
+      eventLog,
+      store,
+      clock,
+      ids,
+    );
+
+    await expect(orchestrator.resume("resume:stale", stale, [])).rejects.toMatchObject({
+      code: "stale-result",
+    });
   });
 });

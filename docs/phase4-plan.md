@@ -55,7 +55,7 @@ JSONL耐久性の設計判断は、AcceptedのADR-0024〜0031に記録済みで�
 
 ### WP1：タスク台帳runtime（gate 23）
 
-**状態：未着手。** gate契約案はgate 23（`gate:task-ledger`、`runsAfter: gate:knowledge-application`）。
+**状態：実装済み。** gate契約案はgate 23（`gate:task-ledger`、`runsAfter: gate:knowledge-application`）。
 
 **作業**
 
@@ -74,6 +74,8 @@ JSONL耐久性の設計判断は、AcceptedのADR-0024〜0031に記録済みで�
   tool呼び出し回数とする。
 - JSONLはADR-0029に従い、毎appendでsyncし、run単位の単一writerロックを取得する。
 - 台帳の各遷移をevent logへ追記し、event列から台帳状態を再構成できることをテストで固定する。
+- 承認却下されたエントリもattentionへ列挙し、停止理由は`pending`または`completed`への復帰時に
+  クリアする。既存runへ接続するruntimeは最初のmutation前にevent logをloadする。
 - ラン所有者をworker processとする前提は、AcceptedのADR-0004（browser-first、optional
   workers）および[`architecture.md`](architecture.md)のブラウザのみ／ワーカーモードを
   廃止せず、Phase 4のワーカーモードの実行形態として補完するものとして
@@ -119,6 +121,7 @@ JSONL耐久性の設計判断は、AcceptedのADR-0024〜0031に記録済みで�
   いずれかが変わったcheckpointは再利用されず、staleとして再実行される（AGENTS.mdの
   Evidence無効化条件およびADR-0025に一致）。
 - 未検証・失敗stageのcheckpointからは再開せず、停止してEvidenceを残す。
+- 現在のPhase 4受入runnerはKiCad実行を伴う早期checkpointからの再開を網羅しておらず、このcoverage gapを既知の残債として扱う。
 
 ### WP3：中断・再開のgolden task（README完了条件の測定）
 

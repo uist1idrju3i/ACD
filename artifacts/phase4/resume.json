@@ -127,14 +127,14 @@
           "mode": "baseline",
           "stageId": "gate:fixture-reference",
           "gate": 1,
-          "contextHash": "sha256:29ddd829c6a4de036dc5e5b792e0a0e1d80b496815d323004727242c52420fb9",
+          "contextHash": "sha256:3a7492301bafad4013ab8519bf80e0ded91c8be1e2944e46d8ff5d2dbb4598df",
           "artifactHashes": []
         },
         {
           "mode": "baseline",
           "stageId": "gate:semantic-input",
           "gate": 2,
-          "contextHash": "sha256:9f02fa5ceaf443b59ffe644e5edfbd71d532652307a91330694b1a7ac5028c16",
+          "contextHash": "sha256:5963fea1273f10c8fb722bfb5e6329953caad8bba24ef376fce452cb0a3f8ca5",
           "artifactHashes": [
             "gate-results.json=sha256:c99900c4398e9aa9abf32dbb22bc7f7c0f0059cb40ce18061216448e5d3bb88f"
           ]
@@ -143,7 +143,7 @@
           "mode": "baseline",
           "stageId": "gate:bom",
           "gate": 3,
-          "contextHash": "sha256:344e686e906efa96dff4342d801e464deecff44f1ce7dcb033a80d1a39d72feb",
+          "contextHash": "sha256:f25e651e466c6e4122b0a961bc1b438443fe4522e267faf9f69a6e4635b7956f",
           "artifactHashes": [
             "gate-results.json=sha256:62b28d07092fc26c1f599b49705b06a7fc0aa9f6bb082013ab0a7d37d2c0994d"
           ]
@@ -152,7 +152,7 @@
           "mode": "baseline",
           "stageId": "gate:placement",
           "gate": 4,
-          "contextHash": "sha256:286eb5a5b2dbf03a5d6cb3812801def46fa02cf73a0a776f65e76e41c8b0b46f",
+          "contextHash": "sha256:58892888d2d63798d81884c8ba08242b5d3e649a197947fbffecbc8f066263b0",
           "artifactHashes": [
             "gate-results.json=sha256:447e336878d3662352670d0ef75e2286a30d48af8f2cb53b36496827b2be5fe6"
           ]
@@ -161,7 +161,7 @@
           "mode": "baseline",
           "stageId": "gate:canonical-netlist",
           "gate": 5,
-          "contextHash": "sha256:41ac0948ae10a06d14a41656a1627dbf2ad571cff3d3d6c19c4c2c75cbf15a65",
+          "contextHash": "sha256:0a015716740945fcc8b9dc75a00d03275441afa5422435becd82dbb182ea417b",
           "artifactHashes": [
             "gate-results.json=sha256:f1f6c7750716a38d6f942d12e6906c6f4aec003de84f9a82edb705789775797a"
           ]
@@ -170,7 +170,7 @@
           "mode": "baseline",
           "stageId": "gate:electrical-lint",
           "gate": 14,
-          "contextHash": "sha256:bb07c33367f4584e4ab9f72359de7b3e357121944bc90cf51fb4d67ee61fbf71",
+          "contextHash": "sha256:50c8fa3e682939b1f1891c8d72a3f7ff02479245ed59ce8bc02cf6b9d2260735",
           "artifactHashes": [
             "gate-results.json=sha256:19ec5fe712586b2ceaf993a7a7e793df4c509c96947e089668465f6f760ff7de"
           ]
@@ -179,7 +179,7 @@
           "mode": "baseline",
           "stageId": "gate:design-rationale",
           "gate": 15,
-          "contextHash": "sha256:762ecc8e1ea81a4f9aa53ada92849da19cf050accb1f0886af43a9805d3c40ca",
+          "contextHash": "sha256:8bdaa59fca3714a58edce8cb5872b9653996e32db85fcda76756604b6d696b29",
           "artifactHashes": [
             "gate-results.json=sha256:ab526e5590e9e256198eba5c8b5bc492e880319e584d41ba79ff9bd6dfed1556"
           ]
@@ -188,7 +188,7 @@
           "mode": "baseline",
           "stageId": "gate:test-plan",
           "gate": 16,
-          "contextHash": "sha256:73a787b598b6049fc93c1ff75853ed72a33bcc8ef4900fb7c8b9189be8c8a378",
+          "contextHash": "sha256:ed710ab7425951152abb4401818619ca1ce9e35ab100d97d0fe63db95717fb85",
           "artifactHashes": [
             "gate-results.json=sha256:480eea679e227f858c406b4676a1ba76f905f179924c4ce91f76d583005dd375",
             "test-plan.json=sha256:e6404b57fc4892fec188d5d838c9ae2faf052b583fd8ee026f200ef9e63ff973"
@@ -198,7 +198,7 @@
           "mode": "baseline",
           "stageId": "gate:repair-loop",
           "gate": 17,
-          "contextHash": "sha256:60cfc6de03db0a1fdbf1d379704ea895edcb6bfafe51ec85bf36a7ca265b2789",
+          "contextHash": "sha256:62c3bc4a82c2d3f6ddf96b6a814ebecde34962e977ebeb93e1143a82acb8268c",
           "artifactHashes": [
             "gate-results.json=sha256:43e63ab6a4ee0cd4b9dc978e88890eb26cc6c0cb51a043544833e0faf599ed3b",
             "repair-loop.json=sha256:0b97444405eefaf01d2406ab9e77318243786c81833dbd9ef4da73111be39d35",
@@ -209,7 +209,7 @@
           "mode": "baseline",
           "stageId": "gate:spice",
           "gate": 18,
-          "contextHash": "sha256:062e114ffe935e8dd1490a91b7ea35df1ae69cca4aac75bb7411a77d4b5c97ca",
+          "contextHash": "sha256:b805e30341d1980b697bb9c7ac5e8888bbce62272e1dabf9943004a977032ff4",
           "artifactHashes": [
             "gate-results.json=sha256:fcf6d0663fb5b856b77b11fc9c0514c0e2592a3876efeed4154f1103bce78367",
             "repair-loop.json=sha256:0b97444405eefaf01d2406ab9e77318243786c81833dbd9ef4da73111be39d35",
@@ -227,7 +227,7 @@
           "mode": "baseline",
           "stageId": "gate:fab-feedback",
           "gate": 19,
-          "contextHash": "sha256:bb582209040f6c09c3192569195c59af3abcf6fefb1fbccf76d5653ae4691a35",
+          "contextHash": "sha256:57071fb9c510fbedfc8915932dc796dd6ad9c7e93b14589142881938438c6c5d",
           "artifactHashes": [
             "fab-feedback.json=sha256:dc38af16e84d06090d522eae91f038848a479e5544e4822b67031072713eef3c",
             "gate-results.json=sha256:b0fd18ef1582dd9863a037a584afbd18993a46f470877ce6ad783de9b0275578",
@@ -246,7 +246,7 @@
           "mode": "baseline",
           "stageId": "gate:knowledge-lifecycle",
           "gate": 20,
-          "contextHash": "sha256:278ee1853bf96f8a9e64a72283788d0f2bc611a744cded61c73cb537716c60cc",
+          "contextHash": "sha256:3746f6bf7f38dc6a104e9d11363160e1acd65449a1c5a1bd4d14dc216891ea9d",
           "artifactHashes": [
             "fab-feedback.json=sha256:dc38af16e84d06090d522eae91f038848a479e5544e4822b67031072713eef3c",
             "gate-results.json=sha256:c72ff273ef1e40de268bbeac22aaefeb47814e68a7213eb8c0c70d2846a42e0d",
@@ -266,7 +266,7 @@
           "mode": "baseline",
           "stageId": "gate:kicad-projection",
           "gate": 6,
-          "contextHash": "sha256:58518782f21c60b5b002bbf4690971395692ce770fa2616b572d25525d794bf0",
+          "contextHash": "sha256:fbfe4066a0ea556cd134f4d3189615ba7618aeea170fae4dec4a091679e52fd7",
           "artifactHashes": [
             "fab-feedback.json=sha256:dc38af16e84d06090d522eae91f038848a479e5544e4822b67031072713eef3c",
             "gate-results.json=sha256:ead0669fdb6c38470c49cb51af2c462d9444e6a19a2339467c72d4b2a26bdaa5",
@@ -295,7 +295,7 @@
           "mode": "baseline",
           "stageId": "gate:kicad-readback",
           "gate": 7,
-          "contextHash": "sha256:468ec608a054f64d52dc8f485a94f99cceef4c73f568818edc3afddb77af9e55",
+          "contextHash": "sha256:23ad35b98354c7aadb8915166680c1bfe6ef85a0d5536bef2a088bdded0cd0e9",
           "artifactHashes": [
             "fab-feedback.json=sha256:dc38af16e84d06090d522eae91f038848a479e5544e4822b67031072713eef3c",
             "gate-results.json=sha256:23254457e7812fa8a8dc39cec59686fb3f214d4591c987e2e76d7e263875be0f",
@@ -324,7 +324,7 @@
           "mode": "baseline",
           "stageId": "gate:erc",
           "gate": 8,
-          "contextHash": "sha256:70e1489943880ca0aa2921c4ff28eebb1ecb35a15fd9f89f037c37c17f33dcbd",
+          "contextHash": "sha256:20b6cf94871376bf46db5ff39e6b352648ad5e062698fd47cc8a33c60a03ae57",
           "artifactHashes": [
             "fab-feedback.json=sha256:dc38af16e84d06090d522eae91f038848a479e5544e4822b67031072713eef3c",
             "gate-results.json=sha256:5ba7e02e0ebd1102759545751e51f7e87d2835efb8ddd0219cb3a128dd0c7720",
@@ -354,7 +354,7 @@
           "mode": "baseline",
           "stageId": "gate:routing",
           "gate": 9,
-          "contextHash": "sha256:dce41f6aa990c775c6fa72b9beeb3de99db95cfdda1db67d0edcee2efea46283",
+          "contextHash": "sha256:cb97cf0c7488c31561f124b324df97fd71164b1fd0e207317df890cb1acaf7a9",
           "artifactHashes": [
             "fab-feedback.json=sha256:dc38af16e84d06090d522eae91f038848a479e5544e4822b67031072713eef3c",
             "gate-results.json=sha256:7bf0af1b881c7a5173ebec27a273f1014e9afbbe56e9aa5376de04efcc3b5f70",
@@ -391,7 +391,7 @@
           "mode": "baseline",
           "stageId": "gate:drc",
           "gate": 10,
-          "contextHash": "sha256:ce0f13783a904a1825a990d04e3699d7e8e6ee61f6d85566e13ea2605a4043cc",
+          "contextHash": "sha256:7c09025ddc7c74ec840eb6f90260fdb740c32bc37ecfeb860b91c9653515258e",
           "artifactHashes": [
             "fab-feedback.json=sha256:dc38af16e84d06090d522eae91f038848a479e5544e4822b67031072713eef3c",
             "gate-results.json=sha256:eaf8f784cd74f55a238d5e0c079a33af325c41d88527e065c8e1e18033ffead7",
@@ -429,7 +429,7 @@
           "mode": "resume",
           "stageId": "gate:manufacturing",
           "gate": 11,
-          "contextHash": "sha256:cf849fc4120036e491d2dec9f1173bb7aae104b3c235c549ec2243394c47a8ec",
+          "contextHash": "sha256:90bb1bf95f28236b2a81beed102d14843d89c1fc1690c31577ec123d5d769817",
           "artifactHashes": [
             "fab-feedback.json=sha256:dc38af16e84d06090d522eae91f038848a479e5544e4822b67031072713eef3c",
             "gate-results.json=sha256:2c3397eab089a7959b0060a1f18878a20510aa5e340e7a687928df2089cdf5c0",
@@ -478,7 +478,7 @@
           "mode": "resume",
           "stageId": "gate:pre-order",
           "gate": 12,
-          "contextHash": "sha256:11ba4f90b08ad4e97a86a9dc638a80ece3b13004f9cc23e38c569aa902d9ae84",
+          "contextHash": "sha256:a8c3eab7465238de65caa1a361a49c2b3ffc5abc47d1924324ce150686de1013",
           "artifactHashes": [
             "fab-feedback.json=sha256:dc38af16e84d06090d522eae91f038848a479e5544e4822b67031072713eef3c",
             "gate-results.json=sha256:386aabe02b2a1afa3111d4ab45f7437fad954204e15a7fad16a9c66c28e05032",
@@ -528,7 +528,7 @@
           "mode": "resume",
           "stageId": "gate:library-patch",
           "gate": 21,
-          "contextHash": "sha256:501aa77c0fef691a6186da522493d26cc362b9395bfbf46e2658be76f432fba9",
+          "contextHash": "sha256:af670e6b0b111b40ec7827401baec7302bc2e4dccaccd89f5fd521c17155bb91",
           "artifactHashes": [
             "fab-feedback.json=sha256:dc38af16e84d06090d522eae91f038848a479e5544e4822b67031072713eef3c",
             "gate-results.json=sha256:0edf57580f4bae184d6adc1412efd142fe990f6b18d92854a4016f2311944c06",
@@ -593,7 +593,7 @@
           "mode": "resume",
           "stageId": "gate:knowledge-application",
           "gate": 22,
-          "contextHash": "sha256:1ba4371fd3414200831eeb760c12ad59c62145c467649de487896a25f1432075",
+          "contextHash": "sha256:8d2460cadef5ea22ec179488d0f54ab6bcf1e11ae7bfa60f8103bae3b0fe59db",
           "artifactHashes": [
             "fab-feedback.json=sha256:dc38af16e84d06090d522eae91f038848a479e5544e4822b67031072713eef3c",
             "gate-results.json=sha256:e3c9fbe2fe84531bdebddd3c7683d9571b978e2ba41b851939cae03c5aebea48",
@@ -1422,9 +1422,10 @@
       "contextValidation": {
         "deserialized": true,
         "fixtureValidated": true,
-        "restoredContextHash": "sha256:ce0f13783a904a1825a990d04e3699d7e8e6ee61f6d85566e13ea2605a4043cc",
-        "checkpointContextHash": "sha256:ce0f13783a904a1825a990d04e3699d7e8e6ee61f6d85566e13ea2605a4043cc"
+        "restoredContextHash": "sha256:7c09025ddc7c74ec840eb6f90260fdb740c32bc37ecfeb860b91c9653515258e",
+        "checkpointContextHash": "sha256:7c09025ddc7c74ec840eb6f90260fdb740c32bc37ecfeb860b91c9653515258e"
       },
+      "firstBudgetCheckReconstructed": true,
       "verification": {
         "passed": true,
         "failures": []
@@ -1475,14 +1476,14 @@
           "mode": "baseline",
           "stageId": "gate:fixture-reference",
           "gate": 1,
-          "contextHash": "sha256:29ddd829c6a4de036dc5e5b792e0a0e1d80b496815d323004727242c52420fb9",
+          "contextHash": "sha256:3a7492301bafad4013ab8519bf80e0ded91c8be1e2944e46d8ff5d2dbb4598df",
           "artifactHashes": []
         },
         {
           "mode": "baseline",
           "stageId": "gate:semantic-input",
           "gate": 2,
-          "contextHash": "sha256:9f02fa5ceaf443b59ffe644e5edfbd71d532652307a91330694b1a7ac5028c16",
+          "contextHash": "sha256:5963fea1273f10c8fb722bfb5e6329953caad8bba24ef376fce452cb0a3f8ca5",
           "artifactHashes": [
             "gate-results.json=sha256:c99900c4398e9aa9abf32dbb22bc7f7c0f0059cb40ce18061216448e5d3bb88f"
           ]
@@ -1491,7 +1492,7 @@
           "mode": "baseline",
           "stageId": "gate:bom",
           "gate": 3,
-          "contextHash": "sha256:344e686e906efa96dff4342d801e464deecff44f1ce7dcb033a80d1a39d72feb",
+          "contextHash": "sha256:f25e651e466c6e4122b0a961bc1b438443fe4522e267faf9f69a6e4635b7956f",
           "artifactHashes": [
             "gate-results.json=sha256:62b28d07092fc26c1f599b49705b06a7fc0aa9f6bb082013ab0a7d37d2c0994d"
           ]
@@ -1500,7 +1501,7 @@
           "mode": "baseline",
           "stageId": "gate:placement",
           "gate": 4,
-          "contextHash": "sha256:286eb5a5b2dbf03a5d6cb3812801def46fa02cf73a0a776f65e76e41c8b0b46f",
+          "contextHash": "sha256:58892888d2d63798d81884c8ba08242b5d3e649a197947fbffecbc8f066263b0",
           "artifactHashes": [
             "gate-results.json=sha256:447e336878d3662352670d0ef75e2286a30d48af8f2cb53b36496827b2be5fe6"
           ]
@@ -1509,7 +1510,7 @@
           "mode": "baseline",
           "stageId": "gate:canonical-netlist",
           "gate": 5,
-          "contextHash": "sha256:41ac0948ae10a06d14a41656a1627dbf2ad571cff3d3d6c19c4c2c75cbf15a65",
+          "contextHash": "sha256:0a015716740945fcc8b9dc75a00d03275441afa5422435becd82dbb182ea417b",
           "artifactHashes": [
             "gate-results.json=sha256:f1f6c7750716a38d6f942d12e6906c6f4aec003de84f9a82edb705789775797a"
           ]
@@ -1518,7 +1519,7 @@
           "mode": "baseline",
           "stageId": "gate:electrical-lint",
           "gate": 14,
-          "contextHash": "sha256:bb07c33367f4584e4ab9f72359de7b3e357121944bc90cf51fb4d67ee61fbf71",
+          "contextHash": "sha256:50c8fa3e682939b1f1891c8d72a3f7ff02479245ed59ce8bc02cf6b9d2260735",
           "artifactHashes": [
             "gate-results.json=sha256:19ec5fe712586b2ceaf993a7a7e793df4c509c96947e089668465f6f760ff7de"
           ]
@@ -1527,7 +1528,7 @@
           "mode": "baseline",
           "stageId": "gate:design-rationale",
           "gate": 15,
-          "contextHash": "sha256:762ecc8e1ea81a4f9aa53ada92849da19cf050accb1f0886af43a9805d3c40ca",
+          "contextHash": "sha256:8bdaa59fca3714a58edce8cb5872b9653996e32db85fcda76756604b6d696b29",
           "artifactHashes": [
             "gate-results.json=sha256:ab526e5590e9e256198eba5c8b5bc492e880319e584d41ba79ff9bd6dfed1556"
           ]
@@ -1536,7 +1537,7 @@
           "mode": "baseline",
           "stageId": "gate:test-plan",
           "gate": 16,
-          "contextHash": "sha256:73a787b598b6049fc93c1ff75853ed72a33bcc8ef4900fb7c8b9189be8c8a378",
+          "contextHash": "sha256:ed710ab7425951152abb4401818619ca1ce9e35ab100d97d0fe63db95717fb85",
           "artifactHashes": [
             "gate-results.json=sha256:480eea679e227f858c406b4676a1ba76f905f179924c4ce91f76d583005dd375",
             "test-plan.json=sha256:e6404b57fc4892fec188d5d838c9ae2faf052b583fd8ee026f200ef9e63ff973"
@@ -1546,7 +1547,7 @@
           "mode": "baseline",
           "stageId": "gate:repair-loop",
           "gate": 17,
-          "contextHash": "sha256:60cfc6de03db0a1fdbf1d379704ea895edcb6bfafe51ec85bf36a7ca265b2789",
+          "contextHash": "sha256:62c3bc4a82c2d3f6ddf96b6a814ebecde34962e977ebeb93e1143a82acb8268c",
           "artifactHashes": [
             "gate-results.json=sha256:43e63ab6a4ee0cd4b9dc978e88890eb26cc6c0cb51a043544833e0faf599ed3b",
             "repair-loop.json=sha256:0b97444405eefaf01d2406ab9e77318243786c81833dbd9ef4da73111be39d35",
@@ -1557,7 +1558,7 @@
           "mode": "baseline",
           "stageId": "gate:spice",
           "gate": 18,
-          "contextHash": "sha256:062e114ffe935e8dd1490a91b7ea35df1ae69cca4aac75bb7411a77d4b5c97ca",
+          "contextHash": "sha256:b805e30341d1980b697bb9c7ac5e8888bbce62272e1dabf9943004a977032ff4",
           "artifactHashes": [
             "gate-results.json=sha256:fcf6d0663fb5b856b77b11fc9c0514c0e2592a3876efeed4154f1103bce78367",
             "repair-loop.json=sha256:0b97444405eefaf01d2406ab9e77318243786c81833dbd9ef4da73111be39d35",
@@ -1575,7 +1576,7 @@
           "mode": "baseline",
           "stageId": "gate:fab-feedback",
           "gate": 19,
-          "contextHash": "sha256:bb582209040f6c09c3192569195c59af3abcf6fefb1fbccf76d5653ae4691a35",
+          "contextHash": "sha256:57071fb9c510fbedfc8915932dc796dd6ad9c7e93b14589142881938438c6c5d",
           "artifactHashes": [
             "fab-feedback.json=sha256:dc38af16e84d06090d522eae91f038848a479e5544e4822b67031072713eef3c",
             "gate-results.json=sha256:b0fd18ef1582dd9863a037a584afbd18993a46f470877ce6ad783de9b0275578",
@@ -1594,7 +1595,7 @@
           "mode": "baseline",
           "stageId": "gate:knowledge-lifecycle",
           "gate": 20,
-          "contextHash": "sha256:278ee1853bf96f8a9e64a72283788d0f2bc611a744cded61c73cb537716c60cc",
+          "contextHash": "sha256:3746f6bf7f38dc6a104e9d11363160e1acd65449a1c5a1bd4d14dc216891ea9d",
           "artifactHashes": [
             "fab-feedback.json=sha256:dc38af16e84d06090d522eae91f038848a479e5544e4822b67031072713eef3c",
             "gate-results.json=sha256:c72ff273ef1e40de268bbeac22aaefeb47814e68a7213eb8c0c70d2846a42e0d",
@@ -1614,7 +1615,7 @@
           "mode": "resume",
           "stageId": "gate:kicad-projection",
           "gate": 6,
-          "contextHash": "sha256:58518782f21c60b5b002bbf4690971395692ce770fa2616b572d25525d794bf0",
+          "contextHash": "sha256:fbfe4066a0ea556cd134f4d3189615ba7618aeea170fae4dec4a091679e52fd7",
           "artifactHashes": [
             "fab-feedback.json=sha256:dc38af16e84d06090d522eae91f038848a479e5544e4822b67031072713eef3c",
             "gate-results.json=sha256:ead0669fdb6c38470c49cb51af2c462d9444e6a19a2339467c72d4b2a26bdaa5",
@@ -1643,7 +1644,7 @@
           "mode": "resume",
           "stageId": "gate:kicad-readback",
           "gate": 7,
-          "contextHash": "sha256:468ec608a054f64d52dc8f485a94f99cceef4c73f568818edc3afddb77af9e55",
+          "contextHash": "sha256:23ad35b98354c7aadb8915166680c1bfe6ef85a0d5536bef2a088bdded0cd0e9",
           "artifactHashes": [
             "fab-feedback.json=sha256:dc38af16e84d06090d522eae91f038848a479e5544e4822b67031072713eef3c",
             "gate-results.json=sha256:23254457e7812fa8a8dc39cec59686fb3f214d4591c987e2e76d7e263875be0f",
@@ -1672,7 +1673,7 @@
           "mode": "resume",
           "stageId": "gate:erc",
           "gate": 8,
-          "contextHash": "sha256:70e1489943880ca0aa2921c4ff28eebb1ecb35a15fd9f89f037c37c17f33dcbd",
+          "contextHash": "sha256:20b6cf94871376bf46db5ff39e6b352648ad5e062698fd47cc8a33c60a03ae57",
           "artifactHashes": [
             "fab-feedback.json=sha256:dc38af16e84d06090d522eae91f038848a479e5544e4822b67031072713eef3c",
             "gate-results.json=sha256:5ba7e02e0ebd1102759545751e51f7e87d2835efb8ddd0219cb3a128dd0c7720",
@@ -1702,7 +1703,7 @@
           "mode": "resume",
           "stageId": "gate:routing",
           "gate": 9,
-          "contextHash": "sha256:dce41f6aa990c775c6fa72b9beeb3de99db95cfdda1db67d0edcee2efea46283",
+          "contextHash": "sha256:cb97cf0c7488c31561f124b324df97fd71164b1fd0e207317df890cb1acaf7a9",
           "artifactHashes": [
             "fab-feedback.json=sha256:dc38af16e84d06090d522eae91f038848a479e5544e4822b67031072713eef3c",
             "gate-results.json=sha256:7bf0af1b881c7a5173ebec27a273f1014e9afbbe56e9aa5376de04efcc3b5f70",
@@ -1739,7 +1740,7 @@
           "mode": "resume",
           "stageId": "gate:drc",
           "gate": 10,
-          "contextHash": "sha256:ce0f13783a904a1825a990d04e3699d7e8e6ee61f6d85566e13ea2605a4043cc",
+          "contextHash": "sha256:7c09025ddc7c74ec840eb6f90260fdb740c32bc37ecfeb860b91c9653515258e",
           "artifactHashes": [
             "fab-feedback.json=sha256:dc38af16e84d06090d522eae91f038848a479e5544e4822b67031072713eef3c",
             "gate-results.json=sha256:eaf8f784cd74f55a238d5e0c079a33af325c41d88527e065c8e1e18033ffead7",
@@ -1777,7 +1778,7 @@
           "mode": "resume",
           "stageId": "gate:manufacturing",
           "gate": 11,
-          "contextHash": "sha256:cf849fc4120036e491d2dec9f1173bb7aae104b3c235c549ec2243394c47a8ec",
+          "contextHash": "sha256:90bb1bf95f28236b2a81beed102d14843d89c1fc1690c31577ec123d5d769817",
           "artifactHashes": [
             "fab-feedback.json=sha256:dc38af16e84d06090d522eae91f038848a479e5544e4822b67031072713eef3c",
             "gate-results.json=sha256:2c3397eab089a7959b0060a1f18878a20510aa5e340e7a687928df2089cdf5c0",
@@ -1826,7 +1827,7 @@
           "mode": "resume",
           "stageId": "gate:pre-order",
           "gate": 12,
-          "contextHash": "sha256:11ba4f90b08ad4e97a86a9dc638a80ece3b13004f9cc23e38c569aa902d9ae84",
+          "contextHash": "sha256:a8c3eab7465238de65caa1a361a49c2b3ffc5abc47d1924324ce150686de1013",
           "artifactHashes": [
             "fab-feedback.json=sha256:dc38af16e84d06090d522eae91f038848a479e5544e4822b67031072713eef3c",
             "gate-results.json=sha256:386aabe02b2a1afa3111d4ab45f7437fad954204e15a7fad16a9c66c28e05032",
@@ -1876,7 +1877,7 @@
           "mode": "resume",
           "stageId": "gate:library-patch",
           "gate": 21,
-          "contextHash": "sha256:501aa77c0fef691a6186da522493d26cc362b9395bfbf46e2658be76f432fba9",
+          "contextHash": "sha256:af670e6b0b111b40ec7827401baec7302bc2e4dccaccd89f5fd521c17155bb91",
           "artifactHashes": [
             "fab-feedback.json=sha256:dc38af16e84d06090d522eae91f038848a479e5544e4822b67031072713eef3c",
             "gate-results.json=sha256:0edf57580f4bae184d6adc1412efd142fe990f6b18d92854a4016f2311944c06",
@@ -1941,7 +1942,7 @@
           "mode": "resume",
           "stageId": "gate:knowledge-application",
           "gate": 22,
-          "contextHash": "sha256:1ba4371fd3414200831eeb760c12ad59c62145c467649de487896a25f1432075",
+          "contextHash": "sha256:8d2460cadef5ea22ec179488d0f54ab6bcf1e11ae7bfa60f8103bae3b0fe59db",
           "artifactHashes": [
             "fab-feedback.json=sha256:dc38af16e84d06090d522eae91f038848a479e5544e4822b67031072713eef3c",
             "gate-results.json=sha256:e3c9fbe2fe84531bdebddd3c7683d9571b978e2ba41b851939cae03c5aebea48",
@@ -2770,9 +2771,10 @@
       "contextValidation": {
         "deserialized": true,
         "fixtureValidated": true,
-        "restoredContextHash": "sha256:278ee1853bf96f8a9e64a72283788d0f2bc611a744cded61c73cb537716c60cc",
-        "checkpointContextHash": "sha256:278ee1853bf96f8a9e64a72283788d0f2bc611a744cded61c73cb537716c60cc"
+        "restoredContextHash": "sha256:3746f6bf7f38dc6a104e9d11363160e1acd65449a1c5a1bd4d14dc216891ea9d",
+        "checkpointContextHash": "sha256:3746f6bf7f38dc6a104e9d11363160e1acd65449a1c5a1bd4d14dc216891ea9d"
       },
+      "firstBudgetCheckReconstructed": true,
       "verification": {
         "passed": true,
         "failures": []
@@ -2816,14 +2818,14 @@
           "mode": "baseline",
           "stageId": "gate:fixture-reference",
           "gate": 1,
-          "contextHash": "sha256:29ddd829c6a4de036dc5e5b792e0a0e1d80b496815d323004727242c52420fb9",
+          "contextHash": "sha256:3a7492301bafad4013ab8519bf80e0ded91c8be1e2944e46d8ff5d2dbb4598df",
           "artifactHashes": []
         },
         {
           "mode": "baseline",
           "stageId": "gate:semantic-input",
           "gate": 2,
-          "contextHash": "sha256:9f02fa5ceaf443b59ffe644e5edfbd71d532652307a91330694b1a7ac5028c16",
+          "contextHash": "sha256:5963fea1273f10c8fb722bfb5e6329953caad8bba24ef376fce452cb0a3f8ca5",
           "artifactHashes": [
             "gate-results.json=sha256:c99900c4398e9aa9abf32dbb22bc7f7c0f0059cb40ce18061216448e5d3bb88f"
           ]
@@ -2832,7 +2834,7 @@
           "mode": "baseline",
           "stageId": "gate:bom",
           "gate": 3,
-          "contextHash": "sha256:344e686e906efa96dff4342d801e464deecff44f1ce7dcb033a80d1a39d72feb",
+          "contextHash": "sha256:f25e651e466c6e4122b0a961bc1b438443fe4522e267faf9f69a6e4635b7956f",
           "artifactHashes": [
             "gate-results.json=sha256:62b28d07092fc26c1f599b49705b06a7fc0aa9f6bb082013ab0a7d37d2c0994d"
           ]
@@ -2841,7 +2843,7 @@
           "mode": "baseline",
           "stageId": "gate:placement",
           "gate": 4,
-          "contextHash": "sha256:286eb5a5b2dbf03a5d6cb3812801def46fa02cf73a0a776f65e76e41c8b0b46f",
+          "contextHash": "sha256:58892888d2d63798d81884c8ba08242b5d3e649a197947fbffecbc8f066263b0",
           "artifactHashes": [
             "gate-results.json=sha256:447e336878d3662352670d0ef75e2286a30d48af8f2cb53b36496827b2be5fe6"
           ]
@@ -2850,7 +2852,7 @@
           "mode": "baseline",
           "stageId": "gate:canonical-netlist",
           "gate": 5,
-          "contextHash": "sha256:41ac0948ae10a06d14a41656a1627dbf2ad571cff3d3d6c19c4c2c75cbf15a65",
+          "contextHash": "sha256:0a015716740945fcc8b9dc75a00d03275441afa5422435becd82dbb182ea417b",
           "artifactHashes": [
             "gate-results.json=sha256:f1f6c7750716a38d6f942d12e6906c6f4aec003de84f9a82edb705789775797a"
           ]
@@ -2859,7 +2861,7 @@
           "mode": "baseline",
           "stageId": "gate:electrical-lint",
           "gate": 14,
-          "contextHash": "sha256:bb07c33367f4584e4ab9f72359de7b3e357121944bc90cf51fb4d67ee61fbf71",
+          "contextHash": "sha256:50c8fa3e682939b1f1891c8d72a3f7ff02479245ed59ce8bc02cf6b9d2260735",
           "artifactHashes": [
             "gate-results.json=sha256:19ec5fe712586b2ceaf993a7a7e793df4c509c96947e089668465f6f760ff7de"
           ]
@@ -2868,7 +2870,7 @@
           "mode": "baseline",
           "stageId": "gate:design-rationale",
           "gate": 15,
-          "contextHash": "sha256:762ecc8e1ea81a4f9aa53ada92849da19cf050accb1f0886af43a9805d3c40ca",
+          "contextHash": "sha256:8bdaa59fca3714a58edce8cb5872b9653996e32db85fcda76756604b6d696b29",
           "artifactHashes": [
             "gate-results.json=sha256:ab526e5590e9e256198eba5c8b5bc492e880319e584d41ba79ff9bd6dfed1556"
           ]
@@ -2877,7 +2879,7 @@
           "mode": "baseline",
           "stageId": "gate:test-plan",
           "gate": 16,
-          "contextHash": "sha256:73a787b598b6049fc93c1ff75853ed72a33bcc8ef4900fb7c8b9189be8c8a378",
+          "contextHash": "sha256:ed710ab7425951152abb4401818619ca1ce9e35ab100d97d0fe63db95717fb85",
           "artifactHashes": [
             "gate-results.json=sha256:480eea679e227f858c406b4676a1ba76f905f179924c4ce91f76d583005dd375",
             "test-plan.json=sha256:e6404b57fc4892fec188d5d838c9ae2faf052b583fd8ee026f200ef9e63ff973"
@@ -2887,7 +2889,7 @@
           "mode": "baseline",
           "stageId": "gate:repair-loop",
           "gate": 17,
-          "contextHash": "sha256:60cfc6de03db0a1fdbf1d379704ea895edcb6bfafe51ec85bf36a7ca265b2789",
+          "contextHash": "sha256:62c3bc4a82c2d3f6ddf96b6a814ebecde34962e977ebeb93e1143a82acb8268c",
           "artifactHashes": [
             "gate-results.json=sha256:43e63ab6a4ee0cd4b9dc978e88890eb26cc6c0cb51a043544833e0faf599ed3b",
             "repair-loop.json=sha256:0b97444405eefaf01d2406ab9e77318243786c81833dbd9ef4da73111be39d35",
@@ -2898,7 +2900,7 @@
           "mode": "baseline",
           "stageId": "gate:spice",
           "gate": 18,
-          "contextHash": "sha256:062e114ffe935e8dd1490a91b7ea35df1ae69cca4aac75bb7411a77d4b5c97ca",
+          "contextHash": "sha256:b805e30341d1980b697bb9c7ac5e8888bbce62272e1dabf9943004a977032ff4",
           "artifactHashes": [
             "gate-results.json=sha256:fcf6d0663fb5b856b77b11fc9c0514c0e2592a3876efeed4154f1103bce78367",
             "repair-loop.json=sha256:0b97444405eefaf01d2406ab9e77318243786c81833dbd9ef4da73111be39d35",
@@ -2916,7 +2918,7 @@
           "mode": "baseline",
           "stageId": "gate:fab-feedback",
           "gate": 19,
-          "contextHash": "sha256:bb582209040f6c09c3192569195c59af3abcf6fefb1fbccf76d5653ae4691a35",
+          "contextHash": "sha256:57071fb9c510fbedfc8915932dc796dd6ad9c7e93b14589142881938438c6c5d",
           "artifactHashes": [
             "fab-feedback.json=sha256:dc38af16e84d06090d522eae91f038848a479e5544e4822b67031072713eef3c",
             "gate-results.json=sha256:b0fd18ef1582dd9863a037a584afbd18993a46f470877ce6ad783de9b0275578",
@@ -2935,7 +2937,7 @@
           "mode": "baseline",
           "stageId": "gate:knowledge-lifecycle",
           "gate": 20,
-          "contextHash": "sha256:278ee1853bf96f8a9e64a72283788d0f2bc611a744cded61c73cb537716c60cc",
+          "contextHash": "sha256:3746f6bf7f38dc6a104e9d11363160e1acd65449a1c5a1bd4d14dc216891ea9d",
           "artifactHashes": [
             "fab-feedback.json=sha256:dc38af16e84d06090d522eae91f038848a479e5544e4822b67031072713eef3c",
             "gate-results.json=sha256:c72ff273ef1e40de268bbeac22aaefeb47814e68a7213eb8c0c70d2846a42e0d",
@@ -2955,7 +2957,7 @@
           "mode": "baseline",
           "stageId": "gate:kicad-projection",
           "gate": 6,
-          "contextHash": "sha256:58518782f21c60b5b002bbf4690971395692ce770fa2616b572d25525d794bf0",
+          "contextHash": "sha256:fbfe4066a0ea556cd134f4d3189615ba7618aeea170fae4dec4a091679e52fd7",
           "artifactHashes": [
             "fab-feedback.json=sha256:dc38af16e84d06090d522eae91f038848a479e5544e4822b67031072713eef3c",
             "gate-results.json=sha256:ead0669fdb6c38470c49cb51af2c462d9444e6a19a2339467c72d4b2a26bdaa5",
@@ -2984,7 +2986,7 @@
           "mode": "baseline",
           "stageId": "gate:kicad-readback",
           "gate": 7,
-          "contextHash": "sha256:468ec608a054f64d52dc8f485a94f99cceef4c73f568818edc3afddb77af9e55",
+          "contextHash": "sha256:23ad35b98354c7aadb8915166680c1bfe6ef85a0d5536bef2a088bdded0cd0e9",
           "artifactHashes": [
             "fab-feedback.json=sha256:dc38af16e84d06090d522eae91f038848a479e5544e4822b67031072713eef3c",
             "gate-results.json=sha256:23254457e7812fa8a8dc39cec59686fb3f214d4591c987e2e76d7e263875be0f",
@@ -3013,7 +3015,7 @@
           "mode": "baseline",
           "stageId": "gate:erc",
           "gate": 8,
-          "contextHash": "sha256:70e1489943880ca0aa2921c4ff28eebb1ecb35a15fd9f89f037c37c17f33dcbd",
+          "contextHash": "sha256:20b6cf94871376bf46db5ff39e6b352648ad5e062698fd47cc8a33c60a03ae57",
           "artifactHashes": [
             "fab-feedback.json=sha256:dc38af16e84d06090d522eae91f038848a479e5544e4822b67031072713eef3c",
             "gate-results.json=sha256:5ba7e02e0ebd1102759545751e51f7e87d2835efb8ddd0219cb3a128dd0c7720",
@@ -3043,7 +3045,7 @@
           "mode": "baseline",
           "stageId": "gate:routing",
           "gate": 9,
-          "contextHash": "sha256:dce41f6aa990c775c6fa72b9beeb3de99db95cfdda1db67d0edcee2efea46283",
+          "contextHash": "sha256:cb97cf0c7488c31561f124b324df97fd71164b1fd0e207317df890cb1acaf7a9",
           "artifactHashes": [
             "fab-feedback.json=sha256:dc38af16e84d06090d522eae91f038848a479e5544e4822b67031072713eef3c",
             "gate-results.json=sha256:7bf0af1b881c7a5173ebec27a273f1014e9afbbe56e9aa5376de04efcc3b5f70",
@@ -3080,7 +3082,7 @@
           "mode": "baseline",
           "stageId": "gate:drc",
           "gate": 10,
-          "contextHash": "sha256:ce0f13783a904a1825a990d04e3699d7e8e6ee61f6d85566e13ea2605a4043cc",
+          "contextHash": "sha256:7c09025ddc7c74ec840eb6f90260fdb740c32bc37ecfeb860b91c9653515258e",
           "artifactHashes": [
             "fab-feedback.json=sha256:dc38af16e84d06090d522eae91f038848a479e5544e4822b67031072713eef3c",
             "gate-results.json=sha256:eaf8f784cd74f55a238d5e0c079a33af325c41d88527e065c8e1e18033ffead7",
@@ -3118,7 +3120,7 @@
           "mode": "baseline",
           "stageId": "gate:manufacturing",
           "gate": 11,
-          "contextHash": "sha256:cf849fc4120036e491d2dec9f1173bb7aae104b3c235c549ec2243394c47a8ec",
+          "contextHash": "sha256:90bb1bf95f28236b2a81beed102d14843d89c1fc1690c31577ec123d5d769817",
           "artifactHashes": [
             "fab-feedback.json=sha256:dc38af16e84d06090d522eae91f038848a479e5544e4822b67031072713eef3c",
             "gate-results.json=sha256:2c3397eab089a7959b0060a1f18878a20510aa5e340e7a687928df2089cdf5c0",
@@ -3167,7 +3169,7 @@
           "mode": "baseline",
           "stageId": "gate:pre-order",
           "gate": 12,
-          "contextHash": "sha256:11ba4f90b08ad4e97a86a9dc638a80ece3b13004f9cc23e38c569aa902d9ae84",
+          "contextHash": "sha256:a8c3eab7465238de65caa1a361a49c2b3ffc5abc47d1924324ce150686de1013",
           "artifactHashes": [
             "fab-feedback.json=sha256:dc38af16e84d06090d522eae91f038848a479e5544e4822b67031072713eef3c",
             "gate-results.json=sha256:386aabe02b2a1afa3111d4ab45f7437fad954204e15a7fad16a9c66c28e05032",
@@ -3217,7 +3219,7 @@
           "mode": "resume",
           "stageId": "gate:library-patch",
           "gate": 21,
-          "contextHash": "sha256:501aa77c0fef691a6186da522493d26cc362b9395bfbf46e2658be76f432fba9",
+          "contextHash": "sha256:af670e6b0b111b40ec7827401baec7302bc2e4dccaccd89f5fd521c17155bb91",
           "artifactHashes": [
             "fab-feedback.json=sha256:dc38af16e84d06090d522eae91f038848a479e5544e4822b67031072713eef3c",
             "gate-results.json=sha256:0edf57580f4bae184d6adc1412efd142fe990f6b18d92854a4016f2311944c06",
@@ -3282,7 +3284,7 @@
           "mode": "resume",
           "stageId": "gate:knowledge-application",
           "gate": 22,
-          "contextHash": "sha256:1ba4371fd3414200831eeb760c12ad59c62145c467649de487896a25f1432075",
+          "contextHash": "sha256:8d2460cadef5ea22ec179488d0f54ab6bcf1e11ae7bfa60f8103bae3b0fe59db",
           "artifactHashes": [
             "fab-feedback.json=sha256:dc38af16e84d06090d522eae91f038848a479e5544e4822b67031072713eef3c",
             "gate-results.json=sha256:e3c9fbe2fe84531bdebddd3c7683d9571b978e2ba41b851939cae03c5aebea48",
@@ -4111,9 +4113,10 @@
       "contextValidation": {
         "deserialized": true,
         "fixtureValidated": true,
-        "restoredContextHash": "sha256:11ba4f90b08ad4e97a86a9dc638a80ece3b13004f9cc23e38c569aa902d9ae84",
-        "checkpointContextHash": "sha256:11ba4f90b08ad4e97a86a9dc638a80ece3b13004f9cc23e38c569aa902d9ae84"
+        "restoredContextHash": "sha256:a8c3eab7465238de65caa1a361a49c2b3ffc5abc47d1924324ce150686de1013",
+        "checkpointContextHash": "sha256:a8c3eab7465238de65caa1a361a49c2b3ffc5abc47d1924324ce150686de1013"
       },
+      "firstBudgetCheckReconstructed": true,
       "verification": {
         "passed": true,
         "failures": []
