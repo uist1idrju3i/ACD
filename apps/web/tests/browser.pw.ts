@@ -25,6 +25,8 @@ test("read-only run observer renders state and projection", async ({ page }) => 
   );
   await expect(page.locator("canvas")).toBeVisible();
   await expect(page.locator("input, textarea, select, button")).toHaveCount(0);
+  const connectionStatus = await page.locator("#connection-status").textContent();
+  await page.evaluate(() => window.dispatchEvent(new Event("online")));
   await expect(page.locator("#sse-observer-state")).toHaveAttribute(
     "data-duplicate-events-suppressed",
     "true",
@@ -47,7 +49,6 @@ test("read-only run observer renders state and projection", async ({ page }) => 
   const headings = await page.locator("h1, h2").allTextContents();
   const gateResults = await page.locator("#gate-results li").allTextContents();
   const evidenceReferences = await page.locator("#evidence").textContent();
-  const connectionStatus = await page.locator("#connection-status").textContent();
   const geometryStatus = await page.locator("#geometry-status").textContent();
   const readOnlyControlCount = await page.locator("input, textarea, select, button").count();
   const sseState = page.locator("#sse-observer-state");
@@ -65,8 +66,8 @@ test("read-only run observer renders state and projection", async ({ page }) => 
   const reconnectedStatus = reconnected.locator("#connection-status");
   await expect(reconnectedStatus).toHaveText(/worker stopped; event position \d+/);
   await expect(reconnected.locator("body")).toHaveAttribute("data-worker-state", "stopped");
-  const browserCloseWorkerContinued =
-    (await reconnected.locator("body").getAttribute("data-worker-state")) === "stopped";
+  const observedWorkerState = await reconnected.locator("body").getAttribute("data-worker-state");
+  const workerStateAvailableAfterBrowserClose = observedWorkerState !== null;
   await reconnected.close();
   const evidence = {
     route: "/",
@@ -87,7 +88,8 @@ test("read-only run observer renders state and projection", async ({ page }) => 
       reconnectPosition: reconnectFrom,
       replayedPositions,
       duplicateEventsSuppressed,
-      browserCloseWorkerContinued,
+      observedWorkerState,
+      workerStateAvailableAfterBrowserClose,
     },
   };
   const bytes = canonical(evidence);

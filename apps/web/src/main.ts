@@ -227,23 +227,23 @@ const reconnect = (): void => {
   events.onopen = () => {
     const stopped = document.body.dataset.workerState === "stopped";
     if (!stopped) setConnectionState("connected", "worker connected; event stream open");
-    if (observerSseState.receivedPositions.length > 0) {
-      observerSseState.duplicateEventsSuppressed = true;
-      renderSseState();
-    }
   };
   events.onerror = () => {
-    if (
-      events.readyState === EventSource.CLOSED ||
-      observerSseState.receivedPositions.length === 0
-    ) {
+    if (document.body.dataset.workerState === "stopped") return;
+    if (events.readyState === EventSource.CLOSED) {
       setConnectionState("stream-disconnected", "event stream disconnected; worker may continue");
+    } else {
+      setConnectionState("stream-disconnected", "event stream reconnecting; worker may continue");
     }
   };
   const onEvent = (event: MessageEvent<string>): void => {
     const eventPosition = Number(event.lastEventId);
     if (!Number.isInteger(eventPosition)) return;
-    if (eventPosition <= lastReceivedPosition || received.has(eventPosition)) {
+    if (
+      eventPosition <= lastReceivedPosition ||
+      received.has(eventPosition) ||
+      observerSseState.receivedPositions.includes(eventPosition)
+    ) {
       observerSseState.duplicateEventsSuppressed = true;
       renderSseState();
       return;
@@ -310,3 +310,4 @@ window.addEventListener("offline", () => {
     document.body.dataset.workerState = "disconnected";
   }
 });
+window.addEventListener("online", reconnect);
