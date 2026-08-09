@@ -121,6 +121,7 @@ JSONL耐久性の設計判断は、AcceptedのADR-0024〜0031に記録済みで�
   いずれかが変わったcheckpointは再利用されず、staleとして再実行される（AGENTS.mdの
   Evidence無効化条件およびADR-0025に一致）。
 - 未検証・失敗stageのcheckpointからは再開せず、停止してEvidenceを残す。
+- 現在のPhase 4受入runnerはKiCad実行を伴う早期checkpointからの再開を網羅しておらず、このcoverage gapを既知の残債として扱う。
 
 ### WP3：中断・再開のgolden task（README完了条件の測定）
 
