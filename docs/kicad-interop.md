@@ -9,9 +9,9 @@ READMEの「オープンなエンジンとフォーマット」およびロー�
 ## 出力・入力ターゲット
 
 - KiCadプロジェクト（回路図、PCB、ライブラリ参照）
-- Gerber X2、drill、BOM、pick-and-place、ODB++（`pcb export odb`）
+- Gerber X2、drill、BOM、pick-and-place、ODB++（`pcb export odb`、現行フェーズの必須出力ではなく追加候補）
 - IPC-2581。v4.0は2026年3月のIPC APEXでFirst Draft Industry Reviewコメントが解決され、投票前の段階にあるが、ACDの実装は現行KiCad出力に従う
-- IPC-D-356（`pcb export ipcd`）とboard statistics（`pcb export stats`）は検証補助として扱う
+- IPC-D-356（`pcb export ipcd356`）とboard statistics（`pcb export stats`）は検証補助として扱う
 - STEP、glTF/GLB、DXFによるMCAD向け形状・2D境界
 - IDFv3（レガシーな基板・部品外形交換）
 - IDX（ProSTEP iViPの増分交換）は将来候補

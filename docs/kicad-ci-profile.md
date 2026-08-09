@@ -49,7 +49,7 @@ kicad-cli pcb export step -o artifacts/board.step design.kicad_pcb
 
 ### 任意の追加検証候補
 
-現行の必須コマンドとは別に、KiCad 10.0.5で能力を確認したうえで、`pcb drc --format json`、`pcb drc --schematic-parity`、`pcb export ipc2581`、`pcb export odb`、`pcb export stats`、`pcb export ipcd`、および関連exportの`--variant`を追加検証候補とします。これらは現行プロファイルの必須要件ではありません。
+現行の必須コマンドとは別に、KiCad 10.0.5で能力を確認したうえで、`pcb drc --format json`、`pcb drc --schematic-parity`、`pcb export ipc2581`、`pcb export odb`、`pcb export stats`、および関連exportの`--variant`を追加検証候補とします。ODB++とboard statisticsは本プロファイルの基準コマンド一覧に含まれない追加候補です。`pcb export ipcd356`はPhase 1のreadback比較ですでに使用していますが、本プロファイルの基準コマンド一覧には未記載であり、記載の整理は別途行います。これらは現行プロファイルの必須要件ではありません。
 
 KiCad 11で予定される`kicad-cli gerber diff`、`gerber info`（`--exit-code-only`、JSON出力を含む）と`api-server`は、将来の製造データ差分検査・構造検査・CI内IPC利用の候補です。開発版由来で変更の可能性があり、現行の固定10.0.5プロファイルは変更しません。
 
