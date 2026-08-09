@@ -114,6 +114,7 @@ export type StageContext = {
   adoptedKnowledgeForLibraryPatch?: Awaited<ReturnType<typeof transitionKnowledgeItem>>;
   adoptedLibraryPatch?: ReturnType<typeof createLibraryPatchCandidate>;
   watchdogInjection?: boolean;
+  watchdogAttemptInjection?: boolean;
   watchdogProgressObservations?: ProgressObservation[];
 };
 export type StageDefinition = {
@@ -418,12 +419,12 @@ const stage_repair_loop = async (context: StageContext): Promise<void> => {
         return repeatedProposal ? [repeatedProposal] : proposals;
       },
     };
-    const observations = (context.watchdogProgressObservations = []);
+    const observations = (context.watchdogProgressObservations ??= []);
     const result = runRepairLoop({
       fixture: injected,
       proposer,
       gateIds: context.gateIds,
-      maxIterations: 3,
+      maxIterations: context.watchdogAttemptInjection ? 1 : 3,
       observe: (observation) => observations.push(observation),
     });
     await writeFile(

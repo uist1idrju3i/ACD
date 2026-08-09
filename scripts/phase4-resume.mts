@@ -47,6 +47,7 @@ const artifactRoot = join(root, "artifacts/phase4");
 const workerMode = process.argv.includes("--worker");
 const resumeMode = process.argv.includes("--resume");
 const budgetInjectionMode = process.argv.includes("--budget-injected");
+const noProgressInjectionMode = process.argv.includes("--no-progress-injected");
 const caseId = process.argv.find((value) => value.startsWith("--case="))?.slice(7);
 const killAfter = process.argv.find((value) => value.startsWith("--kill-after="))?.slice(13);
 const toolRunId = process.argv.find((value) => value.startsWith("--tool-run-id="))?.slice(14);
@@ -119,6 +120,22 @@ type BudgetWatchdogEvidence = {
       upperBoundAtLeastMeasured: boolean;
     }
   >;
+  injectedBudget: {
+    runUsage: ReturnType<typeof createBudgetUsageSnapshot>;
+    taskUsage: ReturnType<typeof createBudgetUsageSnapshot>;
+    runBudget: Budget;
+    taskBudget: TaskLedgerEntry["budget"];
+    executedStageIds: string[];
+    stopRecord: ReturnType<typeof buildStopRecord>;
+    nextStageId: string;
+    nextStageStarted: boolean;
+    nextStageUpperBound: { externalProcessExecutions: number; elapsedSeconds: number };
+    observationCounts: {
+      externalProcessExecutions: number;
+      logicalToolRequests: number;
+      registryReplays: number;
+    };
+  };
   injectedNoProgress: {
     reasons: string[];
     run: {
@@ -131,12 +148,13 @@ type BudgetWatchdogEvidence = {
     };
     observations: ProgressObservation[];
     observationCount: number;
-    noProgressObservationStatus: "evaluated" | "insufficient-observations";
+    noProgressObservationStatus: "detected" | "not-detected" | "insufficient-observations";
     executedStageIds: string[];
     stopRecord: ReturnType<typeof buildStopRecord>;
     nextStageId: string;
+    nextAttempt: number;
+    nextAttemptStarted: boolean;
     nextStageStarted: boolean;
-    nextStageUpperBound: { externalProcessExecutions: number; elapsedSeconds: number };
     repairEvidence: unknown;
     observationCounts: {
       externalProcessExecutions: number;
@@ -344,6 +362,16 @@ const runWorker = async (runRoot: string): Promise<void> => {
   let runExternalProcessExecutions = 0;
   let runLogicalToolRequests = 0;
   let runRegistryReplays = 0;
+  let noProgressStop:
+    | {
+        stoppedStageId: string;
+        stoppedAttempt: number;
+        nextAttempt: number;
+        nextStageId: string | null;
+        reasons: string[];
+      }
+    | undefined;
+  let stopRequested = false;
   const stageExternalProcessExecutions: Record<string, number> = {};
   let activeTaskId: string | undefined;
   let activeAttempt: number | undefined;
@@ -431,7 +459,10 @@ const runWorker = async (runRoot: string): Promise<void> => {
         gateMatrix,
         designGraphValidator,
       });
-      if (budgetInjectionMode) context.watchdogInjection = true;
+      if (budgetInjectionMode || noProgressInjectionMode) {
+        context.watchdogInjection = true;
+      }
+      if (noProgressInjectionMode) context.watchdogAttemptInjection = true;
       if (Object.keys(state.entries).length === 0) {
         for (const stage of phase1Stages) await ledger.create(taskEntry(stage));
       }
@@ -440,6 +471,7 @@ const runWorker = async (runRoot: string): Promise<void> => {
 
     const executedRecords = await readJson<ExecutionRecord[]>(executionPath(runRoot), []);
     for (const stage of phase1Stages.filter((candidate) => !skipped.has(candidate.id))) {
+      if (stopRequested) break;
       const entry = (await ledger.load()).entries[`task:${stage.id}`];
       if (!entry) throw new Error(`reference-integrity: missing task ${stage.id}`);
       const taskUsageBefore = (await ledger.load()).usage?.[entry.id];
@@ -555,6 +587,104 @@ const runWorker = async (runRoot: string): Promise<void> => {
         process.kill(process.pid, "SIGKILL");
       }
       const current = (await ledger.load()).entries[`task:${stage.id}`];
+      if (noProgressInjectionMode && stage.id === "gate:repair-loop") {
+        if (!current || current.status !== "running") {
+          throw new Error("verification-failed: repair-loop retry did not remain running");
+        }
+        await ledger.transition(current.id, "failed", { stopReason: "unknown-impact" });
+        await ledger.transition(current.id, "pending");
+        const retryEntry = (await ledger.load()).entries[entry.id];
+        if (!retryEntry) throw new Error(`reference-integrity: missing retry task ${stage.id}`);
+        await ledger.transition(retryEntry.id, "running");
+        activeTaskId = retryEntry.id;
+        activeAttempt = (await ledger.load()).entries[retryEntry.id]?.attemptCount;
+        setToolObservationContext(context, {
+          runId: activeToolRunId,
+          taskId: activeTaskId,
+          attempt: activeAttempt,
+        });
+        const retryTaskUsageBefore = (await ledger.load()).usage?.[retryEntry.id];
+        const retryTaskExternalBefore = retryTaskUsageBefore?.externalProcessExecutions ?? 0;
+        const retryTaskLogicalBefore = retryTaskUsageBefore?.logicalToolRequests ?? 0;
+        const retryTaskElapsedBefore = retryTaskUsageBefore?.elapsedSeconds ?? 0;
+        const retryRunExternalBefore = runExternalProcessExecutions;
+        const retryRunLogicalBefore = runLogicalToolRequests;
+        const retryMonotonicStart = monotonicClock.now();
+        await stage.run(context);
+        monotonicClock.advance(1);
+        stageExternalProcessExecutions[stage.id] =
+          (stageExternalProcessExecutions[stage.id] ?? 0) +
+          (runExternalProcessExecutions - retryRunExternalBefore);
+        const retryTaskUsageAfter = createBudgetUsageSnapshot({
+          scope: "task",
+          attempts:
+            (await ledger.load()).entries[retryEntry.id]?.attemptCount ?? retryEntry.attemptCount,
+          elapsedSeconds: retryTaskElapsedBefore + (monotonicClock.now() - retryMonotonicStart),
+          externalProcessExecutions:
+            retryTaskExternalBefore + (runExternalProcessExecutions - retryRunExternalBefore),
+          logicalToolRequests:
+            retryTaskLogicalBefore + (runLogicalToolRequests - retryRunLogicalBefore),
+        });
+        await ledger.updateUsage(retryEntry.id, retryTaskUsageAfter);
+        const retryContextHash = await writeContext(runRoot, context);
+        const retryHashes = await artifactHashes(runRoot);
+        const retryRecord: ExecutionRecord = {
+          mode,
+          stageId: stage.id,
+          gate: stage.gate,
+          contextHash: retryContextHash,
+          artifactHashes: retryHashes,
+        };
+        executedRecords.push(retryRecord);
+        await writeFile(executionPath(runRoot), `${JSON.stringify(executedRecords, null, 2)}\n`);
+        await writeResults(runRoot, context.results);
+        const retryObservations = context.watchdogProgressObservations ?? [];
+        const retryReasons = detectNoProgress(retryObservations);
+        const nextStage =
+          phase1Stages[phase1Stages.findIndex((candidate) => candidate.id === stage.id) + 1];
+        if (retryReasons.length === 0) {
+          throw new Error("verification-failed: attempt-level no-progress was not detected");
+        }
+        const retryRunUsage = createBudgetUsageSnapshot({
+          scope: "run",
+          attempts: (await log.readAll()).filter(
+            (event) =>
+              event.type === "task.transitioned" &&
+              (event.payload as { to?: string }).to === "running",
+          ).length,
+          elapsedSeconds: monotonicClock.now(),
+          externalProcessExecutions: runExternalProcessExecutions,
+          logicalToolRequests: runLogicalToolRequests,
+        });
+        const retryStopRecord = buildStopRecord({
+          reasonCode: "unknown-impact",
+          knownFacts: [
+            `attempt-level no-progress reasons: ${retryReasons.join(", ")}`,
+            `stopped after attempt ${activeAttempt ?? retryEntry.attemptCount}`,
+          ],
+          uncertainties: ["the next attempt and downstream stage were not started"],
+          options: [{ id: "resume", description: "resume after reviewing the repeated attempt" }],
+          recommendation: "review the repeated task input and proposal before resuming",
+          resumeCondition: "the repeated attempt has been reviewed",
+          resumePosition: { eventPosition: (await log.readAll()).length },
+          budgetSnapshot: { run: retryRunUsage, task: retryTaskUsageAfter },
+          evidenceIds: [`evidence:no-progress:${stage.id}`],
+        });
+        await writeFile(
+          join(runRoot, "stop-record.json"),
+          `${JSON.stringify(retryStopRecord, null, 2)}\n`,
+        );
+        await ledger.transition(retryEntry.id, "blocked", { stopReason: "unknown-impact" });
+        noProgressStop = {
+          stoppedStageId: stage.id,
+          stoppedAttempt: activeAttempt ?? retryEntry.attemptCount,
+          nextAttempt: (activeAttempt ?? retryEntry.attemptCount) + 1,
+          nextStageId: nextStage?.id ?? null,
+          reasons: retryReasons,
+        };
+        stopRequested = true;
+        continue;
+      }
       if (current?.status === "running") {
         await ledger.transition(current.id, "completed", { resultId: `result:${stage.id}` });
       }
@@ -599,8 +729,20 @@ const runWorker = async (runRoot: string): Promise<void> => {
             externalProcessExecutions: runExternalProcessExecutions,
             logicalToolRequests: runLogicalToolRequests,
           }),
+          attemptsByTask: finalEvents
+            .filter(
+              (event) =>
+                event.type === "task.transitioned" &&
+                (event.payload as { to?: string }).to === "running",
+            )
+            .reduce<Record<string, number>>((counts, event) => {
+              const taskId = (event.payload as { taskId?: string }).taskId;
+              if (taskId) counts[taskId] = (counts[taskId] ?? 0) + 1;
+              return counts;
+            }, {}),
           runBudget,
           nextStage: lastBudgetCheck ?? null,
+          noProgressStop: noProgressStop ?? null,
           stageExternalProcessExecutions,
           stageUpperBoundChecks: Object.fromEntries(
             Object.entries(stageExternalProcessExecutions).map(([stageId, measured]) => [
@@ -825,45 +967,100 @@ const buildBudgetWatchdogEvidence = async (): Promise<BudgetWatchdogEvidence> =>
   }>(join(artifactRoot, "after-drc", "baseline", "budget-runtime.json"), {
     stageUpperBoundChecks: {},
   });
-  const context = deserializeStageContext(await readFile(contextPath(injectedRoot), "utf8"));
-  const observations = context.watchdogProgressObservations ?? [];
-  const reasons = detectNoProgress(observations);
   const stopRecord = await readJson<ReturnType<typeof buildStopRecord>>(
     join(injectedRoot, "stop-record.json"),
     {} as ReturnType<typeof buildStopRecord>,
-  );
-  const repairEvidence = await readJson<unknown>(
-    join(injectedRoot, "repair-loop-watchdog.json"),
-    null,
   );
   const nextStage = runtime.nextStage;
   if (!nextStage)
     throw new Error("verification-failed: injected worker did not record budget check");
   const taskSnapshot = stopRecord.budgetSnapshot.task;
+  const noProgressRoot = join(artifactRoot, "budget-watchdog-no-progress");
+  await rm(noProgressRoot, { recursive: true, force: true });
+  await mkdir(noProgressRoot, { recursive: true });
+  const noProgressWorker = await runChild([
+    "--worker",
+    "--no-progress-injected",
+    "--case=budget-watchdog-no-progress",
+    `--root=${noProgressRoot}`,
+    "--tool-run-id=tool-run:budget-watchdog-no-progress",
+  ]);
+  if (noProgressWorker.code !== 0) throw new Error("budget watchdog no-progress worker failed");
+  const noProgressRun = await readJson<RunManifest>(
+    join(noProgressRoot, "run.json"),
+    {} as RunManifest,
+  );
+  const noProgressRuntime = await readJson<{
+    runUsage: ReturnType<typeof createBudgetUsageSnapshot>;
+    runBudget: Budget;
+    attemptsByTask: Record<string, number>;
+    nextStage: {
+      taskBudget: TaskLedgerEntry["budget"];
+    } | null;
+    noProgressStop: {
+      stoppedStageId: string;
+      stoppedAttempt: number;
+      nextAttempt: number;
+      nextStageId: string | null;
+      reasons: string[];
+    } | null;
+    observationCounts: BudgetWatchdogEvidence["injectedNoProgress"]["observationCounts"];
+  }>(join(noProgressRoot, "budget-runtime.json"), {} as never);
+  const noProgressContext = deserializeStageContext(
+    await readFile(contextPath(noProgressRoot), "utf8"),
+  );
+  const noProgressObservations = noProgressContext.watchdogProgressObservations ?? [];
+  const noProgressStop = noProgressRuntime.noProgressStop;
+  if (!noProgressStop)
+    throw new Error("verification-failed: no-progress worker did not record its stop");
+  const noProgressStopRecord = await readJson<ReturnType<typeof buildStopRecord>>(
+    join(noProgressRoot, "stop-record.json"),
+    {} as ReturnType<typeof buildStopRecord>,
+  );
+  const noProgressReasons = detectNoProgress(noProgressObservations);
   return {
     runner: "phase4-resume",
     normalRunObservationCounts: normalRuntime.stageUpperBoundChecks,
-    injectedNoProgress: {
-      reasons,
-      run: {
-        runUsage: runtime.runUsage,
-        budget: nextStage.runBudget,
-      },
-      task: {
-        taskUsage: taskSnapshot,
-        budget: nextStage.taskBudget,
-      },
-      observations,
-      observationCount: observations.length,
-      noProgressObservationStatus:
-        observations.length >= 2 ? "evaluated" : "insufficient-observations",
+    injectedBudget: {
+      runUsage: runtime.runUsage,
+      taskUsage: taskSnapshot,
+      runBudget: nextStage.runBudget,
+      taskBudget: nextStage.taskBudget,
       executedStageIds: run.executedStageIds,
       stopRecord,
       nextStageId: nextStage.nextStageId,
       nextStageStarted: run.executedStageIds.includes(nextStage.nextStageId),
       nextStageUpperBound: nextStage.operationEstimate,
-      repairEvidence,
       observationCounts: runtime.observationCounts,
+    },
+    injectedNoProgress: {
+      reasons: noProgressReasons,
+      run: {
+        runUsage: noProgressRuntime.runUsage,
+        budget: noProgressRuntime.runBudget,
+      },
+      task: {
+        taskUsage: noProgressStopRecord.budgetSnapshot.task,
+        budget: noProgressRuntime.nextStage?.taskBudget ?? noProgressRuntime.runBudget,
+      },
+      observations: noProgressObservations,
+      observationCount: noProgressObservations.length,
+      noProgressObservationStatus: noProgressReasons.length > 0 ? "detected" : "not-detected",
+      executedStageIds: noProgressRun.executedStageIds,
+      stopRecord: noProgressStopRecord,
+      nextStageId: noProgressStop.nextStageId ?? "none",
+      nextAttempt: noProgressStop.nextAttempt,
+      nextAttemptStarted:
+        (noProgressRuntime.attemptsByTask[`task:${noProgressStop.stoppedStageId}`] ?? 0) >=
+        noProgressStop.nextAttempt,
+      nextStageStarted:
+        noProgressStop.nextStageId !== null &&
+        noProgressRun.executedStageIds.includes(noProgressStop.nextStageId),
+      repairEvidence: await readJson<unknown>(
+        join(noProgressRoot, "repair-loop-watchdog.json"),
+        null,
+      ),
+      observationCounts: noProgressRuntime.observationCounts,
     },
   };
 };

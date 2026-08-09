@@ -29,8 +29,9 @@ Accepted（Step Aのコア契約とStep Bのrunner接続。Gate 25のstatus変�
    retry budgetを検査するため、到達後ではなく次のattempt実行前に停止する。
 6. 無進捗の改善は、未解決finding数の減少、gate statusの改善、成果物hashの変化
    のいずれかとする。同一input＋proposal、成果物不変、gate結果の非改善、既訪問
-   state hashへの復帰を、引数で与えた閾値で検知する。既定値2回は、1回の再試行を
-   許容し、同一状態の連続を次の反復で停止する最小値である。
+   state hashへの復帰を、引数で与えた閾値で検知する。無進捗の観測単位はtaskの
+   attemptとし、repair loop内部の反復を継続させることでjidokaを弱めない。既定値2回は、
+   1回の再試行を許容し、同一状態の連続を次のattemptで停止する最小値である。
 7. 機械可読の停止情報は`stop-record.schema.json`を正本とし、既存taxonomy、
    Evidence ID、checkpoint/event positionを参照する。ledgerの`stopReason`文字列
    は人間向け互換情報として残す。
@@ -49,6 +50,9 @@ Accepted（Step Aのコア契約とStep Bのrunner接続。Gate 25のstatus変�
 11. repair loopのjidoka停止条件は常に有効とし、進捗がない場合に継続させる
     core optionは持たない。`observe`で停止までに実測できた観測列だけを記録し、
     閾値未満の場合は観測不足として扱う。
+12. injected runnerでは、同一taskをtask ledgerの`retryBudget`内で再実行し、
+    attemptごとの実測観測列へ`detectNoProgress`を適用する。検知後は次attemptと
+    downstream stageを実行せず、budget超過による停止とは別のケースと証跡で記録する。
 
 ## 代替案と理由
 

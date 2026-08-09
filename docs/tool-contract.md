@@ -108,3 +108,5 @@ baseline/resumedで必然的に異なるruntime measurementのため、resumeの
 comparable event countから除外し、`task.transitioned(kind=usage-updated)`として
 除外一覧へ明示する。raw event countは全event logの件数として別に保持する。
 repair loopは無進捗時に継続するoptionを持たず、jidoka停止までの観測列だけを保存する。
+runnerの無進捗検知はtask attempt単位で観測し、検知後の次attemptおよびdownstream stageを
+実行しない。
