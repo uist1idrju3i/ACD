@@ -170,7 +170,14 @@ fn integer_sqrt(value: i128) -> i64 {
 }
 
 #[no_mangle]
-pub static __heap_base: u8 = 0;
+pub extern "C" fn acd_geometry_module_version_ptr() -> *const u8 {
+    MODULE_VERSION.as_ptr()
+}
+
+#[no_mangle]
+pub extern "C" fn acd_geometry_module_version_len() -> usize {
+    MODULE_VERSION.len()
+}
 
 fn expand(polygon: &Polygon, expansion: i64) -> Polygon {
     let left = polygon.points.iter().map(|point| point.x).min().unwrap() - expansion;

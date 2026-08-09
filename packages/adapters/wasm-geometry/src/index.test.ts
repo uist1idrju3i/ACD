@@ -54,6 +54,37 @@ describe("WASM geometry boundary", () => {
       (entry) => entry.name,
     );
     expect(exportNames).toContain("__heap_base");
+    const rawInstance = await WebAssembly.instantiate(wasmBytes, {});
+    const rawExports = rawInstance.instance.exports as unknown as {
+      memory: WebAssembly.Memory;
+      __heap_base: WebAssembly.Global | number;
+      acd_geometry_run: (
+        inputPtr: number,
+        inputLength: number,
+        outputPtr: number,
+        outputCapacity: number,
+      ) => number;
+      acd_geometry_module_version_ptr: () => number;
+      acd_geometry_module_version_len: () => number;
+    };
+    const heapBase =
+      typeof rawExports.__heap_base === "number"
+        ? rawExports.__heap_base
+        : Number(rawExports.__heap_base.value);
+    expect(heapBase).toBeGreaterThan(1_048_840);
+    const versionPtr = rawExports.acd_geometry_module_version_ptr();
+    const versionLength = rawExports.acd_geometry_module_version_len();
+    const versionBefore = [...new Uint8Array(rawExports.memory.buffer, versionPtr, versionLength)];
+    const largeInputLength = 1024 * 1024;
+    const largeOutputOffset = heapBase + largeInputLength;
+    const requiredBytes = largeOutputOffset + largeInputLength;
+    const requiredPages = Math.ceil(requiredBytes / 65_536);
+    const currentPages = rawExports.memory.buffer.byteLength / 65_536;
+    if (requiredPages > currentPages) rawExports.memory.grow(requiredPages - currentPages);
+    new Uint8Array(rawExports.memory.buffer, heapBase, largeInputLength).fill(0xa5);
+    rawExports.acd_geometry_run(heapBase, largeInputLength, largeOutputOffset, largeInputLength);
+    const versionAfter = new Uint8Array(rawExports.memory.buffer, versionPtr, versionLength);
+    expect([...versionAfter]).toEqual(versionBefore);
     const canonical = () =>
       fixture.cases.map(({ input: candidate }) => ({
         native: runGeometryChecks(candidate),
