@@ -26,6 +26,17 @@ nativeとWASMの正規化結果がbyte一致しない場合は`verification-fail
 nativeへfallbackできるのはWASM moduleが利用不能な場合だけであり、その理由をEvidence
 provenanceへ記録する。
 
+pad間銅クリアランスは、同一実装layerかつ異なるnetの対だけを比較する。netは
+BoardNetの`pinIds`からBoardPinの`padNumber`を経由して解決し、解決できないpadは
+`pad-connectivity-not-provided`のunknownとする。courtyard重なりも同一実装面の対だけを
+比較し、表裏の部品を重なりとは扱わない。
+
+mask sliverは開口の融合（測定値0、`mask-fusion`）と、正の幅を持つ細いsliver
+（`mask-sliver`）を別ruleとして報告する。回転padのmask開口は量子化後のpolygonを
+AABBへ落として膨らませる近似であり、実開口より保守側に大きく評価される。閾値は
+manufacturing profileの型付き`geometryThresholdsNm`から供給し、自由文の
+`processConditions`はparseしない。
+
 ## WASM境界、ABI、provenance
 
 WASMは`packages/adapters/wasm-geometry`の外部境界でNode組み込みの
@@ -35,8 +46,10 @@ APIへ依存しない。wasm-bindgen、wasmtime、wasm-packは依存とlicense�
 
 TSは量子化済み整数DTOを固定長のlittle-endian `i64`レコードへpacked encodingし、
 Rustの素のC ABIとlinear memoryで受け渡す。入力はmagic、entity count、3閾値、polygon
-point列、mask expansionからなり、出力はmagic、ruleごとのstatus、finding count、
-entity index、測定nm、閾値nmからなる。文字列は境界を越えず、TS側でstable IDへ復元する。
+point列、net/layer ordinal、mask expansionからなり、出力はmagic、ruleごとのstatus、
+unknown reason、finding count、entity index、測定nm、閾値nmからなる。文字列は境界を
+越えず、TS側でstable IDへ復元する。parity比較は`canonicalize`を使い、key順の違いを
+誤差として扱わない。
 入力・出力の長さ、magic、index、status、unknown時のfinding欠如を検証し、超過や破損は
 明示的な`verification-failed`停止とする。
 

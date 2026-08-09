@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { createHash } from "node:crypto";
 import { readFile } from "node:fs/promises";
 import { resolve } from "node:path";
-import { runGeometryChecks } from "@acd/graph-core";
+import { canonicalize, runGeometryChecks } from "@acd/graph-core";
 import { loadWasmGeometryModule, runGeometryChecksWithFallback } from "./index.js";
 
 const input = {
@@ -55,11 +55,11 @@ describe("WASM geometry boundary", () => {
         native: runGeometryChecks(candidate),
         wasm: runGeometryChecksWithFallback(candidate, module).results,
       }));
-    const first = JSON.stringify(canonical());
-    const second = JSON.stringify(canonical());
+    const first = canonicalize(canonical());
+    const second = canonicalize(canonical());
     expect(first).toBe(second);
     for (const { native, wasm } of canonical()) {
-      expect(JSON.stringify(wasm)).toBe(JSON.stringify(native));
+      expect(canonicalize(wasm)).toBe(canonicalize(native));
     }
     const execution = runGeometryChecksWithFallback(fixture.cases[0]!.input, module);
     expect(execution.provenance).toMatchObject({

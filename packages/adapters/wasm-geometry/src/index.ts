@@ -1,5 +1,6 @@
 import {
   GraphCoreError,
+  canonicalize,
   runGeometryChecks,
   type GeometryCheckInput,
   type GeometryCheckResult,
@@ -13,6 +14,8 @@ const UNKNOWN = 0n;
 const PASSED = 1n;
 const FAILED = 2n;
 const UNAVAILABLE_THRESHOLD = -1n;
+const UNKNOWN_CANONICAL_DATA = 1n;
+const UNKNOWN_CONNECTIVITY = 2n;
 const INPUT_OFFSET = 65_536;
 const OUTPUT_CAPACITY = 16 * 1024 * 1024;
 
@@ -93,6 +96,15 @@ const writeThreshold = (writer: PackedWriter, value: number | undefined): void =
 const encodeInput = (input: GeometryCheckInput): Uint8Array => {
   const bytes = new ArrayBuffer(16 * 1024 * 1024);
   const writer = new PackedWriter(bytes);
+  const netIds = [...new Set(input.pads.flatMap((pad) => (pad.netId ? [pad.netId] : [])))].sort();
+  const layers = [
+    ...new Set([
+      ...input.pads.flatMap((pad) => (pad.layer ? [pad.layer] : [])),
+      ...input.courtyards.flatMap((courtyard) => (courtyard.layer ? [courtyard.layer] : [])),
+    ]),
+  ].sort();
+  const ordinal = (values: string[], value: string | undefined): bigint =>
+    value === undefined ? -1n : BigInt(values.indexOf(value));
   writer.write(INPUT_MAGIC);
   writer.write(BigInt(input.pads.length));
   writer.write(BigInt(input.courtyards.length));
@@ -110,6 +122,8 @@ const encodeInput = (input: GeometryCheckInput): Uint8Array => {
         ? UNAVAILABLE_THRESHOLD
         : assertI64(pad.maskExpansionNm, "maskExpansionNm"),
     );
+    writer.write(ordinal(netIds, pad.netId));
+    writer.write(ordinal(layers, pad.layer));
   }
   for (const courtyard of input.courtyards) {
     writer.write(BigInt(courtyard.polygon.points.length));
@@ -117,6 +131,7 @@ const encodeInput = (input: GeometryCheckInput): Uint8Array => {
       writer.write(assertI64(point.xNm, "courtyard xNm"));
       writer.write(assertI64(point.yNm, "courtyard yNm"));
     }
+    writer.write(ordinal(layers, courtyard.layer));
   }
   return new Uint8Array(bytes, 0, writer.length);
 };
@@ -159,15 +174,26 @@ const decodeResult = (
   subjects: (left: number, right: number) => string[],
 ): GeometryCheckResult => {
   const status = reader.read();
+  const reason = reader.read();
   const findingCount = toNumber(reader.read(), `${ruleId} finding count`);
   if (findingCount < 0) {
     throw new GraphCoreError("verification-failed", `${ruleId} finding count is negative`);
   }
   if (status === UNKNOWN) {
-    if (findingCount !== 0) {
+    if (
+      findingCount !== 0 ||
+      (reason !== UNKNOWN_CANONICAL_DATA && reason !== UNKNOWN_CONNECTIVITY)
+    ) {
       throw new GraphCoreError("verification-failed", `${ruleId} unknown result contains findings`);
     }
-    return { status: "unknown", reason: "canonical-data-not-provided", findings: [] };
+    return {
+      status: "unknown",
+      reason:
+        reason === UNKNOWN_CONNECTIVITY
+          ? "pad-connectivity-not-provided"
+          : "canonical-data-not-provided",
+      findings: [],
+    };
   }
   if (status !== PASSED && status !== FAILED) {
     throw new GraphCoreError("verification-failed", `${ruleId} returned an invalid status`);
@@ -180,8 +206,8 @@ const decodeResult = (
     const thresholdNm = toNumber(reader.read(), `${ruleId} thresholdNm`);
     const subjectIds = subjects(left, right).sort();
     findings.push({
-      id: `finding:${ruleId}:${subjectIds.join(":")}`,
-      ruleId,
+      id: `finding:${ruleId === "mask-sliver" && measuredNm === 0 ? "mask-fusion" : ruleId}:${subjectIds.join(":")}`,
+      ruleId: ruleId === "mask-sliver" && measuredNm === 0 ? "mask-fusion" : ruleId,
       status: "violation",
       subjectIds,
       measuredNm,
@@ -281,7 +307,7 @@ export const runGeometryChecksWithFallback = (
     return { results: native, provenance: nativeProvenance("wasm-module-unavailable") };
   }
   const wasm = wasmModule.run(input);
-  if (JSON.stringify(wasm) !== JSON.stringify(native)) {
+  if (canonicalize(wasm) !== canonicalize(native)) {
     throw new GraphCoreError(
       "verification-failed",
       "WASM/native geometry parity mismatch; execution stopped",

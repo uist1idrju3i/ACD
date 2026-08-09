@@ -7,6 +7,8 @@ const MAGIC_OUTPUT: i64 = 0xACD7_0002;
 const UNKNOWN: i64 = 0;
 const PASSED: i64 = 1;
 const FAILED: i64 = 2;
+const UNKNOWN_CANONICAL_DATA: i64 = 1;
+const UNKNOWN_CONNECTIVITY: i64 = 2;
 const MAX_POINTS: usize = 1_000_000;
 
 #[derive(Clone, Copy)]
@@ -22,6 +24,8 @@ struct Polygon {
 struct Pad {
     polygon: Polygon,
     expansion: i64,
+    net: i64,
+    layer: i64,
 }
 
 struct Finding {
@@ -30,6 +34,8 @@ struct Finding {
     measured: i64,
     threshold: i64,
 }
+
+type ParsedInput = (Vec<Pad>, Vec<(Polygon, i64)>, [i64; 3]);
 
 fn read_i64(input: &[u8], cursor: &mut usize) -> Option<i64> {
     let end = cursor.checked_add(8)?;
@@ -196,7 +202,7 @@ fn read_polygon(input: &[u8], cursor: &mut usize) -> Option<Polygon> {
     Some(Polygon { points })
 }
 
-fn read_input(input: &[u8]) -> Option<(Vec<Pad>, Vec<Polygon>, [i64; 3])> {
+fn read_input(input: &[u8]) -> Option<ParsedInput> {
     let mut cursor = 0;
     if read_i64(input, &mut cursor)? != MAGIC_INPUT {
         return None;
@@ -216,11 +222,16 @@ fn read_input(input: &[u8]) -> Option<(Vec<Pad>, Vec<Polygon>, [i64; 3])> {
         pads.push(Pad {
             polygon: read_polygon(input, &mut cursor)?,
             expansion: read_i64(input, &mut cursor)?,
+            net: read_i64(input, &mut cursor)?,
+            layer: read_i64(input, &mut cursor)?,
         });
     }
     let mut courtyards = Vec::with_capacity(courtyard_count);
     for _ in 0..courtyard_count {
-        courtyards.push(read_polygon(input, &mut cursor)?);
+        courtyards.push((
+            read_polygon(input, &mut cursor)?,
+            read_i64(input, &mut cursor)?,
+        ));
     }
     if cursor != input.len() {
         return None;
@@ -228,29 +239,49 @@ fn read_input(input: &[u8]) -> Option<(Vec<Pad>, Vec<Polygon>, [i64; 3])> {
     Some((pads, courtyards, thresholds))
 }
 
-fn rule(threshold: i64, available: bool, pairs: Vec<Finding>) -> (i64, Vec<Finding>) {
+fn rule(
+    threshold: i64,
+    available: bool,
+    reason: i64,
+    pairs: Vec<Finding>,
+) -> (i64, i64, Vec<Finding>) {
     if threshold < 0 || !available {
-        return (UNKNOWN, Vec::new());
+        return (UNKNOWN, reason, Vec::new());
     }
-    (if pairs.is_empty() { PASSED } else { FAILED }, pairs)
+    (if pairs.is_empty() { PASSED } else { FAILED }, 0, pairs)
 }
 
 fn run(input: &[u8], output: &mut [u8]) -> Option<usize> {
     let (pads, courtyards, thresholds) = read_input(input)?;
     let mut pad_pairs = Vec::new();
     let mut mask_pairs = Vec::new();
+    let mut pad_connectivity_unknown = false;
+    let mut mask_data_unknown = false;
     for left in 0..pads.len() {
         for right in (left + 1)..pads.len() {
-            let distance = polygon_distance_squared(&pads[left].polygon, &pads[right].polygon);
-            if thresholds[0] >= 0 && distance < i128::from(thresholds[0]).pow(2) {
-                pad_pairs.push(Finding {
-                    left: left as i64,
-                    right: right as i64,
-                    measured: integer_sqrt(distance),
-                    threshold: thresholds[0],
-                });
+            if pads[left].net < 0
+                || pads[left].layer < 0
+                || pads[right].net < 0
+                || pads[right].layer < 0
+            {
+                pad_connectivity_unknown = true;
+            } else if pads[left].layer == pads[right].layer && pads[left].net != pads[right].net {
+                let distance = polygon_distance_squared(&pads[left].polygon, &pads[right].polygon);
+                if thresholds[0] >= 0 && distance < i128::from(thresholds[0]).pow(2) {
+                    pad_pairs.push(Finding {
+                        left: left as i64,
+                        right: right as i64,
+                        measured: integer_sqrt(distance),
+                        threshold: thresholds[0],
+                    });
+                }
             }
-            if pads[left].expansion >= 0 && pads[right].expansion >= 0 {
+            if pads[left].layer < 0 || pads[right].layer < 0 {
+                mask_data_unknown = true;
+            } else if pads[left].layer == pads[right].layer
+                && pads[left].expansion >= 0
+                && pads[right].expansion >= 0
+            {
                 let a = expand(&pads[left].polygon, pads[left].expansion);
                 let b = expand(&pads[right].polygon, pads[right].expansion);
                 let distance = polygon_distance_squared(&a, &b);
@@ -262,42 +293,67 @@ fn run(input: &[u8], output: &mut [u8]) -> Option<usize> {
                         threshold: thresholds[1],
                     });
                 }
+            } else if pads[left].layer == pads[right].layer {
+                mask_data_unknown = true;
             }
         }
+    }
+    if pads.iter().any(|pad| pad.expansion < 0) {
+        mask_data_unknown = true;
     }
     let mut courtyard_pairs = Vec::new();
+    let mut courtyard_layer_unknown = false;
     for left in 0..courtyards.len() {
         for right in (left + 1)..courtyards.len() {
-            let distance = polygon_distance_squared(&courtyards[left], &courtyards[right]);
-            if thresholds[2] >= 0 && distance < i128::from(thresholds[2]).pow(2) {
-                courtyard_pairs.push(Finding {
-                    left: left as i64,
-                    right: right as i64,
-                    measured: integer_sqrt(distance),
-                    threshold: thresholds[2],
-                });
+            if courtyards[left].1 < 0 || courtyards[right].1 < 0 {
+                courtyard_layer_unknown = true;
+            } else if courtyards[left].1 == courtyards[right].1 {
+                let distance = polygon_distance_squared(&courtyards[left].0, &courtyards[right].0);
+                if thresholds[2] >= 0 && distance < i128::from(thresholds[2]).pow(2) {
+                    courtyard_pairs.push(Finding {
+                        left: left as i64,
+                        right: right as i64,
+                        measured: integer_sqrt(distance),
+                        threshold: thresholds[2],
+                    });
+                }
             }
         }
     }
-    let (pad_status, pad_findings) = rule(thresholds[0], pads.len() > 1, pad_pairs);
-    let (mask_status, mask_findings) = rule(
+    let (pad_status, pad_reason, pad_findings) = rule(
+        thresholds[0],
+        pads.len() > 1 && !pad_connectivity_unknown,
+        if pad_connectivity_unknown {
+            UNKNOWN_CONNECTIVITY
+        } else {
+            UNKNOWN_CANONICAL_DATA
+        },
+        pad_pairs,
+    );
+    let (mask_status, mask_reason, mask_findings) = rule(
         thresholds[1],
-        pads.len() > 1 && pads.iter().all(|pad| pad.expansion >= 0),
+        pads.len() > 1 && !mask_data_unknown,
+        UNKNOWN_CANONICAL_DATA,
         mask_pairs,
     );
-    let (courtyard_status, courtyard_findings) =
-        rule(thresholds[2], courtyards.len() > 1, courtyard_pairs);
+    let (courtyard_status, courtyard_reason, courtyard_findings) = rule(
+        thresholds[2],
+        courtyards.len() > 1 && !courtyard_layer_unknown,
+        UNKNOWN_CANONICAL_DATA,
+        courtyard_pairs,
+    );
     let sections = [
-        (pad_status, pad_findings),
-        (mask_status, mask_findings),
-        (courtyard_status, courtyard_findings),
+        (pad_status, pad_reason, pad_findings),
+        (mask_status, mask_reason, mask_findings),
+        (courtyard_status, courtyard_reason, courtyard_findings),
     ];
     let mut cursor = 0;
     if !write_i64(output, &mut cursor, MAGIC_OUTPUT) {
         return None;
     }
-    for (status, findings) in sections {
+    for (status, reason, findings) in sections {
         if !write_i64(output, &mut cursor, status)
+            || !write_i64(output, &mut cursor, reason)
             || !write_i64(output, &mut cursor, findings.len() as i64)
         {
             return None;

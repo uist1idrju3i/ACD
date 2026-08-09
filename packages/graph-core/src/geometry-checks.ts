@@ -1,11 +1,18 @@
 import type { BoardModel, PointMm } from "./board.js";
+import type { FabProfileRules } from "./fab-profile-rules.js";
 
 export type NmPoint = { xNm: number; yNm: number };
 export type NmPolygon = { points: NmPoint[] };
 
 export type GeometryCheckInput = {
-  pads: Array<{ id: string; polygon: NmPolygon; maskExpansionNm?: number }>;
-  courtyards: Array<{ componentId: string; polygon: NmPolygon }>;
+  pads: Array<{
+    id: string;
+    polygon: NmPolygon;
+    netId?: string;
+    layer?: string;
+    maskExpansionNm?: number;
+  }>;
+  courtyards: Array<{ componentId: string; polygon: NmPolygon; layer?: string }>;
   thresholds: {
     minimumCopperClearanceNm?: number;
     minimumMaskSliverNm?: number;
@@ -15,7 +22,7 @@ export type GeometryCheckInput = {
 
 export type GeometryFinding = {
   id: string;
-  ruleId: "pad-clearance" | "mask-sliver" | "courtyard-overlap";
+  ruleId: "pad-clearance" | "mask-sliver" | "mask-fusion" | "courtyard-overlap";
   status: "violation";
   subjectIds: string[];
   measuredNm: number;
@@ -24,7 +31,7 @@ export type GeometryFinding = {
 
 export type GeometryCheckResult = {
   status: "passed" | "failed" | "unknown";
-  reason?: "canonical-data-not-provided";
+  reason?: "canonical-data-not-provided" | "pad-connectivity-not-provided";
   findings: GeometryFinding[];
 };
 
@@ -69,7 +76,10 @@ const rectangle = (xMm: number, yMm: number, widthMm: number, heightMm: number):
   ],
 });
 
-export const quantizeBoardGeometry = (model: BoardModel): GeometryCheckInput => {
+export const quantizeBoardGeometry = (
+  model: BoardModel,
+  profile?: FabProfileRules,
+): GeometryCheckInput => {
   const placements = new Map(
     model.placements.map((placement) => [placement.componentId, placement]),
   );
@@ -84,6 +94,7 @@ export const quantizeBoardGeometry = (model: BoardModel): GeometryCheckInput => 
     if (footprint.courtyard) {
       courtyards.push({
         componentId: component.id,
+        layer: placement.layer,
         polygon: {
           points: footprint.courtyard.points.map((point) =>
             quantizePoint(rotate(point, placement.xMm, placement.yMm, placement.rotationDeg)),
@@ -92,6 +103,12 @@ export const quantizeBoardGeometry = (model: BoardModel): GeometryCheckInput => 
       });
     }
     for (const pad of footprint.pads) {
+      const matchingPins = component.pins.filter((pin) => pin.padNumber === pad.number);
+      const netIds = matchingPins
+        .map((pin) => model.nets.find((net) => net.pinIds.includes(pin.id))?.id)
+        .filter((netId): netId is string => netId !== undefined);
+      const resolvedNetId =
+        netIds.length === matchingPins.length && new Set(netIds).size === 1 ? netIds[0] : undefined;
       const origin = rotate(
         { xMm: pad.xMm, yMm: pad.yMm },
         placement.xMm,
@@ -108,6 +125,8 @@ export const quantizeBoardGeometry = (model: BoardModel): GeometryCheckInput => 
           : rectangle(origin.xMm, origin.yMm, pad.widthMm, pad.heightMm);
       pads.push({
         id: `pad:${component.id}:${pad.number}`,
+        ...(placement.layer ? { layer: placement.layer } : {}),
+        ...(resolvedNetId === undefined ? {} : { netId: resolvedNetId }),
         polygon,
         ...(pad.maskExpansionMm === undefined
           ? {}
@@ -115,7 +134,7 @@ export const quantizeBoardGeometry = (model: BoardModel): GeometryCheckInput => 
       });
     }
   }
-  return { pads, courtyards, thresholds: {} };
+  return { pads, courtyards, thresholds: profile?.geometryThresholdsNm ?? {} };
 };
 
 const cross = (a: NmPoint, b: NmPoint, c: NmPoint): bigint =>
@@ -225,17 +244,18 @@ const result = (
   threshold: number | undefined,
   available: boolean,
   ruleId: GeometryFinding["ruleId"],
-  pairs: Array<{ ids: string[]; measured: bigint }>,
+  pairs: Array<{ ids: string[]; measured: bigint; findingRuleId?: GeometryFinding["ruleId"] }>,
+  unknownReason: GeometryCheckResult["reason"] = "canonical-data-not-provided",
 ): GeometryCheckResult => {
   if (threshold === undefined || !available) {
-    return { status: "unknown", reason: "canonical-data-not-provided", findings: [] };
+    return { status: "unknown", reason: unknownReason, findings: [] };
   }
   const thresholdSquared = BigInt(threshold) * BigInt(threshold);
   const findings = pairs
     .filter((pair) => pair.measured < thresholdSquared)
     .map((pair) => ({
-      id: `finding:${ruleId}:${pair.ids.join(":")}`,
-      ruleId,
+      id: `finding:${pair.findingRuleId ?? ruleId}:${pair.ids.join(":")}`,
+      ruleId: pair.findingRuleId ?? ruleId,
       status: "violation" as const,
       subjectIds: [...pair.ids].sort(),
       measuredNm: integerSqrt(pair.measured),
@@ -259,53 +279,86 @@ const integerSqrt = (value: bigint): number => {
 
 export const runGeometryChecks = (input: GeometryCheckInput): GeometryCheckResults => {
   const padPairs: Array<{ ids: string[]; measured: bigint }> = [];
-  const maskPairs: Array<{ ids: string[]; measured: bigint }> = [];
+  const maskPairs: Array<{
+    ids: string[];
+    measured: bigint;
+    findingRuleId?: GeometryFinding["ruleId"];
+  }> = [];
+  let padConnectivityUnknown = false;
+  let maskDataUnknown = false;
   for (let left = 0; left < input.pads.length; left += 1) {
     for (let right = left + 1; right < input.pads.length; right += 1) {
       const a = input.pads[left];
       const b = input.pads[right];
       if (!a || !b) throw new Error("pad pair is missing");
-      const distance = polygonDistanceSquared(a.polygon, b.polygon);
-      padPairs.push({ ids: [a.id, b.id], measured: distance });
-      if (a.maskExpansionNm !== undefined && b.maskExpansionNm !== undefined) {
+      if (
+        a.netId === undefined ||
+        a.layer === undefined ||
+        b.netId === undefined ||
+        b.layer === undefined
+      ) {
+        padConnectivityUnknown = true;
+      } else if (a.layer === b.layer && a.netId !== b.netId) {
+        const distance = polygonDistanceSquared(a.polygon, b.polygon);
+        padPairs.push({ ids: [a.id, b.id], measured: distance });
+      }
+      if (a.layer === undefined || b.layer === undefined) {
+        maskDataUnknown = true;
+      } else if (
+        a.layer === b.layer &&
+        a.maskExpansionNm !== undefined &&
+        b.maskExpansionNm !== undefined
+      ) {
+        const maskDistance = polygonDistanceSquared(
+          expandPolygon(a.polygon, a.maskExpansionNm),
+          expandPolygon(b.polygon, b.maskExpansionNm),
+        );
         maskPairs.push({
           ids: [a.id, b.id],
-          measured: polygonDistanceSquared(
-            expandPolygon(a.polygon, a.maskExpansionNm),
-            expandPolygon(b.polygon, b.maskExpansionNm),
-          ),
+          measured: maskDistance,
+          ...(maskDistance === 0n ? { findingRuleId: "mask-fusion" } : {}),
         });
+      } else if (a.layer === b.layer) {
+        maskDataUnknown = true;
       }
     }
   }
   const courtyardPairs: Array<{ ids: string[]; measured: bigint }> = [];
+  let courtyardLayerUnknown = false;
   for (let left = 0; left < input.courtyards.length; left += 1) {
     for (let right = left + 1; right < input.courtyards.length; right += 1) {
       const a = input.courtyards[left];
       const b = input.courtyards[right];
       if (!a || !b) throw new Error("courtyard pair is missing");
+      if (a.layer === undefined || b.layer === undefined) {
+        courtyardLayerUnknown = true;
+        continue;
+      }
+      if (a.layer !== b.layer) continue;
       courtyardPairs.push({
         ids: [a.componentId, b.componentId],
         measured: polygonDistanceSquared(a.polygon, b.polygon),
       });
     }
   }
+  if (input.pads.some((pad) => pad.maskExpansionNm === undefined)) maskDataUnknown = true;
   return {
     padClearance: result(
       input.thresholds.minimumCopperClearanceNm,
-      input.pads.length > 1,
+      input.pads.length > 1 && !padConnectivityUnknown,
       "pad-clearance",
       padPairs,
+      padConnectivityUnknown ? "pad-connectivity-not-provided" : undefined,
     ),
     maskSliver: result(
       input.thresholds.minimumMaskSliverNm,
-      input.pads.length > 1 && input.pads.every((pad) => pad.maskExpansionNm !== undefined),
+      input.pads.length > 1 && !maskDataUnknown,
       "mask-sliver",
       maskPairs,
     ),
     courtyardOverlap: result(
       input.thresholds.minimumCourtyardClearanceNm,
-      input.courtyards.length > 1,
+      input.courtyards.length > 1 && !courtyardLayerUnknown,
       "courtyard-overlap",
       courtyardPairs,
     ),
