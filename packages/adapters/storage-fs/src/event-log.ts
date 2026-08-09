@@ -1,12 +1,13 @@
 import { mkdir, open, readFile, unlink } from "node:fs/promises";
 import type { FileHandle } from "node:fs/promises";
 import { dirname } from "node:path";
-import { canonicalize } from "@acd/graph-core";
-import { GraphCoreError, verifyEvent, type EventEnvelope, type EventLog } from "@acd/graph-core";
+import { canonicalize, GraphCoreError } from "@acd/graph-core";
+import { verifyEvent, type EventEnvelope, type EventLog } from "@acd/graph-core";
 
 export class FileEventLog implements EventLog {
   private handle: FileHandle | undefined;
   private lock: FileHandle | undefined;
+  private opening: Promise<FileHandle> | undefined;
 
   constructor(private readonly path: string) {}
 
@@ -62,15 +63,28 @@ export class FileEventLog implements EventLog {
 
   private async openWriter(): Promise<FileHandle> {
     if (this.handle) return this.handle;
-    await mkdir(dirname(this.path), { recursive: true });
+    if (this.opening) return this.opening;
+    const opening = this.openWriterOnce();
+    this.opening = opening;
     try {
-      this.lock = await open(`${this.path}.lock`, "wx");
-      this.handle = await open(this.path, "a");
-      return this.handle;
+      return await opening;
+    } finally {
+      if (this.opening === opening) this.opening = undefined;
+    }
+  }
+
+  private async openWriterOnce(): Promise<FileHandle> {
+    await mkdir(dirname(this.path), { recursive: true });
+    let lock: FileHandle | undefined;
+    try {
+      lock = await open(`${this.path}.lock`, "wx");
+      const handle = await open(this.path, "a");
+      this.lock = lock;
+      this.handle = handle;
+      return handle;
     } catch (error) {
-      await this.lock?.close();
-      if (this.lock) {
-        this.lock = undefined;
+      await lock?.close();
+      if (lock) {
         try {
           await unlink(`${this.path}.lock`);
         } catch {
@@ -78,7 +92,10 @@ export class FileEventLog implements EventLog {
         }
       }
       if ((error as NodeJS.ErrnoException).code === "EEXIST") {
-        throw new Error(`event-log writer lock already held: ${this.path}`);
+        throw new GraphCoreError(
+          "lock-conflict",
+          `event-log writer lock already held: ${this.path}`,
+        );
       }
       throw error;
     }

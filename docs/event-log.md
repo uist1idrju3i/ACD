@@ -53,7 +53,10 @@ Phase 0では少なくとも次を扱います。
   resolved library revision、projection artifactを含み、KnowledgeItem→library→projectionの追跡を可能にする。
 - `task.created`：タスク台帳エントリを作成した記録。payloadは対象taskIdと作成時のentryスナップショットを含む。
 - `task.transitioned`：タスク台帳エントリの状態遷移を記録したイベント。payloadは対象taskId、
-  遷移前後のstatus、遷移後のentryスナップショットを含む。
+  遷移前後のstatus、遷移後のentryスナップショットを含む。予算使用量を永続化するときは
+  `kind: "usage-updated"`を指定し、`{ kind, taskId, usage }`（usageは
+  `BudgetUsageSnapshot`）をpayloadとする。このvariantは状態遷移を進めず、replay時に
+  task単位の最新使用量として再構成される。
 
 イベント種別ごとのpayload schemaとerror codeは実装時に追加し、未知の種別は
 削除せず`unknown event`として保存してreplayを停止します。

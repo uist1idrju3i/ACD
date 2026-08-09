@@ -1,10 +1,11 @@
 import { describe, expect, it } from "vitest";
-import { InMemoryEventLog } from "./event-log.js";
+import { InMemoryEventLog, createEvent } from "./event-log.js";
 import { GraphCoreError } from "./errors.js";
 import {
   TaskLedgerRuntime,
   listTaskLedgerAttention,
   transitionTask,
+  replayTaskLedger,
   type ClockPort,
   type IdPort,
   type TaskLedgerEntry,
@@ -66,9 +67,15 @@ describe("task ledger", () => {
       entry({ id: "task:m", approvalState: "pending" }),
       entry({ id: "task:a", status: "blocked", stopReason: "waiting for dependency" }),
       entry({ id: "task:ok", status: "pending" }),
+      entry({ id: "task:rejected", approvalState: "rejected" }),
     ]);
 
-    expect(listed.map((item) => item.taskId)).toEqual(["task:a", "task:m", "task:z"]);
+    expect(listed.map((item) => item.taskId)).toEqual([
+      "task:a",
+      "task:m",
+      "task:rejected",
+      "task:z",
+    ]);
     expect(listed).toMatchObject([
       {
         taskId: "task:a",
@@ -83,12 +90,32 @@ describe("task ledger", () => {
         waitingReason: "approval-pending",
       },
       {
+        taskId: "task:rejected",
+        status: "pending",
+        stopReason: null,
+        waitingReason: null,
+      },
+      {
         taskId: "task:z",
         status: "failed",
         stopReason: "tool failed",
         waitingReason: null,
       },
     ]);
+    expect(listed.find((item) => item.taskId === "task:rejected")).toMatchObject({
+      approvalState: "rejected",
+      waitingReason: null,
+    });
+  });
+
+  it("clears stale stop reasons when returning to pending or completing", () => {
+    const blocked = transitionTask(entry(), "blocked", [], { stopReason: "tool stopped" });
+    const pending = transitionTask(blocked, "pending", []);
+    expect(pending.stopReason).toBeUndefined();
+
+    const running = transitionTask(pending, "running", []);
+    const completed = transitionTask(running, "completed", [], { resultId: "result:1" });
+    expect(completed.stopReason).toBeUndefined();
   });
 
   it("restores unfinished dependent entries after a runtime restart", async () => {
@@ -150,7 +177,6 @@ describe("task ledger", () => {
       }),
     ).rejects.toThrow(/differs from event replay/);
   });
-
   it("replays usage separately from the budget cap", async () => {
     const eventLog = new InMemoryEventLog();
     const runtime = new TaskLedgerRuntime("project:test", "test", eventLog, clock, ids);
@@ -167,5 +193,77 @@ describe("task ledger", () => {
     await expect(
       restarted.assertConsistent({ ...held, usage: { "task:main": { ...usage, attempts: 2 } } }),
     ).rejects.toThrow("event replay");
+  });
+
+  it("loads existing events before the first mutation", async () => {
+    const eventLog = new InMemoryEventLog();
+    const existing = entry({ id: "task:existing" });
+    await eventLog.append(
+      createEvent({
+        eventId: "event:existing",
+        type: "task.created",
+        occurredAt: clock.now(),
+        actor: "test",
+        projectId: "project:test",
+        baseRevision: 0,
+        resultRevision: 1,
+        payload: { kind: "created", taskId: existing.id, entry: existing },
+      }),
+    );
+
+    const runtime = new TaskLedgerRuntime("project:test", "test", eventLog, clock, ids);
+    await runtime.create(entry({ id: "task:new" }));
+    const events = await eventLog.readAll();
+
+    expect(events.at(-1)).toMatchObject({ baseRevision: 1, resultRevision: 2 });
+    expect((await runtime.load()).entries["task:existing"]).toBeDefined();
+  });
+
+  it("rejects tampered transition payload identity and status during replay", async () => {
+    const created = entry({ id: "task:replay" });
+    const running = transitionTask(created, "running", []);
+    const base = {
+      eventId: "event:created",
+      type: "task.created" as const,
+      occurredAt: clock.now(),
+      actor: "test",
+      projectId: "project:test",
+      baseRevision: 0,
+      resultRevision: 1,
+      payload: { kind: "created" as const, taskId: created.id, entry: created },
+    };
+    const transition = {
+      eventId: "event:transition",
+      type: "task.transitioned" as const,
+      occurredAt: clock.now(),
+      actor: "test",
+      projectId: "project:test",
+      baseRevision: 1,
+      resultRevision: 2,
+      payload: {
+        kind: "transitioned" as const,
+        taskId: "task:other",
+        from: "pending" as const,
+        to: "completed" as const,
+        entry: running,
+      },
+    };
+
+    const createdEvent = createEvent(base);
+    expect(() => replayTaskLedger([createdEvent, createEvent(transition)])).toThrow(GraphCoreError);
+    expect(() =>
+      replayTaskLedger([
+        createdEvent,
+        createEvent({
+          ...transition,
+          eventId: "event:transition-status",
+          payload: {
+            ...transition.payload,
+            taskId: created.id,
+            to: "completed",
+          },
+        }),
+      ]),
+    ).toThrow(GraphCoreError);
   });
 });

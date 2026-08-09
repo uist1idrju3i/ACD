@@ -6,6 +6,7 @@ import {
   CheckpointRuntime,
   ResumeOrchestrator,
   TaskLedgerRuntime,
+  replayTaskLedger,
   createEvent,
   type Checkpoint,
   type CheckpointContext,
@@ -15,6 +16,7 @@ import {
   buildStopRecord,
   checkBudget,
   createBudgetUsageSnapshot,
+  assertExternalProcessUpperBound,
   detectNoProgress,
   type ProgressObservation,
 } from "../packages/graph-core/src/index.js";
@@ -30,6 +32,7 @@ import type { Budget } from "../packages/schema/src/generated/design-graph.js";
 import {
   createPhase1Context,
   deserializeStageContext,
+  failureResult,
   phase1Stages,
   setToolObservationContext,
   setToolObservationHook,
@@ -98,17 +101,31 @@ type RunManifest = {
 };
 
 const stageExternalProcessUpperBounds: Readonly<Record<string, number>> = {
+  "gate:fixture-reference": 0,
+  "gate:semantic-input": 0,
+  "gate:bom": 0,
+  "gate:placement": 0,
+  "gate:canonical-netlist": 0,
+  "gate:electrical-lint": 0,
+  "gate:design-rationale": 0,
+  "gate:test-plan": 0,
+  "gate:repair-loop": 0,
   "gate:spice": 3,
+  "gate:fab-feedback": 0,
+  "gate:knowledge-lifecycle": 0,
   "gate:kicad-projection": 2,
+  "gate:kicad-readback": 0,
   "gate:erc": 1,
   "gate:routing": 3,
   "gate:drc": 1,
   "gate:manufacturing": 2,
   "gate:library-patch": 3,
+  "gate:knowledge-application": 0,
+  "gate:pre-order": 0,
 };
 
-const externalProcessUpperBoundForStage = (stageId: string): number =>
-  stageExternalProcessUpperBounds[stageId] ?? 0;
+const externalProcessUpperBoundForStage = (stageId: string): number | undefined =>
+  stageExternalProcessUpperBounds[stageId];
 
 type BudgetWatchdogEvidence = {
   runner: "phase4-resume";
@@ -116,7 +133,7 @@ type BudgetWatchdogEvidence = {
     string,
     {
       measured: number;
-      upperBound: number;
+      upperBound: number | null;
       upperBoundAtLeastMeasured: boolean;
     }
   >;
@@ -129,7 +146,7 @@ type BudgetWatchdogEvidence = {
     stopRecord: ReturnType<typeof buildStopRecord>;
     nextStageId: string;
     nextStageStarted: boolean;
-    nextStageUpperBound: { externalProcessExecutions: number; elapsedSeconds: number };
+    nextStageUpperBound: { externalProcessExecutions?: number; elapsedSeconds: number };
     observationCounts: {
       externalProcessExecutions: number;
       logicalToolRequests: number;
@@ -277,6 +294,7 @@ const artifactHashes = async (runRoot: string): Promise<string[]> => {
 
 const appendVerification = async (log: FileEventLog, stage: StageDefinition): Promise<void> => {
   const events = await log.readAll();
+  const revision = events.at(-1)?.resultRevision ?? 0;
   const verificationResultId = `verification:${stage.id}`;
   if (events.some((event) => event.eventId === verificationResultId)) return;
   await log.append(
@@ -286,8 +304,8 @@ const appendVerification = async (log: FileEventLog, stage: StageDefinition): Pr
       occurredAt: "2026-01-01T00:00:00.000Z",
       actor: "phase4-resume-worker",
       projectId: "project:phase4-resume",
-      baseRevision: events.length,
-      resultRevision: events.length + 1,
+      baseRevision: revision,
+      resultRevision: revision + 1,
       payload: {
         verificationResultId,
         status: "passed",
@@ -303,15 +321,17 @@ const appendStopped = async (
   runCaseId: string,
 ): Promise<void> => {
   const events = await log.readAll();
+  const revision = events.at(-1)?.resultRevision ?? 0;
+  const stopIndex = events.filter((event) => event.type === "run.stopped").length;
   await log.append(
     createEvent({
-      eventId: `run.stopped:${runCaseId}`,
+      eventId: `run.stopped:${runCaseId}:${stopIndex}`,
       type: "run.stopped",
       occurredAt: "2026-01-01T00:00:00.000Z",
       actor: "phase4-resume-worker",
       projectId: "project:phase4-resume",
-      baseRevision: events.length,
-      resultRevision: events.length + 1,
+      baseRevision: revision,
+      resultRevision: revision,
       payload: { caseId: runCaseId, reason },
     }),
   );
@@ -380,7 +400,13 @@ const runWorker = async (runRoot: string): Promise<void> => {
         nextStageId: string;
         runBudget: Budget;
         taskBudget: TaskLedgerEntry["budget"];
-        operationEstimate: { elapsedSeconds: number; externalProcessExecutions: number };
+        operationEstimate: { elapsedSeconds: number; externalProcessExecutions?: number };
+      }
+    | undefined;
+  let firstBudgetCheck:
+    | {
+        runUsage: ReturnType<typeof createBudgetUsageSnapshot>;
+        taskUsage: ReturnType<typeof createBudgetUsageSnapshot>;
       }
     | undefined;
   const observations: ToolObservation[] = [];
@@ -390,6 +416,7 @@ const runWorker = async (runRoot: string): Promise<void> => {
     if (observation.kind === "logical-request") runLogicalToolRequests += 1;
     if (observation.kind === "registry-replay") runRegistryReplays += 1;
   });
+  let context: StageContext | undefined;
   try {
     const existingEvents = await log.readAll();
     const ledger = new TaskLedgerRuntime(
@@ -404,7 +431,18 @@ const runWorker = async (runRoot: string): Promise<void> => {
       ),
     );
     const state = await ledger.load();
-    let context: StageContext;
+    const persistedTaskUsage = Object.values(state.usage ?? {});
+    runExternalProcessExecutions = persistedTaskUsage.reduce(
+      (total, usage) => total + usage.externalProcessExecutions,
+      0,
+    );
+    runLogicalToolRequests = persistedTaskUsage.reduce(
+      (total, usage) => total + usage.logicalToolRequests,
+      0,
+    );
+    monotonicClock.advance(
+      persistedTaskUsage.reduce((total, usage) => total + usage.elapsedSeconds, 0),
+    );
     let skipped = new Set<string>();
     let selectedCheckpoint: Checkpoint | undefined;
     let mode: ExecutionRecord["mode"] = "baseline";
@@ -412,7 +450,10 @@ const runWorker = async (runRoot: string): Promise<void> => {
 
     if (resumeMode) {
       mode = "resume";
-      context = deserializeStageContext(await readFile(contextPath(runRoot), "utf8"));
+      context = deserializeStageContext(
+        await readFile(contextPath(runRoot), "utf8"),
+        designGraphValidator,
+      );
       const store = new FileCheckpointStore(checkpointPath(runRoot));
       const orchestrator = new ResumeOrchestrator(
         "project:phase4-resume",
@@ -498,6 +539,7 @@ const runWorker = async (runRoot: string): Promise<void> => {
         externalProcessExecutions: taskExternalBefore,
         logicalToolRequests: taskLogicalBefore,
       });
+      firstBudgetCheck ??= { runUsage, taskUsage };
       const nextStageUpperBound = externalProcessUpperBoundForStage(stage.id);
       const operationEstimate = {
         elapsedSeconds: 1,
@@ -546,9 +588,20 @@ const runWorker = async (runRoot: string): Promise<void> => {
         attempt: activeAttempt,
       });
       const monotonicStart = monotonicClock.now();
+      context.activeStage = {
+        id: stage.id,
+        gate: stage.gate,
+        name:
+          gateMatrix.gates.find((candidate) => candidate.order === stage.gate)?.name ?? stage.id,
+      };
       await stage.run(context);
       monotonicClock.advance(1);
       stageExternalProcessExecutions[stage.id] = runExternalProcessExecutions - runExternalBefore;
+      assertExternalProcessUpperBound(
+        stage.id,
+        stageExternalProcessExecutions[stage.id],
+        externalProcessUpperBoundForStage(stage.id),
+      );
       const taskUsageAfter = createBudgetUsageSnapshot({
         scope: "task",
         attempts: (await ledger.load()).entries[entry.id]?.attemptCount ?? entry.attemptCount,
@@ -742,6 +795,7 @@ const runWorker = async (runRoot: string): Promise<void> => {
             }, {}),
           runBudget,
           nextStage: lastBudgetCheck ?? null,
+          firstBudgetCheck: firstBudgetCheck ?? null,
           noProgressStop: noProgressStop ?? null,
           stageExternalProcessExecutions,
           stageUpperBoundChecks: Object.fromEntries(
@@ -749,8 +803,10 @@ const runWorker = async (runRoot: string): Promise<void> => {
               stageId,
               {
                 measured,
-                upperBound: externalProcessUpperBoundForStage(stageId),
-                upperBoundAtLeastMeasured: externalProcessUpperBoundForStage(stageId) >= measured,
+                upperBound: externalProcessUpperBoundForStage(stageId) ?? null,
+                upperBoundAtLeastMeasured:
+                  externalProcessUpperBoundForStage(stageId) === undefined ||
+                  externalProcessUpperBoundForStage(stageId)! >= measured,
               },
             ]),
           ),
@@ -765,6 +821,8 @@ const runWorker = async (runRoot: string): Promise<void> => {
       )}\n`,
     );
   } catch (error) {
+    if (context !== undefined)
+      await writeResults(runRoot, [...context.results, failureResult(context, error)]);
     if (resumeMode)
       await appendStopped(
         log,
@@ -842,8 +900,13 @@ const runCase = async (id: string, interruption: string): Promise<Record<string,
   if (killed.signal !== "SIGKILL") throw new Error(`worker did not terminate with SIGKILL: ${id}`);
   await rm(`${eventPath(interruptedRoot)}.lock`, { force: true });
   await rm(`${checkpointPath(interruptedRoot)}.lock`, { force: true });
+  await rm(join(root, ".acd", "runs", activeToolRunId, "tool-invocations.jsonl.lock"), {
+    force: true,
+  });
   const interruptedLog = new FileEventLog(eventPath(interruptedRoot));
   await appendStopped(interruptedLog, "worker killed at configured stage boundary", id);
+  const interruptedEvents = await interruptedLog.readAll();
+  const interruptedLedger = replayTaskLedger(interruptedEvents);
   await interruptedLog.close();
   const resumed = await runChild([
     "--worker",
@@ -868,6 +931,12 @@ const runCase = async (id: string, interruption: string): Promise<Record<string,
   const resumedLog = new FileEventLog(eventPath(interruptedRoot));
   const resumedEvents = await resumedLog.readAll();
   await resumedLog.close();
+  const resumedRuntime = await readJson<{
+    firstBudgetCheck: {
+      runUsage: ReturnType<typeof createBudgetUsageSnapshot>;
+      taskUsage: ReturnType<typeof createBudgetUsageSnapshot>;
+    } | null;
+  }>(join(interruptedRoot, "budget-runtime.json"), { firstBudgetCheck: null });
   const baselineHashes = await artifactHashes(baselineRoot);
   const resumedHashes = await artifactHashes(interruptedRoot);
   const comparableBaseline = baselineEvents
@@ -885,6 +954,20 @@ const runCase = async (id: string, interruption: string): Promise<Record<string,
   const hashesEqual = canonicalize(baselineHashes) === canonicalize(resumedHashes);
   const gatesEqual = canonicalize(baselineRun.gateResults) === canonicalize(resumedRun.gateResults);
   const eventsEqual = canonicalize(comparableBaseline) === canonicalize(comparableResumed);
+  const durableUsage = Object.values(interruptedLedger.usage ?? {}).reduce(
+    (total, usage) => ({
+      elapsedSeconds: total.elapsedSeconds + usage.elapsedSeconds,
+      externalProcessExecutions: total.externalProcessExecutions + usage.externalProcessExecutions,
+      logicalToolRequests: total.logicalToolRequests + usage.logicalToolRequests,
+    }),
+    { elapsedSeconds: 0, externalProcessExecutions: 0, logicalToolRequests: 0 },
+  );
+  const firstBudgetCheckReconstructed =
+    resumedRuntime.firstBudgetCheck?.runUsage.elapsedSeconds === durableUsage.elapsedSeconds &&
+    resumedRuntime.firstBudgetCheck.runUsage.externalProcessExecutions ===
+      durableUsage.externalProcessExecutions &&
+    resumedRuntime.firstBudgetCheck.runUsage.logicalToolRequests ===
+      durableUsage.logicalToolRequests;
   return {
     interruptionStageId: interruption,
     resumedCheckpoint: resumedRun.selectedCheckpoint,
@@ -911,12 +994,16 @@ const runCase = async (id: string, interruption: string): Promise<Record<string,
     comparableBaselineEventCount: comparableBaseline.length,
     comparableResumedEventCount: comparableResumed.length,
     contextValidation: resumedRun.contextValidation,
+    firstBudgetCheckReconstructed,
     verification: {
-      passed: hashesEqual && gatesEqual && eventsEqual,
+      passed: hashesEqual && gatesEqual && eventsEqual && firstBudgetCheckReconstructed,
       failures: [
         ...(hashesEqual ? [] : ["artifact hash mismatch"]),
         ...(gatesEqual ? [] : ["gate result mismatch"]),
         ...(eventsEqual ? [] : ["event sequence mismatch"]),
+        ...(firstBudgetCheckReconstructed
+          ? []
+          : ["resumed first budget check did not reconstruct durable usage"]),
       ],
     },
   };
@@ -950,19 +1037,19 @@ const buildBudgetWatchdogEvidence = async (): Promise<BudgetWatchdogEvidence> =>
         toolCalls: number;
       };
       taskBudget: TaskLedgerEntry["budget"];
-      operationEstimate: { elapsedSeconds: number; externalProcessExecutions: number };
+      operationEstimate: { elapsedSeconds: number; externalProcessExecutions?: number };
     } | null;
     stageExternalProcessExecutions: Record<string, number>;
     stageUpperBoundChecks: Record<
       string,
-      { measured: number; upperBound: number; upperBoundAtLeastMeasured: boolean }
+      { measured: number; upperBound: number | null; upperBoundAtLeastMeasured: boolean }
     >;
     observationCounts: BudgetWatchdogEvidence["injectedNoProgress"]["observationCounts"];
   }>(join(injectedRoot, "budget-runtime.json"), {} as never);
   const normalRuntime = await readJson<{
     stageUpperBoundChecks: Record<
       string,
-      { measured: number; upperBound: number; upperBoundAtLeastMeasured: boolean }
+      { measured: number; upperBound: number | null; upperBoundAtLeastMeasured: boolean }
     >;
   }>(join(artifactRoot, "after-drc", "baseline", "budget-runtime.json"), {
     stageUpperBoundChecks: {},
@@ -1008,6 +1095,7 @@ const buildBudgetWatchdogEvidence = async (): Promise<BudgetWatchdogEvidence> =>
   }>(join(noProgressRoot, "budget-runtime.json"), {} as never);
   const noProgressContext = deserializeStageContext(
     await readFile(contextPath(noProgressRoot), "utf8"),
+    designGraphValidator,
   );
   const noProgressObservations = noProgressContext.watchdogProgressObservations ?? [];
   const noProgressStop = noProgressRuntime.noProgressStop;

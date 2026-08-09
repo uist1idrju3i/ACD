@@ -43,6 +43,7 @@ import {
   runRepairLoop,
   transitionKnowledgeItem,
   InMemoryEventLog,
+  GraphCoreError,
   unresolvedFindings,
   unresolvedRationaleFindings,
   unresolvedTestPlanFindings,
@@ -116,6 +117,8 @@ export type StageContext = {
   watchdogInjection?: boolean;
   watchdogAttemptInjection?: boolean;
   watchdogProgressObservations?: ProgressObservation[];
+  designGraphValidator: Awaited<ReturnType<typeof loadSchemaValidator>>;
+  activeStage?: { id: string; gate: number; name: string };
 };
 export type StageDefinition = {
   id: string;
@@ -123,7 +126,6 @@ export type StageDefinition = {
   run: (context: StageContext) => Promise<void>;
 };
 const root = resolve(import.meta.dirname, "..");
-let graphValidator: Awaited<ReturnType<typeof loadSchemaValidator>> | undefined;
 const image =
   process.env.KICAD_IMAGE ??
   "kicad/kicad@sha256:182c8005cb775a2c448a4c18681d489f1ff472a761885eba3e08b07e3c0564de";
@@ -619,11 +621,11 @@ const stage_knowledge_lifecycle = async (context: StageContext): Promise<void> =
       project: { id: context.fixture.fixtureId, type: "Project", revision: 0 },
       entities: [knowledgeItem],
     };
-    if (!graphValidator)
-      throw new Error("schema-invalid: design graph validator is not configured");
-    if (!graphValidator(graph)) {
+    if (!context.designGraphValidator(graph)) {
       throw new Error(
-        `schema-invalid: knowledge item ${knowledgeItem.id}: ${(graphValidator.errors ?? [])
+        `schema-invalid: knowledge item ${knowledgeItem.id}: ${(
+          context.designGraphValidator.errors ?? []
+        )
           .map((error) => `${error.instancePath || "/"} ${error.message ?? "invalid"}`)
           .join("; ")}`,
       );
@@ -873,6 +875,7 @@ const stage_routing = async (context: StageContext): Promise<void> => {
     renderGoldenBoard(context.fixture, routeModel),
     "utf8",
   );
+  await requireProjectFile(join(context.projectRoot, "design.kicad_prl"));
   await copyFile(
     join(context.projectRoot, "design.kicad_pro"),
     join(context.projectRoot, "routed.kicad_pro"),
@@ -1391,7 +1394,6 @@ export const createPhase1Context = (input: {
   gateMatrix: Awaited<ReturnType<typeof loadGateMatrix>>;
   designGraphValidator: Awaited<ReturnType<typeof loadSchemaValidator>>;
 }): StageContext => {
-  graphValidator = input.designGraphValidator;
   return {
     fixture: input.fixture,
     artifactRoot: input.artifactRoot,
@@ -1401,6 +1403,7 @@ export const createPhase1Context = (input: {
     results: [],
     knowledgeEvents: [],
     knowledgeStates: [],
+    designGraphValidator: input.designGraphValidator,
   };
 };
 
@@ -1418,7 +1421,10 @@ export const stageContextHash = (context: StageContext): string =>
 const isObject = (value: unknown): value is { [key: string]: unknown } =>
   typeof value === "object" && value !== null && !Array.isArray(value);
 
-export const deserializeStageContext = (serialized: string): StageContext => {
+export const deserializeStageContext = (
+  serialized: string,
+  designGraphValidator: Awaited<ReturnType<typeof loadSchemaValidator>>,
+): StageContext => {
   let value: unknown;
   try {
     value = JSON.parse(serialized);
@@ -1489,9 +1495,42 @@ export const deserializeStageContext = (serialized: string): StageContext => {
   if (value.knowledgeEvents !== undefined && !Array.isArray(value.knowledgeEvents)) {
     throw new Error("stale-result: stage context knowledgeEvents are invalid");
   }
-  return value as unknown as StageContext;
+  return { ...(value as unknown as StageContext), designGraphValidator };
 };
 
 export const runPhase1Stages = async (context: StageContext): Promise<void> => {
-  for (const stage of phase1Stages) await stage.run(context);
+  for (const stage of phase1Stages) {
+    const gate = context.gateMatrix.gates.find((candidate) => candidate.order === stage.gate);
+    context.activeStage = {
+      id: stage.id,
+      gate: stage.gate,
+      name: gate?.name ?? stage.id,
+    };
+    await stage.run(context);
+  }
+};
+
+export const failureResult = (context: StageContext, error: unknown): Result => ({
+  gate: context.activeStage?.gate ?? context.results.at(-1)?.gate ?? 1,
+  name: context.activeStage?.name ?? context.results.at(-1)?.name ?? "golden",
+  status: "failed",
+  reason: error instanceof Error ? error.message : String(error),
+});
+
+export const requireProjectFile = async (path: string): Promise<void> => {
+  try {
+    await readFile(path);
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code === "ENOENT") {
+      throw new GraphCoreError(
+        "reopen-failure",
+        `required KiCad sidecar is missing: ${path}`,
+        "error",
+        {
+          path,
+        },
+      );
+    }
+    throw error;
+  }
 };

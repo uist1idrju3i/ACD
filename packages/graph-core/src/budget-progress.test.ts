@@ -3,6 +3,7 @@ import {
   checkBudget,
   createBudgetUsageSnapshot,
   elapsedSecondsBetween,
+  assertExternalProcessUpperBound,
   type MonotonicClockPort,
 } from "./budget.js";
 import { detectNoProgress, type ProgressObservation } from "./progress.js";
@@ -45,6 +46,20 @@ describe("budget and watchdog core contracts", () => {
     const usage = createBudgetUsageSnapshot({ scope: "run" });
     expect(usage.tokens).toEqual({ status: "unknown" });
     expect(usage.money).toEqual({ status: "unknown" });
+    expect(checkBudget({ scope: "execution", tokens: 100 }, usage, {}).status).toBe(
+      "unknown-impact",
+    );
+    expect(
+      checkBudget({ scope: "total-order-cost", amount: 10, currency: "USD" }, usage, {}).status,
+    ).toBe("unknown-impact");
+  });
+
+  it("stops when measured external process usage exceeds its stage upper bound", () => {
+    expect(() => assertExternalProcessUpperBound("gate:spice", 4, 3)).toThrow(
+      "measured external process count exceeded upper bound",
+    );
+    expect(() => assertExternalProcessUpperBound("gate:fixture-reference", 0, 0)).not.toThrow();
+    expect(() => assertExternalProcessUpperBound("gate:unlisted", 4, undefined)).not.toThrow();
   });
 
   const observation = (overrides: Partial<ProgressObservation> = {}): ProgressObservation => ({
