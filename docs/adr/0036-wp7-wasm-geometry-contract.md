@@ -21,6 +21,9 @@ TS側でmmをnm（1mm = 1,000,000nm）へ一度だけ量子化する。量子化
 `Math.round`に固定し、placementの回転もこの段階で適用する。Rust/WASMとnative TSは
 同じ整数DTOを入力し、距離比較は平方距離と整数演算だけで行う。
 
+rect padの寸法はpadローカル座標系で四隅を構成し、placementの回転を適用してから
+一度だけ量子化する。回転後のmask開口については下記のAABB近似を適用する。
+
 findingsはstable ID、rule ID、対象ID、測定nm値、閾値nm値を含め、ID順に正規化する。
 nativeとWASMの正規化結果がbyte一致しない場合は`verification-failed`として停止する。
 nativeへfallbackできるのはWASM moduleが利用不能な場合だけであり、その理由をEvidence
@@ -52,6 +55,9 @@ unknown reason、finding count、entity index、測定nm、閾値nmからなる�
 誤差として扱わない。
 入力・出力の長さ、magic、index、status、unknown時のfinding欠如を検証し、超過や破損は
 明示的な`verification-failed`停止とする。
+
+入力bufferと出力bufferは固定アドレスに依存せず、moduleがexportする`__heap_base`から
+実行時に導出する。`__heap_base`が欠落または不正なmoduleはABI不一致として停止する。
 
 WASM moduleが利用不能な場合だけnativeへ決定論的にfallbackする。Evidenceにはengine、
 理由、module version、build digest、toolchain versionを記録する。`.wasm`はcommitせず、

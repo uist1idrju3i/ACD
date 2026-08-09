@@ -67,13 +67,19 @@ const rotate = (point: PointMm, xMm: number, yMm: number, rotationDeg: number): 
   };
 };
 
-const rectangle = (xMm: number, yMm: number, widthMm: number, heightMm: number): NmPolygon => ({
+const rectangle = (
+  xMm: number,
+  yMm: number,
+  widthMm: number,
+  heightMm: number,
+  rotationDeg: number,
+): NmPolygon => ({
   points: [
-    quantizePoint({ xMm: xMm - widthMm / 2, yMm: yMm - heightMm / 2 }),
-    quantizePoint({ xMm: xMm + widthMm / 2, yMm: yMm - heightMm / 2 }),
-    quantizePoint({ xMm: xMm + widthMm / 2, yMm: yMm + heightMm / 2 }),
-    quantizePoint({ xMm: xMm - widthMm / 2, yMm: yMm + heightMm / 2 }),
-  ],
+    { xMm: -widthMm / 2, yMm: -heightMm / 2 },
+    { xMm: widthMm / 2, yMm: -heightMm / 2 },
+    { xMm: widthMm / 2, yMm: heightMm / 2 },
+    { xMm: -widthMm / 2, yMm: heightMm / 2 },
+  ].map((point) => quantizePoint(rotate(point, xMm, yMm, rotationDeg))),
 });
 
 export const quantizeBoardGeometry = (
@@ -122,7 +128,7 @@ export const quantizeBoardGeometry = (
                 quantizePoint(rotate(point, origin.xMm, origin.yMm, placement.rotationDeg)),
               ),
             }
-          : rectangle(origin.xMm, origin.yMm, pad.widthMm, pad.heightMm);
+          : rectangle(origin.xMm, origin.yMm, pad.widthMm, pad.heightMm, placement.rotationDeg);
       pads.push({
         id: `pad:${component.id}:${pad.number}`,
         ...(placement.layer ? { layer: placement.layer } : {}),
@@ -253,14 +259,18 @@ const result = (
   const thresholdSquared = BigInt(threshold) * BigInt(threshold);
   const findings = pairs
     .filter((pair) => pair.measured < thresholdSquared)
-    .map((pair) => ({
-      id: `finding:${pair.findingRuleId ?? ruleId}:${pair.ids.join(":")}`,
-      ruleId: pair.findingRuleId ?? ruleId,
-      status: "violation" as const,
-      subjectIds: [...pair.ids].sort(),
-      measuredNm: integerSqrt(pair.measured),
-      thresholdNm: threshold,
-    }))
+    .map((pair) => {
+      const subjectIds = [...pair.ids].sort();
+      const canonicalRuleId = pair.findingRuleId ?? ruleId;
+      return {
+        id: `finding:${canonicalRuleId}:${subjectIds.join(":")}`,
+        ruleId: canonicalRuleId,
+        status: "violation" as const,
+        subjectIds,
+        measuredNm: integerSqrt(pair.measured),
+        thresholdNm: threshold,
+      };
+    })
     .sort((left, right) => left.id.localeCompare(right.id));
   return { status: findings.length === 0 ? "passed" : "failed", findings };
 };
@@ -268,10 +278,10 @@ const result = (
 const integerSqrt = (value: bigint): number => {
   if (value < 1n) return 0;
   let low = 1n;
-  let high = value;
+  let high = BigInt(Number.MAX_SAFE_INTEGER);
   while (low <= high) {
     const middle = (low + high) / 2n;
-    if (middle * middle <= value) low = middle + 1n;
+    if (middle <= value / middle) low = middle + 1n;
     else high = middle - 1n;
   }
   return Number(high);

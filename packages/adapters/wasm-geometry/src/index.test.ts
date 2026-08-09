@@ -50,6 +50,10 @@ describe("WASM geometry boundary", () => {
       buildDigest: `sha256:${createHash("sha256").update(wasmBytes).digest("hex")}`,
       toolchainVersion: "rustc 1.97.1",
     });
+    const exportNames = WebAssembly.Module.exports(new WebAssembly.Module(wasmBytes)).map(
+      (entry) => entry.name,
+    );
+    expect(exportNames).toContain("__heap_base");
     const canonical = () =>
       fixture.cases.map(({ input: candidate }) => ({
         native: runGeometryChecks(candidate),
@@ -79,6 +83,10 @@ describe("WASM geometry boundary", () => {
       runGeometryChecks(fixture.cases.find(({ id }) => id === "canonical-data-missing")!.input)
         .courtyardOverlap.status,
     ).toBe("unknown");
+    const unsorted = fixture.cases.find(({ id }) => id === "pad-clearance-unsorted-subjects")!;
+    expect(runGeometryChecks(unsorted.input).padClearance.findings[0]?.id).toBe(
+      "finding:pad-clearance:pad:a:1:pad:z:1",
+    );
   });
 
   it("falls back to native with explicit provenance when WASM is unavailable", () => {

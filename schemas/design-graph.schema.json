@@ -519,7 +519,13 @@
                               "items": { "$ref": "#/$defs/pointMm" }
                             }
                           },
-                          "additionalProperties": false
+                          "additionalProperties": false,
+                          "allOf": [
+                            {
+                              "if": { "properties": { "kind": { "const": "polygon" } } },
+                              "then": { "required": ["points"] }
+                            }
+                          ]
                         },
                         "maskExpansionMm": { "type": "number", "minimum": 0 }
                       },

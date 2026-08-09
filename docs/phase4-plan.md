@@ -125,7 +125,8 @@ JSONL耐久性の設計判断は、AcceptedのADR-0024〜0031に記録済みで�
 
 ### WP3：中断・再開のgolden task（README完了条件の測定）
 
-**状態：未着手。**
+**状態：実装済み。** 幾何系3検査（pad間クリアランス、mask sliver、courtyard重なり）
+のnative/WASM parity、整数固定小数点入力、WASM ABI、CIビルドを実装済み。
 
 **作業**
 

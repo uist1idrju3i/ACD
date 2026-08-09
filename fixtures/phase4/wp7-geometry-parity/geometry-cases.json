@@ -692,6 +692,43 @@
           "minimumCourtyardClearanceNm": 1
         }
       }
+    },
+    {
+      "id": "pad-clearance-unsorted-subjects",
+      "input": {
+        "pads": [
+          {
+            "id": "pad:z:1",
+            "polygon": {
+              "points": [
+                { "xNm": 0, "yNm": 0 },
+                { "xNm": 1000, "yNm": 0 },
+                { "xNm": 1000, "yNm": 1000 },
+                { "xNm": 0, "yNm": 1000 }
+              ]
+            },
+            "netId": "net:z",
+            "layer": "F.Cu"
+          },
+          {
+            "id": "pad:a:1",
+            "polygon": {
+              "points": [
+                { "xNm": 100, "yNm": 0 },
+                { "xNm": 1100, "yNm": 0 },
+                { "xNm": 1100, "yNm": 1000 },
+                { "xNm": 100, "yNm": 1000 }
+              ]
+            },
+            "netId": "net:a",
+            "layer": "F.Cu"
+          }
+        ],
+        "courtyards": [],
+        "thresholds": {
+          "minimumCopperClearanceNm": 1001
+        }
+      }
     }
   ]
 }

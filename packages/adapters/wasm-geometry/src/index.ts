@@ -16,7 +16,6 @@ const FAILED = 2n;
 const UNAVAILABLE_THRESHOLD = -1n;
 const UNKNOWN_CANONICAL_DATA = 1n;
 const UNKNOWN_CONNECTIVITY = 2n;
-const INPUT_OFFSET = 65_536;
 const OUTPUT_CAPACITY = 16 * 1024 * 1024;
 
 export type GeometryEngineProvenance = {
@@ -41,6 +40,7 @@ export type WasmGeometryModule = {
 
 type WasmExports = {
   memory: WebAssembly.Memory;
+  __heap_base: WebAssembly.Global | number;
   acd_geometry_run: (
     inputPtr: number,
     inputLength: number,
@@ -259,21 +259,33 @@ const instantiateModule = (
 ): Promise<WasmGeometryModule> =>
   WebAssembly.instantiate(bytes, {}).then(({ instance }) => {
     const exports = instance.exports as unknown as Partial<WasmExports>;
-    if (!exports.memory || typeof exports.acd_geometry_run !== "function") {
+    if (
+      !exports.memory ||
+      typeof exports.acd_geometry_run !== "function" ||
+      exports.__heap_base === undefined
+    ) {
       throw new GraphCoreError("verification-failed", "WASM geometry ABI exports are incomplete");
+    }
+    const heapBase =
+      typeof exports.__heap_base === "number"
+        ? exports.__heap_base
+        : Number(exports.__heap_base.value);
+    if (!Number.isSafeInteger(heapBase) || heapBase <= 0) {
+      throw new GraphCoreError("verification-failed", "WASM geometry ABI heap base is invalid");
     }
     const run = (input: GeometryCheckInput): GeometryCheckResults => {
       const encoded = encodeInput(input);
-      const outputOffset = INPUT_OFFSET + encoded.byteLength;
+      const inputOffset = heapBase;
+      const outputOffset = inputOffset + encoded.byteLength;
       const requiredBytes = outputOffset + OUTPUT_CAPACITY;
       const pageSize = 64 * 1024;
       const requiredPages = Math.ceil(requiredBytes / pageSize);
       if (exports.memory!.buffer.byteLength < requiredBytes) {
         exports.memory!.grow(requiredPages - exports.memory!.buffer.byteLength / pageSize);
       }
-      new Uint8Array(exports.memory!.buffer, INPUT_OFFSET, encoded.byteLength).set(encoded);
+      new Uint8Array(exports.memory!.buffer, inputOffset, encoded.byteLength).set(encoded);
       const outputLength = exports.acd_geometry_run!(
-        INPUT_OFFSET,
+        inputOffset,
         encoded.byteLength,
         outputOffset,
         OUTPUT_CAPACITY,

@@ -157,10 +157,10 @@ fn integer_sqrt(value: i128) -> i64 {
         return 0;
     }
     let mut low = 1_i128;
-    let mut high = value;
+    let mut high = i128::from(i64::MAX);
     while low <= high {
-        let middle = (low + high) / 2;
-        if middle * middle <= value {
+        let middle = low + (high - low) / 2;
+        if middle <= value / middle {
             low = middle + 1;
         } else {
             high = middle - 1;
@@ -168,6 +168,9 @@ fn integer_sqrt(value: i128) -> i64 {
     }
     high as i64
 }
+
+#[no_mangle]
+pub static __heap_base: u8 = 0;
 
 fn expand(polygon: &Polygon, expansion: i64) -> Polygon {
     let left = polygon.points.iter().map(|point| point.x).min().unwrap() - expansion;

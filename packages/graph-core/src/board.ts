@@ -163,22 +163,21 @@ const readFootprint = (entity: Entity): BoardFootprint => {
     const source = record(pad, where);
     const shapeValue = source["shape"];
     const shape =
-      shapeValue && typeof shapeValue === "object" && !Array.isArray(shapeValue)
-        ? (() => {
-            const shapeRecord = shapeValue as Record<string, unknown>;
+      shapeValue === undefined
+        ? undefined
+        : (() => {
+            const shapeRecord = record(shapeValue, `${where}.shape`);
             const kind = shapeRecord["kind"];
             if (kind === "rect") return { kind: "rect" as const };
-            if (kind !== "polygon" || !Array.isArray(shapeRecord["points"])) {
-              return undefined;
-            }
+            if (kind !== "polygon") return invalid(`${where}.shape.kind is invalid`);
+            const points = list(shapeRecord["points"], `${where}.shape.points`);
             return {
               kind: "polygon" as const,
-              points: shapeRecord["points"].map((pointValue, pointIndex) =>
+              points: points.map((pointValue, pointIndex) =>
                 point(pointValue, `${where}.shape.points[${pointIndex}]`),
               ),
             };
-          })()
-        : undefined;
+          })();
     const maskExpansionMm =
       source["maskExpansionMm"] === undefined
         ? undefined
@@ -196,18 +195,17 @@ const readFootprint = (entity: Entity): BoardFootprint => {
   if (pads.length === 0) invalid(`${entity.id} must define at least one pad`);
   const courtyardValue = attributes["courtyard"];
   const courtyard =
-    courtyardValue && typeof courtyardValue === "object" && !Array.isArray(courtyardValue)
-      ? (() => {
-          const value = courtyardValue as Record<string, unknown>;
-          return Array.isArray(value["points"])
-            ? {
-                points: value["points"].map((pointValue, pointIndex) =>
-                  point(pointValue, `${entity.id}.attributes.courtyard.points[${pointIndex}]`),
-                ),
-              }
-            : undefined;
-        })()
-      : undefined;
+    courtyardValue === undefined
+      ? undefined
+      : (() => {
+          const value = record(courtyardValue, `${entity.id}.attributes.courtyard`);
+          return {
+            points: list(value["points"], `${entity.id}.attributes.courtyard.points`).map(
+              (pointValue, pointIndex) =>
+                point(pointValue, `${entity.id}.attributes.courtyard.points[${pointIndex}]`),
+            ),
+          };
+        })();
   return {
     id: entity.id,
     libraryId: text(attributes["libraryId"], `${entity.id}.attributes.libraryId`),
