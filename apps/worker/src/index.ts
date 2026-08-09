@@ -139,13 +139,15 @@ const collectEvidenceReferences = (
   return [...references].sort();
 };
 
-const readState = async (runRoot: string, log: FileEventLog): Promise<JsonObject> => {
-  const events = await log.readAll();
-  const ledger = replayTaskLedger(events);
-  const run = await readJson(join(runRoot, "run.json"));
-  const gates = await readJson(join(runRoot, "gate-results.json"));
-  const checkpoints = await readJsonLines(join(runRoot, "checkpoints.jsonl"));
-  const stopRecord = await readJson(join(runRoot, "stop-record.json"));
+type VerificationEvent = {
+  type?: unknown;
+  payload?: unknown;
+};
+
+export const attachVerificationResultIds = (
+  gates: unknown,
+  events: readonly VerificationEvent[],
+): unknown => {
   const verificationIds = new Map(
     events.flatMap((event) => {
       if (event.type !== "verification.completed") return [];
@@ -157,7 +159,7 @@ const readState = async (runRoot: string, log: FileEventLog): Promise<JsonObject
         : [];
     }),
   );
-  const gateResults = Array.isArray(gates)
+  return Array.isArray(gates)
     ? gates.map((gate) => {
         if (!gate || typeof gate !== "object" || Array.isArray(gate)) return gate;
         const value = gate as { gate?: unknown; verificationResultId?: unknown };
@@ -166,27 +168,22 @@ const readState = async (runRoot: string, log: FileEventLog): Promise<JsonObject
           ? { ...value, verificationResultId: id }
           : gate;
       })
-    : (gates ?? []);
-  const checkpointVerificationIds = checkpoints.flatMap((checkpoint) => {
-    if (!checkpoint || typeof checkpoint !== "object" || Array.isArray(checkpoint)) return [];
-    const ids = (checkpoint as { verificationResultIds?: unknown }).verificationResultIds;
-    return Array.isArray(ids) ? ids.filter((id): id is string => typeof id === "string") : [];
-  });
-  const gateResultsWithReferences =
-    Array.isArray(gateResults) && gateResults.length === checkpointVerificationIds.length
-      ? gateResults.map((gate, index) => {
-          if (!gate || typeof gate !== "object" || Array.isArray(gate)) return gate;
-          const value = gate as { verificationResultId?: unknown };
-          return value.verificationResultId === undefined
-            ? { ...gate, verificationResultId: checkpointVerificationIds[index] }
-            : gate;
-        })
-      : gateResults;
+    : gates;
+};
+
+const readState = async (runRoot: string, log: FileEventLog): Promise<JsonObject> => {
+  const events = await log.readAll();
+  const ledger = replayTaskLedger(events);
+  const run = await readJson(join(runRoot, "run.json"));
+  const gates = await readJson(join(runRoot, "gate-results.json"));
+  const checkpoints = await readJsonLines(join(runRoot, "checkpoints.jsonl"));
+  const stopRecord = await readJson(join(runRoot, "stop-record.json"));
+  const gateResults = attachVerificationResultIds(gates ?? [], events);
   return {
     revision: events.at(-1)?.resultRevision ?? 0,
     eventPosition: events.length,
     taskLedger: ledger,
-    gateResults: gateResultsWithReferences,
+    gateResults,
     stopRecord: stopRecord ?? null,
     checkpoints: checkpoints ?? [],
     evidenceIds: collectEvidenceReferences(events, gateResults, stopRecord, checkpoints ?? []),

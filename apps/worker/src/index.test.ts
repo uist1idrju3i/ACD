@@ -1,7 +1,7 @@
 import { readFile } from "node:fs/promises";
 import { join, resolve } from "node:path";
 import { describe, expect, it } from "vitest";
-import { createWorkerServer } from "./index.js";
+import { attachVerificationResultIds, createWorkerServer } from "./index.js";
 import type { DesignGraph } from "@acd/graph-core";
 
 const fixtureRoot = resolve(import.meta.dirname, "../../../fixtures/phase4/wp6-browser-run");
@@ -28,6 +28,29 @@ const withServer = async (run: (baseUrl: string) => Promise<void>): Promise<void
 };
 
 describe("worker read-only API", () => {
+  it("matches verification IDs by gate identity without positional fallback", () => {
+    const events = [
+      {
+        type: "verification.completed",
+        payload: { gate: "gate:b", verificationResultId: "verification:b" },
+      },
+      {
+        type: "verification.completed",
+        payload: { gate: "gate:a", verificationResultId: "verification:a" },
+      },
+    ];
+    expect(
+      attachVerificationResultIds(
+        [{ gate: "gate:a" }, { gate: "gate:b" }, { gate: "gate:missing" }],
+        events,
+      ),
+    ).toEqual([
+      { gate: "gate:a", verificationResultId: "verification:a" },
+      { gate: "gate:b", verificationResultId: "verification:b" },
+      { gate: "gate:missing" },
+    ]);
+  });
+
   it("replays from the requested cursor and prioritizes Last-Event-ID", async () => {
     await withServer(async (baseUrl) => {
       const fromOne = await fetch(`${baseUrl}/events?from=1`);
