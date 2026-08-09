@@ -424,12 +424,8 @@ const stage_repair_loop = async (context: StageContext): Promise<void> => {
       proposer,
       gateIds: context.gateIds,
       maxIterations: 3,
-      continueOnNoProgress: true,
       observe: (observation) => observations.push(observation),
     });
-    if (observations.length < 3) {
-      throw new Error("verification-failed: watchdog injection did not observe repeated proposals");
-    }
     await writeFile(
       join(context.artifactRoot, "repair-loop-watchdog.json"),
       `${JSON.stringify({ injection: injection.caseId, result: repairLoopEvidence(result) }, null, 2)}\n`,

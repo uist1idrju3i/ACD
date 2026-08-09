@@ -200,7 +200,6 @@ export const runRepairLoop = (input: {
   proposer: RepairProposer;
   gateIds: readonly string[];
   maxIterations?: number;
-  continueOnNoProgress?: boolean;
   observe?: (observation: ProgressObservation) => void;
 }): RepairLoopResult => {
   const maxIterations = input.maxIterations ?? 4;
@@ -305,7 +304,7 @@ export const runRepairLoop = (input: {
     if (unresolved.length === 0) {
       return { status: "repaired", iterations, fixture: current, appliedProposalIds };
     }
-    if (!advanced && !input.continueOnNoProgress) {
+    if (!advanced) {
       return {
         status: "not-repaired",
         iterations,

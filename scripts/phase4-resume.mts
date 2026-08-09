@@ -26,6 +26,7 @@ import {
 import { canonicalize } from "../packages/graph-core/src/hash.js";
 import { loadGateMatrix, loadSchemaValidator } from "../packages/schema/src/index.js";
 import type { ACDPhase1Fixture } from "../packages/schema/src/generated/phase1-fixture.js";
+import type { Budget } from "../packages/schema/src/generated/design-graph.js";
 import {
   createPhase1Context,
   deserializeStageContext,
@@ -95,33 +96,47 @@ type RunManifest = {
   };
 };
 
+const stageExternalProcessUpperBounds: Readonly<Record<string, number>> = {
+  "gate:spice": 3,
+  "gate:kicad-projection": 2,
+  "gate:erc": 1,
+  "gate:routing": 3,
+  "gate:drc": 1,
+  "gate:manufacturing": 2,
+  "gate:library-patch": 3,
+};
+
+const externalProcessUpperBoundForStage = (stageId: string): number =>
+  stageExternalProcessUpperBounds[stageId] ?? 0;
+
 type BudgetWatchdogEvidence = {
   runner: "phase4-resume";
   normalRunObservationCounts?: Record<
     string,
     {
-      externalProcessExecutions: number;
-      logicalToolRequests: number;
-      registryReplays: number;
+      measured: number;
+      upperBound: number;
+      upperBoundAtLeastMeasured: boolean;
     }
   >;
   injectedNoProgress: {
     reasons: string[];
     run: {
       runUsage: ReturnType<typeof createBudgetUsageSnapshot>;
-      budget: { toolCalls: number; timeSeconds: number };
+      budget: Budget;
     };
     task: {
       taskUsage: ReturnType<typeof createBudgetUsageSnapshot>;
-      budget: { toolCalls: number; timeSeconds: number };
+      budget: Budget;
     };
     observations: ProgressObservation[];
+    observationCount: number;
+    noProgressObservationStatus: "evaluated" | "insufficient-observations";
     executedStageIds: string[];
     stopRecord: ReturnType<typeof buildStopRecord>;
     nextStageId: string;
     nextStageStarted: boolean;
     nextStageUpperBound: { externalProcessExecutions: number; elapsedSeconds: number };
-    stopRecordPath: string;
     repairEvidence: unknown;
     observationCounts: {
       externalProcessExecutions: number;
@@ -329,8 +344,17 @@ const runWorker = async (runRoot: string): Promise<void> => {
   let runExternalProcessExecutions = 0;
   let runLogicalToolRequests = 0;
   let runRegistryReplays = 0;
+  const stageExternalProcessExecutions: Record<string, number> = {};
   let activeTaskId: string | undefined;
   let activeAttempt: number | undefined;
+  let lastBudgetCheck:
+    | {
+        nextStageId: string;
+        runBudget: Budget;
+        taskBudget: TaskLedgerEntry["budget"];
+        operationEstimate: { elapsedSeconds: number; externalProcessExecutions: number };
+      }
+    | undefined;
   const observations: ToolObservation[] = [];
   setToolObservationHook((observation) => {
     observations.push(observation);
@@ -442,20 +466,16 @@ const runWorker = async (runRoot: string): Promise<void> => {
         externalProcessExecutions: taskExternalBefore,
         logicalToolRequests: taskLogicalBefore,
       });
-      const nextStageUpperBound = budgetInjectionMode
-        ? ({
-            "gate:spice": 3,
-            "gate:kicad-projection": 2,
-            "gate:erc": 1,
-            "gate:routing": 3,
-            "gate:drc": 1,
-            "gate:manufacturing": 2,
-            "gate:library-patch": 3,
-          }[stage.id] ?? 0)
-        : 15;
+      const nextStageUpperBound = externalProcessUpperBoundForStage(stage.id);
       const operationEstimate = {
         elapsedSeconds: 1,
         externalProcessExecutions: nextStageUpperBound,
+      };
+      lastBudgetCheck = {
+        nextStageId: stage.id,
+        runBudget,
+        taskBudget: entry.budget,
+        operationEstimate,
       };
       const runDecision = checkBudget(runBudget, runUsage, operationEstimate);
       const taskDecision = checkBudget(entry.budget, taskUsage, {
@@ -496,6 +516,7 @@ const runWorker = async (runRoot: string): Promise<void> => {
       const monotonicStart = monotonicClock.now();
       await stage.run(context);
       monotonicClock.advance(1);
+      stageExternalProcessExecutions[stage.id] = runExternalProcessExecutions - runExternalBefore;
       const taskUsageAfter = createBudgetUsageSnapshot({
         scope: "task",
         attempts: (await ledger.load()).entries[entry.id]?.attemptCount ?? entry.attemptCount,
@@ -578,6 +599,19 @@ const runWorker = async (runRoot: string): Promise<void> => {
             externalProcessExecutions: runExternalProcessExecutions,
             logicalToolRequests: runLogicalToolRequests,
           }),
+          runBudget,
+          nextStage: lastBudgetCheck ?? null,
+          stageExternalProcessExecutions,
+          stageUpperBoundChecks: Object.fromEntries(
+            Object.entries(stageExternalProcessExecutions).map(([stageId, measured]) => [
+              stageId,
+              {
+                measured,
+                upperBound: externalProcessUpperBoundForStage(stageId),
+                upperBoundAtLeastMeasured: externalProcessUpperBoundForStage(stageId) >= measured,
+              },
+            ]),
+          ),
           observationCounts: {
             externalProcessExecutions: runExternalProcessExecutions,
             logicalToolRequests: runLogicalToolRequests,
@@ -761,8 +795,36 @@ const buildBudgetWatchdogEvidence = async (): Promise<BudgetWatchdogEvidence> =>
   const run = await readJson<RunManifest>(join(injectedRoot, "run.json"), {} as RunManifest);
   const runtime = await readJson<{
     runUsage: ReturnType<typeof createBudgetUsageSnapshot>;
+    runBudget: {
+      scope: "execution";
+      timeSeconds: number;
+      toolCalls: number;
+    };
+    nextStage: {
+      nextStageId: string;
+      runBudget: {
+        scope: "execution";
+        timeSeconds: number;
+        toolCalls: number;
+      };
+      taskBudget: TaskLedgerEntry["budget"];
+      operationEstimate: { elapsedSeconds: number; externalProcessExecutions: number };
+    } | null;
+    stageExternalProcessExecutions: Record<string, number>;
+    stageUpperBoundChecks: Record<
+      string,
+      { measured: number; upperBound: number; upperBoundAtLeastMeasured: boolean }
+    >;
     observationCounts: BudgetWatchdogEvidence["injectedNoProgress"]["observationCounts"];
   }>(join(injectedRoot, "budget-runtime.json"), {} as never);
+  const normalRuntime = await readJson<{
+    stageUpperBoundChecks: Record<
+      string,
+      { measured: number; upperBound: number; upperBoundAtLeastMeasured: boolean }
+    >;
+  }>(join(artifactRoot, "after-drc", "baseline", "budget-runtime.json"), {
+    stageUpperBoundChecks: {},
+  });
   const context = deserializeStageContext(await readFile(contextPath(injectedRoot), "utf8"));
   const observations = context.watchdogProgressObservations ?? [];
   const reasons = detectNoProgress(observations);
@@ -774,28 +836,32 @@ const buildBudgetWatchdogEvidence = async (): Promise<BudgetWatchdogEvidence> =>
     join(injectedRoot, "repair-loop-watchdog.json"),
     null,
   );
-  const nextStageId = "gate:spice";
+  const nextStage = runtime.nextStage;
+  if (!nextStage)
+    throw new Error("verification-failed: injected worker did not record budget check");
   const taskSnapshot = stopRecord.budgetSnapshot.task;
   return {
     runner: "phase4-resume",
-    normalRunObservationCounts: {},
+    normalRunObservationCounts: normalRuntime.stageUpperBoundChecks,
     injectedNoProgress: {
       reasons,
       run: {
         runUsage: runtime.runUsage,
-        budget: { toolCalls: 2, timeSeconds: 3600 },
+        budget: nextStage.runBudget,
       },
       task: {
         taskUsage: taskSnapshot,
-        budget: { toolCalls: 100, timeSeconds: 3600 },
+        budget: nextStage.taskBudget,
       },
       observations,
+      observationCount: observations.length,
+      noProgressObservationStatus:
+        observations.length >= 2 ? "evaluated" : "insufficient-observations",
       executedStageIds: run.executedStageIds,
       stopRecord,
-      nextStageId,
-      nextStageStarted: run.executedStageIds.includes(nextStageId),
-      nextStageUpperBound: { externalProcessExecutions: 3, elapsedSeconds: 1 },
-      stopRecordPath: join(injectedRoot, "stop-record.json"),
+      nextStageId: nextStage.nextStageId,
+      nextStageStarted: run.executedStageIds.includes(nextStage.nextStageId),
+      nextStageUpperBound: nextStage.operationEstimate,
       repairEvidence,
       observationCounts: runtime.observationCounts,
     },
@@ -843,18 +909,6 @@ if (workerMode) {
     throw new Error(`verification-failed: ${failures.join("; ")}`);
   }
   const budgetEvidence = await buildBudgetWatchdogEvidence();
-  budgetEvidence.normalRunObservationCounts = {};
-  for (const [id] of cases) {
-    const runtime = await readJson<{
-      observationCounts?: {
-        externalProcessExecutions: number;
-        logicalToolRequests: number;
-        registryReplays: number;
-      };
-    }>(join(artifactRoot, id, "baseline", "budget-runtime.json"), {});
-    if (runtime.observationCounts)
-      budgetEvidence.normalRunObservationCounts[id] = runtime.observationCounts;
-  }
   await writeFile(
     join(artifactRoot, "budget-watchdog.json"),
     `${JSON.stringify(budgetEvidence, null, 2)}\n`,

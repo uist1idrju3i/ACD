@@ -107,3 +107,4 @@ tool call上限は外部process startだけを数える。各操作の実行前�
 baseline/resumedで必然的に異なるruntime measurementのため、resumeの意味比較と
 comparable event countから除外し、`task.transitioned(kind=usage-updated)`として
 除外一覧へ明示する。raw event countは全event logの件数として別に保持する。
+repair loopは無進捗時に継続するoptionを持たず、jidoka停止までの観測列だけを保存する。

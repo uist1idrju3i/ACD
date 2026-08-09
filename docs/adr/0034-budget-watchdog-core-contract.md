@@ -17,8 +17,11 @@ Accepted（Step Aのコア契約とStep Bのrunner接続。Gate 25のstatus変�
    sleep、timerはadapter/workerに置く。既存の`ClockPort`と`CheckpointClock`の
    重複統合は今回行わない。
 5. 操作前にusageと見積りコストを加算して判定する。tool callの見積りは、
-   stageごとに実行し得る外部process数の保守的な上限（通常runでは全stageの
-   最大値15、注入runではstage固有の上限）を使い、時間はstage単位の注入値1秒
+   stageごとに実行し得る外部process数の保守的な上限を単一の表から取得し、
+   通常runと注入runで同じ表を使う。実測値は`gate:spice=3`、
+   `gate:kicad-projection=2`、`gate:erc=1`、`gate:routing=3`、`gate:drc=1`、
+   `gate:manufacturing=2`、`gate:library-patch=3`（合計15）であり、
+   いずれも対応stageの実測外部process数未満ではない。時間はstage単位の注入値1秒
    とする。必要な見積りがない場合は`unknown-impact`として実行せず停止する。
    上限到達または到達見込みは`budget-exceeded`とする。
    attempt上限の所有者はtask ledgerの`retryBudget`であり、`usage.attempts`は
@@ -43,6 +46,9 @@ Accepted（Step Aのコア契約とStep Bのrunner接続。Gate 25のstatus変�
     baselineとresumedで必然的に異なるため、resumeの意味比較対象から除外する。
     除外一覧には`task.transitioned(kind=usage-updated)`を明示する。raw event countは
     実event logの全件数を保持し、比較用の件数は別フィールドで除外後の集合を示す。
+11. repair loopのjidoka停止条件は常に有効とし、進捗がない場合に継続させる
+    core optionは持たない。`observe`で停止までに実測できた観測列だけを記録し、
+    閾値未満の場合は観測不足として扱う。
 
 ## 代替案と理由
 
