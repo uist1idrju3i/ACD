@@ -48,6 +48,7 @@ WP1〜WP7で実装した実行基盤、ブラウザ観測、幾何系WASM境界�
   fixtureとCIで同時に検証する必要がある。
 - Playwright Chromiumはbrowser jobで、worker process kill/resumeはphase4-resume jobで
   必須実行する。両者を同じ測定結果として扱わない。
+- runnerのcleanupは自分が生成するartifactだけを削除し、trackedなWP6 browser evidenceを保持する。
 
 ### WP7：geometry WASM parity
 

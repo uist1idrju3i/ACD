@@ -49,6 +49,16 @@ import { normalizedArtifact, rawSha256 } from "./golden-shared.mts";
 
 const root = resolve(import.meta.dirname, "..");
 const artifactRoot = join(root, "artifacts/phase4");
+const runnerArtifactPaths = [
+  "after-drc",
+  "after-knowledge-lifecycle",
+  "after-pre-order",
+  "budget-watchdog-injected",
+  "budget-watchdog-no-progress",
+  "resume.json",
+  "budget-watchdog.json",
+  "gate-results.json",
+] as const;
 const workerMode = process.argv.includes("--worker");
 const resumeMode = process.argv.includes("--resume");
 const budgetInjectionMode = process.argv.includes("--budget-injected");
@@ -1210,7 +1220,11 @@ if (workerMode) {
   if (!runRoot) throw new Error("worker root is required");
   await runWorker(runRoot);
 } else {
-  await rm(artifactRoot, { recursive: true, force: true });
+  await Promise.all(
+    runnerArtifactPaths.map((path) =>
+      rm(join(artifactRoot, path), { recursive: true, force: true }),
+    ),
+  );
   await mkdir(artifactRoot, { recursive: true });
   const cases = [
     ["after-drc", "gate:drc"],
