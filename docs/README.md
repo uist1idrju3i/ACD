@@ -44,6 +44,8 @@
     - [Phase 3振り返り](phase3-retrospective.md)：完了条件の実測結果、設計判断、Phase 4への課題
 14. [`phase4-plan.md`](phase4-plan.md)、[`agent-runtime.md`](agent-runtime.md)、
     [`architecture.md`](architecture.md) — Phase 4実行基盤、ブラウザUX、WASM境界の実装計画
+    - [Phase 4振り返り](phase4-retrospective.md)：WP1〜WP8の測定結果、教訓、残債
+    - [Phase 1〜4通しの振り返り](phase1-4-retrospective.md)：フェーズ横断の課題と計画見直し案
 15. [`error-taxonomy.md`](error-taxonomy.md) — エラー分類
 16. [`repo-structure.md`](repo-structure.md)、[`tool-contract.md`](tool-contract.md)、
     [`dependency-inventory.md`](dependency-inventory.md)、[`kicad-interop.md`](kicad-interop.md)、
