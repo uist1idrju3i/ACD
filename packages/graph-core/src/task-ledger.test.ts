@@ -195,7 +195,7 @@ describe("task ledger", () => {
     ).rejects.toThrow("event replay");
   });
 
-  it("rejects a corrupted worker-held snapshot used for gate reconstruction", async () => {
+  it("rejects a corrupted incremental projection used for gate reconstruction", async () => {
     const eventLog = new InMemoryEventLog();
     const runtime = new TaskLedgerRuntime("project:test", "test", eventLog, clock, ids);
     await runtime.create(entry());
@@ -209,6 +209,29 @@ describe("task ledger", () => {
     };
 
     await expect(runtime.assertConsistent(corrupted)).rejects.toThrow("event replay");
+  });
+
+  it("keeps incremental state consistent across interleaved non-ledger events", async () => {
+    const eventLog = new InMemoryEventLog();
+    const runtime = new TaskLedgerRuntime("project:test", "test", eventLog, clock, ids);
+    await runtime.create(entry());
+    await eventLog.append(
+      createEvent({
+        eventId: "event:stopped-between-ledger-mutations",
+        type: "run.stopped",
+        occurredAt: clock.now(),
+        actor: "test",
+        projectId: "project:test",
+        baseRevision: 1,
+        resultRevision: 1,
+        payload: { reasonCode: "test-interruption" },
+      }),
+    );
+
+    const held = await runtime.transition("task:main", "running");
+    expect(held.revision).toBe(2);
+    expect(held.entries["task:main"]?.status).toBe("running");
+    await expect(runtime.assertConsistent(held)).resolves.toBeUndefined();
   });
 
   it("loads existing events before the first mutation", async () => {

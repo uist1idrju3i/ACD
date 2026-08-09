@@ -216,52 +216,61 @@ const taskPayload = (event: EventEnvelope): TaskLedgerEventPayload => {
 
 export const replayTaskLedger = (events: readonly EventEnvelope[]): TaskLedgerState => {
   verifyReplay([...events]);
-  const state: TaskLedgerState = { revision: 0, entries: {}, usage: {} };
+  let state: TaskLedgerState = { revision: 0, entries: {}, usage: {} };
   for (const event of events) {
-    if (event.type !== "task.created" && event.type !== "task.transitioned") {
-      state.revision = event.resultRevision;
-      continue;
+    state = applyTaskLedgerEvent(state, event);
+  }
+  return state;
+};
+
+const applyTaskLedgerEvent = (
+  currentState: TaskLedgerState,
+  event: EventEnvelope,
+): TaskLedgerState => {
+  const state: TaskLedgerState = {
+    revision: event.resultRevision,
+    entries: structuredClone(currentState.entries),
+    usage: structuredClone(currentState.usage ?? {}),
+  };
+  if (event.type !== "task.created" && event.type !== "task.transitioned") return state;
+  const payload = taskPayload(event);
+  if (payload.kind === "usage-updated") {
+    if (!state.entries[payload.taskId] || payload.usage.scope !== "task") {
+      throw new GraphCoreError("event-replay-failure", `invalid task usage: ${payload.taskId}`);
     }
-    const payload = taskPayload(event);
-    if (payload.kind === "usage-updated") {
-      if (!state.entries[payload.taskId] || payload.usage.scope !== "task") {
-        throw new GraphCoreError("event-replay-failure", `invalid task usage: ${payload.taskId}`);
-      }
-      try {
-        validateBudgetUsageSnapshot(payload.usage);
-      } catch (error) {
-        throw new GraphCoreError(
-          "event-replay-failure",
-          `invalid task usage: ${payload.taskId}`,
-          "critical",
-          { cause: error instanceof Error ? error.message : String(error) },
-        );
-      }
-      state.usage![payload.taskId] = structuredClone(payload.usage);
-    } else if (payload.kind === "created") {
-      if (payload.taskId !== payload.entry.id || state.entries[payload.taskId]) {
-        throw new GraphCoreError("event-replay-failure", `duplicate task: ${payload.taskId}`);
-      }
-      validateTaskLedgerEntry(payload.entry);
-      state.entries[payload.entry.id] = structuredClone(payload.entry);
-    } else {
-      const current = state.entries[payload.taskId];
-      if (!current || current.status !== payload.from) {
-        throw new GraphCoreError(
-          "event-replay-failure",
-          `task transition does not match state: ${payload.taskId}`,
-        );
-      }
-      if (payload.taskId !== payload.entry.id || payload.entry.status !== payload.to) {
-        throw new GraphCoreError(
-          "event-replay-failure",
-          `task transition payload does not match target: ${payload.taskId}`,
-        );
-      }
-      validateTaskLedgerEntry(payload.entry);
-      state.entries[payload.taskId] = structuredClone(payload.entry);
+    try {
+      validateBudgetUsageSnapshot(payload.usage);
+    } catch (error) {
+      throw new GraphCoreError(
+        "event-replay-failure",
+        `invalid task usage: ${payload.taskId}`,
+        "critical",
+        { cause: error instanceof Error ? error.message : String(error) },
+      );
     }
-    state.revision = event.resultRevision;
+    state.usage![payload.taskId] = structuredClone(payload.usage);
+  } else if (payload.kind === "created") {
+    if (payload.taskId !== payload.entry.id || state.entries[payload.taskId]) {
+      throw new GraphCoreError("event-replay-failure", `duplicate task: ${payload.taskId}`);
+    }
+    validateTaskLedgerEntry(payload.entry);
+    state.entries[payload.entry.id] = structuredClone(payload.entry);
+  } else {
+    const current = state.entries[payload.taskId];
+    if (!current || current.status !== payload.from) {
+      throw new GraphCoreError(
+        "event-replay-failure",
+        `task transition does not match state: ${payload.taskId}`,
+      );
+    }
+    if (payload.taskId !== payload.entry.id || payload.entry.status !== payload.to) {
+      throw new GraphCoreError(
+        "event-replay-failure",
+        `task transition payload does not match target: ${payload.taskId}`,
+      );
+    }
+    validateTaskLedgerEntry(payload.entry);
+    state.entries[payload.taskId] = structuredClone(payload.entry);
   }
   return state;
 };
@@ -340,19 +349,21 @@ export class TaskLedgerRuntime {
     type: "task.created" | "task.transitioned",
     payload: TaskLedgerEventPayload,
   ) {
+    const events = await this.eventLog.readAll();
+    const revision = events.at(-1)?.resultRevision ?? 0;
     const event = createEvent({
       eventId: this.ids.next("event"),
       type,
       occurredAt: this.clock.now(),
       actor: this.actor,
       projectId: this.projectId,
-      baseRevision: this.state.revision,
-      resultRevision: this.state.revision + 1,
+      baseRevision: revision,
+      resultRevision: revision + 1,
       payload,
     });
     verifyEvent(event);
     await this.eventLog.append(event);
-    this.state = replayTaskLedger(await this.eventLog.readAll());
+    this.state = applyTaskLedgerEvent(this.state, event);
   }
 
   private async ensureLoaded(): Promise<void> {

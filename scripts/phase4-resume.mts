@@ -469,7 +469,6 @@ const runWorker = async (runRoot: string): Promise<void> => {
       for (const stage of phase1Stages.filter((candidate) => skipped.has(candidate.id))) {
         const entry = heldLedger.entries[`task:${stage.id}`];
         if (entry?.status === "running") {
-          await ledger.load();
           heldLedger = await ledger.transition(entry.id, "completed", {
             resultId: `result:${stage.id}`,
           });
@@ -489,7 +488,6 @@ const runWorker = async (runRoot: string): Promise<void> => {
       if (noProgressInjectionMode) context.watchdogAttemptInjection = true;
       if (Object.keys(heldLedger.entries).length === 0) {
         for (const stage of phase1Stages) {
-          await ledger.load();
           heldLedger = await ledger.create(taskEntry(stage));
         }
       }
@@ -561,11 +559,9 @@ const runWorker = async (runRoot: string): Promise<void> => {
           join(runRoot, "stop-record.json"),
           `${JSON.stringify(stopRecord, null, 2)}\n`,
         );
-        await ledger.load();
         heldLedger = await ledger.transition(entry.id, "blocked", { stopReason: reasonCode });
         break;
       }
-      await ledger.load();
       if (entry.status === "pending") {
         heldLedger = await ledger.transition(entry.id, "running");
       }
@@ -588,7 +584,6 @@ const runWorker = async (runRoot: string): Promise<void> => {
           taskExternalBefore + (runExternalProcessExecutions - runExternalBefore),
         logicalToolRequests: taskLogicalBefore + (runLogicalToolRequests - runLogicalBefore),
       });
-      await ledger.load();
       heldLedger = await ledger.updateUsage(entry.id, taskUsageAfter);
       await appendVerification(log, stage);
       const contextHash = await writeContext(runRoot, context);
@@ -623,15 +618,12 @@ const runWorker = async (runRoot: string): Promise<void> => {
         if (!current || current.status !== "running") {
           throw new Error("verification-failed: repair-loop retry did not remain running");
         }
-        await ledger.load();
         heldLedger = await ledger.transition(current.id, "failed", {
           stopReason: "unknown-impact",
         });
-        await ledger.load();
         heldLedger = await ledger.transition(current.id, "pending");
         const retryEntry = heldLedger.entries[entry.id];
         if (!retryEntry) throw new Error(`reference-integrity: missing retry task ${stage.id}`);
-        await ledger.load();
         heldLedger = await ledger.transition(retryEntry.id, "running");
         activeTaskId = retryEntry.id;
         activeAttempt = heldLedger.entries[retryEntry.id]?.attemptCount;
@@ -661,7 +653,6 @@ const runWorker = async (runRoot: string): Promise<void> => {
           logicalToolRequests:
             retryTaskLogicalBefore + (runLogicalToolRequests - retryRunLogicalBefore),
         });
-        await ledger.load();
         heldLedger = await ledger.updateUsage(retryEntry.id, retryTaskUsageAfter);
         const retryContextHash = await writeContext(runRoot, context);
         const retryHashes = await artifactHashes(runRoot);
@@ -711,7 +702,6 @@ const runWorker = async (runRoot: string): Promise<void> => {
           join(runRoot, "stop-record.json"),
           `${JSON.stringify(retryStopRecord, null, 2)}\n`,
         );
-        await ledger.load();
         heldLedger = await ledger.transition(retryEntry.id, "blocked", {
           stopReason: "unknown-impact",
         });
@@ -726,7 +716,6 @@ const runWorker = async (runRoot: string): Promise<void> => {
         continue;
       }
       if (current?.status === "running") {
-        await ledger.load();
         heldLedger = await ledger.transition(current.id, "completed", {
           resultId: `result:${stage.id}`,
         });
