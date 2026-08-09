@@ -20,6 +20,7 @@ import type { ACDPhase1Fixture } from "../packages/schema/src/generated/phase1-f
 import {
   createPhase1Context,
   deserializeStageContext,
+  failureResult,
   phase1Stages,
   setToolRunId,
   serializeStageContext,
@@ -183,6 +184,7 @@ const artifactHashes = async (runRoot: string): Promise<string[]> => {
 
 const appendVerification = async (log: FileEventLog, stage: StageDefinition): Promise<void> => {
   const events = await log.readAll();
+  const revision = events.at(-1)?.resultRevision ?? 0;
   const verificationResultId = `verification:${stage.id}`;
   if (events.some((event) => event.eventId === verificationResultId)) return;
   await log.append(
@@ -192,8 +194,8 @@ const appendVerification = async (log: FileEventLog, stage: StageDefinition): Pr
       occurredAt: "2026-01-01T00:00:00.000Z",
       actor: "phase4-resume-worker",
       projectId: "project:phase4-resume",
-      baseRevision: events.length,
-      resultRevision: events.length + 1,
+      baseRevision: revision,
+      resultRevision: revision + 1,
       payload: {
         verificationResultId,
         status: "passed",
@@ -209,15 +211,17 @@ const appendStopped = async (
   runCaseId: string,
 ): Promise<void> => {
   const events = await log.readAll();
+  const revision = events.at(-1)?.resultRevision ?? 0;
+  const stopIndex = events.filter((event) => event.type === "run.stopped").length;
   await log.append(
     createEvent({
-      eventId: `run.stopped:${runCaseId}`,
+      eventId: `run.stopped:${runCaseId}:${stopIndex}`,
       type: "run.stopped",
       occurredAt: "2026-01-01T00:00:00.000Z",
       actor: "phase4-resume-worker",
       projectId: "project:phase4-resume",
-      baseRevision: events.length,
-      resultRevision: events.length + 1,
+      baseRevision: revision,
+      resultRevision: revision,
       payload: { caseId: runCaseId, reason },
     }),
   );
@@ -259,6 +263,7 @@ const runWorker = async (runRoot: string): Promise<void> => {
   await mkdir(projectRoot(runRoot), { recursive: true });
   const log = new FileEventLog(eventPath(runRoot));
   const clock = new FixedClock();
+  let context: StageContext | undefined;
   try {
     const existingEvents = await log.readAll();
     const ledger = new TaskLedgerRuntime(
@@ -273,7 +278,6 @@ const runWorker = async (runRoot: string): Promise<void> => {
       ),
     );
     const state = await ledger.load();
-    let context: StageContext;
     let skipped = new Set<string>();
     let selectedCheckpoint: Checkpoint | undefined;
     let mode: ExecutionRecord["mode"] = "baseline";
@@ -281,7 +285,10 @@ const runWorker = async (runRoot: string): Promise<void> => {
 
     if (resumeMode) {
       mode = "resume";
-      context = deserializeStageContext(await readFile(contextPath(runRoot), "utf8"));
+      context = deserializeStageContext(
+        await readFile(contextPath(runRoot), "utf8"),
+        designGraphValidator,
+      );
       const store = new FileCheckpointStore(checkpointPath(runRoot));
       const orchestrator = new ResumeOrchestrator(
         "project:phase4-resume",
@@ -339,6 +346,12 @@ const runWorker = async (runRoot: string): Promise<void> => {
       const entry = (await ledger.load()).entries[`task:${stage.id}`];
       if (!entry) throw new Error(`reference-integrity: missing task ${stage.id}`);
       if (entry.status === "pending") await ledger.transition(entry.id, "running");
+      context.activeStage = {
+        id: stage.id,
+        gate: stage.gate,
+        name:
+          gateMatrix.gates.find((candidate) => candidate.order === stage.gate)?.name ?? stage.id,
+      };
       await stage.run(context);
       await appendVerification(log, stage);
       const contextHash = await writeContext(runRoot, context);
@@ -399,6 +412,8 @@ const runWorker = async (runRoot: string): Promise<void> => {
     };
     await writeFile(join(runRoot, "run.json"), `${JSON.stringify(manifest, null, 2)}\n`);
   } catch (error) {
+    if (context !== undefined)
+      await writeResults(runRoot, [...context.results, failureResult(context, error)]);
     if (resumeMode)
       await appendStopped(
         log,
@@ -471,6 +486,9 @@ const runCase = async (id: string, interruption: string): Promise<Record<string,
   if (killed.signal !== "SIGKILL") throw new Error(`worker did not terminate with SIGKILL: ${id}`);
   await rm(`${eventPath(interruptedRoot)}.lock`, { force: true });
   await rm(`${checkpointPath(interruptedRoot)}.lock`, { force: true });
+  await rm(join(root, ".acd", "runs", activeToolRunId, "tool-invocations.jsonl.lock"), {
+    force: true,
+  });
   const interruptedLog = new FileEventLog(eventPath(interruptedRoot));
   await appendStopped(interruptedLog, "worker killed at configured stage boundary", id);
   await interruptedLog.close();
