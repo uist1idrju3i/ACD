@@ -7,6 +7,7 @@ import {
   ResumeOrchestrator,
   TaskLedgerRuntime,
   createEvent,
+  replayTaskLedger,
   type Checkpoint,
   type CheckpointContext,
   type EventEnvelope,
@@ -266,6 +267,7 @@ const runtimeFiles = new Set([
   "execution-records.json",
   "run.json",
   "budget-runtime.json",
+  "ledger-state.json",
 ]);
 
 const artifactHashes = async (runRoot: string): Promise<string[]> => {
@@ -718,6 +720,9 @@ const runWorker = async (runRoot: string): Promise<void> => {
       },
     };
     await writeFile(join(runRoot, "run.json"), `${JSON.stringify(manifest, null, 2)}\n`);
+    const heldLedger = await ledger.load();
+    await ledger.assertConsistent(heldLedger);
+    await writeFile(join(runRoot, "ledger-state.json"), `${JSON.stringify(heldLedger, null, 2)}\n`);
     await writeFile(
       join(runRoot, "budget-runtime.json"),
       `${JSON.stringify(
@@ -889,6 +894,22 @@ const runCase = async (id: string, interruption: string): Promise<Record<string,
   const hashesEqual = canonicalize(baselineHashes) === canonicalize(resumedHashes);
   const gatesEqual = canonicalize(baselineRun.gateResults) === canonicalize(resumedRun.gateResults);
   const eventsEqual = canonicalize(comparableBaseline) === canonicalize(comparableResumed);
+  const baselineLedger = await readJson(join(baselineRoot, "ledger-state.json"), {
+    revision: -1,
+    entries: {},
+    usage: {},
+  });
+  const resumedLedger = await readJson(join(interruptedRoot, "ledger-state.json"), {
+    revision: -1,
+    entries: {},
+    usage: {},
+  });
+  const baselineReplayedLedger = replayTaskLedger(baselineEvents);
+  const resumedReplayedLedger = replayTaskLedger(resumedEvents);
+  const ledgerReconstruction = {
+    baselineMatchesPersisted: canonicalize(baselineReplayedLedger) === canonicalize(baselineLedger),
+    resumedMatchesPersisted: canonicalize(resumedReplayedLedger) === canonicalize(resumedLedger),
+  };
   return {
     interruptionStageId: interruption,
     resumedCheckpoint: resumedRun.selectedCheckpoint,
@@ -910,17 +931,32 @@ const runCase = async (id: string, interruption: string): Promise<Record<string,
       equalExcludingInterruptions: eventsEqual,
       excludedEvents: ["run.stopped", "run.resumed", "task.transitioned(kind=usage-updated)"],
     },
+    ledgerReconstruction: {
+      ...ledgerReconstruction,
+      equal:
+        ledgerReconstruction.baselineMatchesPersisted &&
+        ledgerReconstruction.resumedMatchesPersisted,
+    },
     baselineEventCount: baselineEvents.length,
     resumedEventCount: resumedEvents.length,
     comparableBaselineEventCount: comparableBaseline.length,
     comparableResumedEventCount: comparableResumed.length,
     contextValidation: resumedRun.contextValidation,
     verification: {
-      passed: hashesEqual && gatesEqual && eventsEqual,
+      passed:
+        hashesEqual &&
+        gatesEqual &&
+        eventsEqual &&
+        ledgerReconstruction.baselineMatchesPersisted &&
+        ledgerReconstruction.resumedMatchesPersisted,
       failures: [
         ...(hashesEqual ? [] : ["artifact hash mismatch"]),
         ...(gatesEqual ? [] : ["gate result mismatch"]),
         ...(eventsEqual ? [] : ["event sequence mismatch"]),
+        ...(ledgerReconstruction.baselineMatchesPersisted
+          ? []
+          : ["baseline ledger replay mismatch"]),
+        ...(ledgerReconstruction.resumedMatchesPersisted ? [] : ["resumed ledger replay mismatch"]),
       ],
     },
   };
@@ -1080,23 +1116,59 @@ const writePhase4GateResults = async (
   resumeResults: readonly Record<string, unknown>[],
   budgetEvidence: BudgetWatchdogEvidence,
 ): Promise<void> => {
+  const noProgressLog = new FileEventLog(
+    join(artifactRoot, "budget-watchdog-no-progress", "events.jsonl"),
+  );
+  const noProgressEvents = await noProgressLog.readAll();
+  await noProgressLog.close();
+  const stopTransitions = {
+    failed: noProgressEvents.some(
+      (event) =>
+        event.type === "task.transitioned" && (event.payload as { to?: string }).to === "failed",
+    ),
+    blocked: noProgressEvents.some(
+      (event) =>
+        event.type === "task.transitioned" && (event.payload as { to?: string }).to === "blocked",
+    ),
+  };
   const taskLedgerObserved = resumeResults.every(
     (result) =>
-      Array.isArray(result.actualStageExecution) &&
-      result.actualStageExecution.length > 0 &&
-      typeof result.baselineEventCount === "number" &&
-      result.baselineEventCount > 0,
+      (result.ledgerReconstruction as { equal?: boolean } | undefined)?.equal === true &&
+      (result.eventSequenceComparison as { equalExcludingInterruptions?: boolean } | undefined)
+        ?.equalExcludingInterruptions === true,
   );
   const checkpointResumeObserved = resumeResults.every(
     (result) =>
       (result.verification as { passed?: boolean } | undefined)?.passed === true &&
-      (result.resumedCheckpoint as string | null) !== null,
+      (result.resumedCheckpoint as string | null) !== null &&
+      (result.artifactHashComparison as { equal?: boolean } | undefined)?.equal === true &&
+      (result.gateResultComparison as { equal?: boolean } | undefined)?.equal === true &&
+      (
+        result.contextValidation as
+          | { deserialized?: boolean; fixtureValidated?: boolean }
+          | undefined
+      )?.deserialized === true &&
+      (result.contextValidation as { fixtureValidated?: boolean } | undefined)?.fixtureValidated ===
+        true &&
+      (
+        result.contextValidation as
+          | { restoredContextHash?: string | null; checkpointContextHash?: string | null }
+          | undefined
+      )?.restoredContextHash ===
+        (result.contextValidation as { checkpointContextHash?: string | null } | undefined)
+          ?.checkpointContextHash,
   );
   const budgetWatchdogObserved =
     budgetEvidence.injectedBudget.stopRecord.reasonCode === "budget-exceeded" &&
     budgetEvidence.injectedBudget.nextStageStarted === false &&
     budgetEvidence.injectedNoProgress.noProgressObservationStatus === "detected" &&
-    budgetEvidence.injectedNoProgress.stopRecord.reasonCode === "unknown-impact";
+    budgetEvidence.injectedNoProgress.stopRecord.reasonCode === "unknown-impact" &&
+    stopTransitions.failed &&
+    stopTransitions.blocked &&
+    budgetEvidence.injectedBudget.stopRecord.budgetSnapshot.run.tokens.status === "unknown" &&
+    budgetEvidence.injectedBudget.stopRecord.budgetSnapshot.run.money.status === "unknown" &&
+    budgetEvidence.injectedBudget.stopRecord.budgetSnapshot.run.externalProcessExecutions <
+      budgetEvidence.injectedBudget.runBudget.toolCalls;
   const executedOrders = [
     ...(taskLedgerObserved ? [23] : []),
     ...(checkpointResumeObserved ? [24] : []),
