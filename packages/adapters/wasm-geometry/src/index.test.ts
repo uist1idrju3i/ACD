@@ -1,8 +1,9 @@
 import { describe, expect, it } from "vitest";
+import { createHash } from "node:crypto";
 import { readFile } from "node:fs/promises";
 import { resolve } from "node:path";
 import { runGeometryChecks } from "@acd/graph-core";
-import { runGeometryChecksWithFallback } from "./index.js";
+import { loadWasmGeometryModule, runGeometryChecksWithFallback } from "./index.js";
 
 const input = {
   pads: [
@@ -34,24 +35,38 @@ describe("WASM geometry boundary", () => {
     ) as {
       cases: Array<{ id: string; input: Parameters<typeof runGeometryChecks>[0] }>;
     };
-    const nativeBytes = JSON.stringify(
-      fixture.cases.map(({ input: candidate }) => runGeometryChecks(candidate)),
+    const wasmPath = resolve(
+      import.meta.dirname,
+      "../rust/target/wasm32-unknown-unknown/release/acd_geometry_wasm.wasm",
     );
-    const wasmBytes = JSON.stringify(
-      fixture.cases.map(
-        ({ input: candidate }) =>
-          runGeometryChecksWithFallback(candidate, {
-            moduleVersion: "fixture",
-            buildDigest: "fixture",
-            toolchainVersion: "fixture",
-            run: runGeometryChecks,
-          }).results,
-      ),
-    );
-    expect(wasmBytes).toBe(nativeBytes);
-    expect(
-      JSON.stringify(fixture.cases.map(({ input: candidate }) => runGeometryChecks(candidate))),
-    ).toBe(nativeBytes);
+    let wasmBytes: Buffer;
+    try {
+      wasmBytes = await readFile(wasmPath);
+    } catch {
+      throw new Error(`WASM未ビルドのため未検証: ${wasmPath}`);
+    }
+    const module = await loadWasmGeometryModule(wasmBytes, {
+      moduleVersion: "0.1.0",
+      buildDigest: `sha256:${createHash("sha256").update(wasmBytes).digest("hex")}`,
+      toolchainVersion: "rustc 1.97.1",
+    });
+    const canonical = () =>
+      fixture.cases.map(({ input: candidate }) => ({
+        native: runGeometryChecks(candidate),
+        wasm: runGeometryChecksWithFallback(candidate, module).results,
+      }));
+    const first = JSON.stringify(canonical());
+    const second = JSON.stringify(canonical());
+    expect(first).toBe(second);
+    for (const { native, wasm } of canonical()) {
+      expect(JSON.stringify(wasm)).toBe(JSON.stringify(native));
+    }
+    const execution = runGeometryChecksWithFallback(fixture.cases[0]!.input, module);
+    expect(execution.provenance).toMatchObject({
+      engine: "wasm",
+      reason: "wasm-parity-verified",
+      moduleVersion: "0.1.0",
+    });
     expect(
       runGeometryChecks(fixture.cases.find(({ id }) => id === "pad-clearance-violation")!.input)
         .padClearance.status,
@@ -75,35 +90,18 @@ describe("WASM geometry boundary", () => {
     expect(execution.results.padClearance.status).toBe("unknown");
   });
 
-  it("accepts a parity-checked module and records its provenance", () => {
-    const native = runGeometryChecksWithFallback(input).results;
-    const execution = runGeometryChecksWithFallback(input, {
-      moduleVersion: "0.1.0",
-      buildDigest: "sha256:test",
-      toolchainVersion: "rustc 1.97.1",
-      run: () => native,
-    });
-    expect(execution.provenance).toMatchObject({
-      engine: "wasm",
-      reason: "wasm-parity-verified",
-      buildDigest: "sha256:test",
-    });
-  });
-
-  it("falls back deterministically on parity mismatch", () => {
-    const execution = runGeometryChecksWithFallback(input, {
-      moduleVersion: "0.1.0",
-      buildDigest: "sha256:test",
-      toolchainVersion: "rustc 1.97.1",
-      run: () => ({
-        padClearance: { status: "passed", findings: [] },
-        maskSliver: { status: "passed", findings: [] },
-        courtyardOverlap: { status: "passed", findings: [] },
+  it("stops deterministically on parity mismatch", () => {
+    expect(() =>
+      runGeometryChecksWithFallback(input, {
+        moduleVersion: "0.1.0",
+        buildDigest: "sha256:test",
+        toolchainVersion: "rustc 1.97.1",
+        run: () => ({
+          padClearance: { status: "passed", findings: [] },
+          maskSliver: { status: "passed", findings: [] },
+          courtyardOverlap: { status: "passed", findings: [] },
+        }),
       }),
-    });
-    expect(execution.provenance).toMatchObject({
-      engine: "native",
-      reason: "wasm-parity-mismatch",
-    });
+    ).toThrow("parity mismatch");
   });
 });

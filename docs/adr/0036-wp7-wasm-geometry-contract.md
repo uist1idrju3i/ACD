@@ -22,15 +22,27 @@ TS側でmmをnm（1mm = 1,000,000nm）へ一度だけ量子化する。量子化
 同じ整数DTOを入力し、距離比較は平方距離と整数演算だけで行う。
 
 findingsはstable ID、rule ID、対象ID、測定nm値、閾値nm値を含め、ID順に正規化する。
-nativeとWASMの正規化結果がbyte一致しない場合はWASMを採用せずnativeへfallbackし、
-その理由をEvidence provenanceへ記録する。
+nativeとWASMの正規化結果がbyte一致しない場合は`verification-failed`として停止する。
+nativeへfallbackできるのはWASM moduleが利用不能な場合だけであり、その理由をEvidence
+provenanceへ記録する。
 
-## WASM境界とprovenance
+## WASM境界、ABI、provenance
 
-WASMは`packages/adapters/wasm-geometry`の外部境界で読み込み、graph-coreはWASM、
-filesystem、HTTP、browser APIへ依存しない。WASM不在時はnativeへ決定論的にfallback
-する。Evidenceにはengine、理由、module version、build digest、toolchain versionを
-記録する。`.wasm`はcommitせず、Rust targetの導入後にCIでビルドする。
+WASMは`packages/adapters/wasm-geometry`の外部境界でNode組み込みの
+`WebAssembly.instantiate`から読み込み、graph-coreはWASM、filesystem、HTTP、browser
+APIへ依存しない。wasm-bindgen、wasmtime、wasm-packは依存とlicense面を増やすため採用
+しない。
+
+TSは量子化済み整数DTOを固定長のlittle-endian `i64`レコードへpacked encodingし、
+Rustの素のC ABIとlinear memoryで受け渡す。入力はmagic、entity count、3閾値、polygon
+point列、mask expansionからなり、出力はmagic、ruleごとのstatus、finding count、
+entity index、測定nm、閾値nmからなる。文字列は境界を越えず、TS側でstable IDへ復元する。
+入力・出力の長さ、magic、index、status、unknown時のfinding欠如を検証し、超過や破損は
+明示的な`verification-failed`停止とする。
+
+WASM moduleが利用不能な場合だけnativeへ決定論的にfallbackする。Evidenceにはengine、
+理由、module version、build digest、toolchain versionを記録する。`.wasm`はcommitせず、
+`rustup target add wasm32-unknown-unknown`後にCIとローカルscriptでビルドする。
 
 ## 実装根拠とライセンス
 
