@@ -148,4 +148,21 @@ describe("FileEventLog", () => {
 
     await log.close();
   });
+
+  it("reads from a zero-based event cursor", async () => {
+    const directory = await mkdtemp(join(tmpdir(), "acd-event-log-"));
+    const path = join(directory, "events.jsonl");
+    const log = new FileEventLog(path);
+    const secondEvent = {
+      ...event,
+      eventId: "event:storage:2",
+      resultRevision: 2,
+      baseRevision: 1,
+    };
+    await log.append(event);
+    await log.append(secondEvent);
+    await expect(log.readFrom(1)).resolves.toEqual({ position: 1, events: [secondEvent] });
+    await expect(log.readFrom(3)).rejects.toMatchObject({ code: "event-replay-failure" });
+    await log.close();
+  });
 });

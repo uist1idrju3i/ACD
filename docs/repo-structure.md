@@ -24,7 +24,9 @@ packages/
 fixtures/
   golden-tasks/
   design-graphs/
-apps/                     # UI、worker、CLIは必要になった時点で追加
+apps/
+  worker/                 # local HTTP/SSE composition root、run read model
+  web/                    # Vite、Canvas2D、read-only browser client
 docs/
 schemas/
 ```

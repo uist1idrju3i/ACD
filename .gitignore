@@ -6,6 +6,7 @@ artifacts/
 .acd/
 *.log
 *.tsbuildinfo
+apps/web/test-results/
 .env
 .env.*
 !.env.example

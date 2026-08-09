@@ -92,6 +92,16 @@ fab／manufacturing profile、参照KnowledgeItem status、成果物hash、検�
 
 ## Phase 0の範囲と将来拡張
 
+## 位置指定読み出しとSSE
+
+`EventLog.readFrom(position)`は0-based event countをcursorとして扱う。
+`from=N`は先頭からN件を受信済みという意味であり、`events[N...]`を返す。要求位置が
+負数または現在件数を超える場合は`event-replay-failure`とする。
+
+workerの`GET /events`は検証済みraw `EventEnvelope`だけをSSEで配信する。SSE `id`は
+event position、canonical `eventId`はpayload内に保持する。`Last-Event-ID`がqueryの
+`from`より優先される。破損したlogはSSEを継続せずjidoka停止する。
+
 Phase 0では一つのprojectを対象とするJSONLまたは同等のappend-onlyファイルを
 想定します。分散順序、マルチユーザー同期、暗号化、保持期間、署名、ストリーム
 配信、worker間イベントは後続のruntime仕様で拡張します。

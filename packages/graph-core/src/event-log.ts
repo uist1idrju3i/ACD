@@ -33,7 +33,13 @@ export type EventEnvelope = {
 export interface EventLog {
   append(event: EventEnvelope): Promise<void>;
   readAll(): Promise<EventEnvelope[]>;
+  readFrom(position: number): Promise<EventLogRead>;
 }
+
+export type EventLogRead = {
+  position: number;
+  events: EventEnvelope[];
+};
 
 export const createEvent = (input: Omit<EventEnvelope, "payloadHash">): EventEnvelope => ({
   ...input,
@@ -86,5 +92,12 @@ export class InMemoryEventLog implements EventLog {
 
   async readAll(): Promise<EventEnvelope[]> {
     return structuredClone(this.events);
+  }
+
+  async readFrom(position: number): Promise<EventLogRead> {
+    if (!Number.isInteger(position) || position < 0 || position > this.events.length) {
+      throw new GraphCoreError("event-replay-failure", `invalid event position: ${position}`);
+    }
+    return { position, events: structuredClone(this.events.slice(position)) };
   }
 }

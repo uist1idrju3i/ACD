@@ -1,5 +1,6 @@
 export const graphCorePackageVersion = "0.1.0";
 export * from "./board.js";
+export * from "./projection.js";
 export * from "./checkpoint.js";
 export * from "./design-rationale.js";
 export * from "./electrical-lint.js";
@@ -23,3 +24,4 @@ export * from "./tool-process.js";
 export * from "./budget.js";
 export * from "./progress.js";
 export * from "./stop-record.js";
+export * from "./diff.js";

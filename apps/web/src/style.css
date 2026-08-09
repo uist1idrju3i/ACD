@@ -1,0 +1,37 @@
+:root {
+  color: #172033;
+  font-family: sans-serif;
+  background: #f8fafc;
+}
+
+body {
+  margin: 0 auto;
+  max-width: 960px;
+  padding: 2rem;
+}
+
+section {
+  background: white;
+  border: 1px solid #cbd5e1;
+  border-radius: 0.5rem;
+  margin: 1rem 0;
+  padding: 1rem;
+}
+
+.passed {
+  color: #15803d;
+}
+.failed,
+.blocked {
+  color: #b91c1c;
+}
+.stale,
+.unknown,
+.unverified {
+  color: #a16207;
+}
+
+canvas {
+  border: 1px solid #cbd5e1;
+  max-width: 100%;
+}

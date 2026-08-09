@@ -1,0 +1,24 @@
+{
+  "name": "@acd/worker",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "main": "src/index.ts",
+  "types": "src/index.ts",
+  "scripts": {
+    "build": "tsc -b",
+    "typecheck": "tsc -b --pretty false",
+    "start": "tsx src/cli.ts",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@acd/adapter-storage-fs": "workspace:*",
+    "@acd/graph-core": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/node": "22.15.21",
+    "tsx": "4.19.4",
+    "typescript": "5.8.3",
+    "vitest": "3.2.4"
+  }
+}

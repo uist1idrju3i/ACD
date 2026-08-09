@@ -34,7 +34,7 @@ Phase 5の範囲です。FWパッケージと仮想実機はPhase 6、自働発�
     スキーマへ保持するが計測せず、unknownとして保持する。
   - tool request／result／error envelopeは[`tool-contract.md`](tool-contract.md)と
     [`error-taxonomy.md`](error-taxonomy.md)の記述のみで、機械検証可能なschemaが無い。
-  - ブラウザUI、viewer、WASMモジュールは未実装（`apps/`は存在しない）。
+  - WASMモジュールは未実装。ブラウザUIとviewerはWP6でread-only基盤を実装済み。
 - 現状のPhase 1〜3のrunは`scripts/*.mts`の単発runnerであり、途中終了すると先頭から
   やり直します。README §7 Phase 4の完了条件は、この構造では測定できません。
 
@@ -189,7 +189,7 @@ JSONL耐久性の設計判断は、AcceptedのADR-0024〜0031に記録済みで�
 
 ### WP6：ブラウザUX（read-onlyビューアと差分レビュー）
 
-**状態：未着手。**
+**状態：実装済み（schema追加を除く）。**
 
 **作業**
 
@@ -199,6 +199,11 @@ JSONL耐久性の設計判断は、AcceptedのADR-0024〜0031に記録済みで�
 - 2Dの投影ビューア（pad、track、via、courtyard、mask）をread-onlyで表示する。
   描画入力の正本はKiCad成果物やGerberではなくACD投影ジオメトリとし、UIが正のデータを作らない。
 - workerとの伝送はローカルHTTP＋SSEとし、再接続時はイベント位置から再送する。WebSocketは使わない。
+
+実装済みのWP6基盤は`apps/worker`のread-only HTTP/SSE API、`apps/web`のCanvas2D観測UI、
+`EventLog.readFrom`、canonical projection DTO、revision diffの純粋関数を含む。
+courtyard/maskは正本geometry未提供のため未提供として表示し、schema追加は別handoffで扱う。
+
 - ブラウザ切断・再接続でランが継続していることを表示できる（ランの所有者はworker）。
 - 実ブラウザをPlaywright Chromiumで強制終了し、再接続後もworkerがランを継続していることを
   表示できるUI回帰を追加する。

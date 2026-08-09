@@ -19,6 +19,8 @@ MIT、Apache-2.0、BSD-2-Clause、BSD-3-Clause、ISC、0BSD、Python-2.0です�
 | `tsx`                       | 4.19.4   | MIT          | TypeScript script実行                                                   |
 | `typescript`                | 5.8.3    | Apache-2.0   | strict compile/typecheck                                                |
 | `vitest`                    | 3.2.4    | MIT          | unit/golden tests                                                       |
+| `vite`                      | 6.3.5    | MIT          | Vite build/dev server for the dependency-free browser client            |
+| `@playwright/test`          | 1.52.0   | Apache-2.0   | Chromium-only read-only browser regression                              |
 | `eslint` / `@eslint/js`     | 9.30.1   | MIT          | lint                                                                    |
 | `typescript-eslint`         | 8.35.1   | MIT          | TypeScript lint integration                                             |
 | `prettier`                  | 3.6.2    | MIT          | formatting                                                              |

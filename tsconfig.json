@@ -6,6 +6,8 @@
     { "path": "./packages/adapters/kicad" },
     { "path": "./packages/adapters/fab-feedback" },
     { "path": "./packages/adapters/storage-fs" },
-    { "path": "./packages/adapters/spice" }
+    { "path": "./packages/adapters/spice" },
+    { "path": "./apps/worker" },
+    { "path": "./apps/web" }
   ]
 }

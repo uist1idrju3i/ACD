@@ -26,7 +26,9 @@
     "phase1:golden": "pnpm kicad:library:verify && pnpm --filter @acd/adapter-kicad build && tsx scripts/phase1-golden.mts && tsx scripts/phase3-knowledge-loop.mts",
     "phase3:knowledge-loop": "tsx scripts/phase3-knowledge-loop.mts",
     "phase2:record-repairs": "tsx scripts/phase2-record-repairs.mts",
-    "phase1:gate13": "tsx scripts/phase1-gate13.mts"
+    "phase1:gate13": "tsx scripts/phase1-gate13.mts",
+    "web:build": "pnpm --filter @acd/web build",
+    "web:test:e2e:chromium": "pnpm --filter @acd/web test:e2e:chromium"
   },
   "devDependencies": {
     "@eslint/js": "9.30.1",

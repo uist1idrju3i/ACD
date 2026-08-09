@@ -18,5 +18,8 @@ describe("FileEventLog", () => {
     await log.append(event);
     verifyReplay(await log.readAll());
     expect((await log.readAll())[0]?.payloadHash).toMatch(/^sha256:/);
+    expect(await log.readFrom(1)).toEqual({ position: 1, events: [] });
+    await expect(log.readFrom(-1)).rejects.toMatchObject({ code: "event-replay-failure" });
+    await expect(log.readFrom(2)).rejects.toMatchObject({ code: "event-replay-failure" });
   });
 });

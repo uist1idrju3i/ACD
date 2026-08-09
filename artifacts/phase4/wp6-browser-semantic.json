@@ -1,0 +1,15 @@
+{
+  "route": "/",
+  "headings": [
+    "ACD Run Observer",
+    "Task ledger",
+    "Gate results",
+    "Stop record",
+    "Checkpoints",
+    "Evidence references",
+    "2D projection"
+  ],
+  "readOnlyControlCount": 0,
+  "geometryStatus": "unit: mm; revision: 0; courtyard: unavailable; mask: unavailable",
+  "connectionStatus": "worker connected; event position 126"
+}

@@ -2,7 +2,13 @@ import { mkdir, open, readFile, unlink } from "node:fs/promises";
 import type { FileHandle } from "node:fs/promises";
 import { dirname } from "node:path";
 import { canonicalize } from "@acd/graph-core";
-import { GraphCoreError, verifyEvent, type EventEnvelope, type EventLog } from "@acd/graph-core";
+import {
+  GraphCoreError,
+  verifyEvent,
+  type EventEnvelope,
+  type EventLog,
+  type EventLogRead,
+} from "@acd/graph-core";
 
 export class FileEventLog implements EventLog {
   private handle: FileHandle | undefined;
@@ -26,6 +32,14 @@ export class FileEventLog implements EventLog {
       if ((error as NodeJS.ErrnoException).code === "ENOENT") return [];
       throw error;
     }
+  }
+
+  async readFrom(position: number): Promise<EventLogRead> {
+    const events = await this.readAll();
+    if (!Number.isInteger(position) || position < 0 || position > events.length) {
+      throw new GraphCoreError("event-replay-failure", `invalid event position: ${position}`);
+    }
+    return { position, events: structuredClone(events.slice(position)) };
   }
 
   async recover(): Promise<EventLogRecovery> {
